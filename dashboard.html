@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard · Smart Dental Clinic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=General+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/style-v3.css">
+
+<style>
+  .dashboard-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 100vh;
+  }
+  @media (max-width: 800px) {
+    .dashboard-layout { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+  }
+  .sidebar {
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-divider);
+    padding: var(--space-6) var(--space-4);
+  }
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-8);
+  }
+  .sidebar-link {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+  .sidebar-link:hover, .sidebar-link.active {
+    background: var(--color-primary-highlight);
+    color: var(--color-primary-hover);
+  }
+  .dashboard-content {
+    padding: var(--space-8);
+    background: var(--color-bg);
+  }
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-8);
+  }
+  .module-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-6);
+  }
+
+  /* ==========================================================================
+     INLINED CHAT CSS TO BYPASS CACHE
+     ========================================================================== */
+  .chat-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 120px);
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-divider);
+    overflow: hidden;
+  }
+  .chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-divider);
+    background: var(--color-bg);
+  }
+  .chat-header-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+  .chat-history-sidebar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 320px;
+    background: var(--color-surface);
+    border-left: 1px solid var(--color-divider);
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    z-index: 20;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.05);
+  }
+  .chat-history-sidebar.open {
+    transform: translateX(0);
+  }
+  .chat-history-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--color-divider);
+  }
+  .chat-history-sidebar-header h4 {
+    margin: 0;
+    font-size: var(--text-md);
+    color: var(--color-text);
+  }
+  .close-sidebar-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--color-text-muted);
+    cursor: pointer;
+  }
+  .chat-history-sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  .history-item {
+    padding: var(--space-3);
+    background: var(--color-bg);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+  .history-item:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .history-item-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-bottom: var(--space-1);
+  }
+  .history-item-name {
+    font-weight: 600;
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .history-item-delete {
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+    flex-shrink: 0;
+  }
+  .history-item:hover .history-item-delete {
+    opacity: 1;
+  }
+  .history-item-delete:hover {
+    color: #ef4444;
+  }
+  .history-item-date {
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-1);
+  }
+  .history-item-preview {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+  }
+
+  .chat-history {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  .chat-msg {
+    display: flex;
+    gap: var(--space-4);
+    max-width: 85%;
+  }
+  .chat-msg.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+  .chat-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    background: var(--color-primary-highlight);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-weight: 600;
+    font-size: var(--text-sm);
+  }
+  .chat-msg.user .chat-avatar {
+    background: var(--color-border);
+    color: var(--color-text);
+  }
+  .chat-bubble {
+    padding: var(--space-4);
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    color: var(--color-text);
+    border: 1px solid var(--color-divider);
+  }
+  .chat-input-area {
+    padding: var(--space-4);
+    border-top: 1px solid var(--color-divider);
+    background: var(--color-surface);
+    position: relative;
+    z-index: 10;
+  }
+  .chat-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: var(--color-bg);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    width: 100%;
+  }
+  .chat-input-wrapper input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    outline: none;
+  }
+  .chat-input-wrapper button[type="submit"] {
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: var(--space-2) var(--space-4);
+    cursor: pointer;
+    font-weight: 500;
+    transition: opacity 0.2s;
+    font-family: inherit;
+  }
+  .chat-input-wrapper button[type="submit"]:hover { opacity: 0.9; }
+
+  /* Mode Dropdown */
+  .mode-dropdown {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: var(--space-4);
+    min-width: 280px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(0,0,0,.14), 0 2px 8px rgba(0,0,0,.08);
+    padding: var(--space-2);
+    z-index: 100;
+    opacity: 0;
+    transform: translateY(6px);
+    pointer-events: none;
+    transition: opacity .15s ease, transform .15s ease;
+  }
+  .mode-dropdown.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+  }
+  .mode-dropdown-header {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--color-text-muted);
+    padding: var(--space-2) var(--space-3) var(--space-1);
+  }
+  .mode-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-3) var(--space-3);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    transition: background 0.15s;
+  }
+  .mode-option:hover {
+    background: var(--color-bg);
+  }
+  .mode-option.active {
+    background: var(--color-primary-highlight);
+  }
+  .mode-option-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    border: 1px solid var(--color-divider);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--color-text-muted);
+  }
+  .mode-option.active .mode-option-icon {
+    background: var(--color-primary-highlight);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+  .mode-option-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .mode-option-name {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-text);
+  }
+  .mode-option-sub {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+  }
+  .mode-check {
+    color: var(--color-primary);
+    opacity: 0;
+    flex-shrink: 0;
+  }
+  .mode-option.active .mode-check {
+    opacity: 1;
+  }
+
+  /* Mode toggle button */
+  .mode-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: inherit;
+    transition: border-color 0.2s, color 0.2s;
+    flex-shrink: 0;
+  }
+  .mode-toggle-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+</style>
+</head>
+<body>
+<div class="dashboard-layout">
+  <aside class="sidebar">
+    <a href="./index.html" class="brand" aria-label="Smart Dental Clinic home">
+      <svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <rect width="32" height="32" rx="8" fill="#2563eb"/>
+        <path d="M16 8c-2.8 0-5 1.9-5 4.6 0 1.7.6 2.7 1.2 3.9.7 1.4 1.4 3 1.6 6.1.1 1.4 1 2.4 2.2 2.4s2.1-1 2.2-2.4c.2-3.1.9-4.7 1.6-6.1.6-1.2 1.2-2.2 1.2-3.9C21 9.9 18.8 8 16 8Z" fill="#fff"/>
+      </svg>
+      <span class="brand-name">Smart Dental Clinic</span>
+    </a>
+    
+    <nav class="sidebar-nav" id="sidebarNav">
+      <button class="sidebar-link active" data-target="home">Dashboard Home</button>
+      <button class="sidebar-link" data-target="patients">Patients</button>
+      <button class="sidebar-link" data-target="appointments">Appointments</button>
+      <button class="sidebar-link" data-target="ai">AI Assistant</button>
+      <button class="sidebar-link" data-target="settings">Settings</button>
+    </nav>
+  </aside>
+
+  <main class="dashboard-content">
+    <header class="dashboard-header">
+      <h1 style="font-size:var(--text-xl)" id="welcomeMsg">Welcome to your Clinic Dashboard</h1>
+      <button id="logoutBtn" class="btn btn-secondary btn-sm">Sign out</button>
+    </header>
+
+    <!-- SECTION: HOME -->
+    <section id="section-home" class="dashboard-section active">
+      <div class="module-grid" style="margin-bottom: var(--space-8);">
+        <div class="card card-pad">
+          <h3 style="font-size:var(--text-sm);color:var(--color-text-muted)">Today's Appointments</h3>
+          <p id="statAppointments" style="font-size:2rem;font-weight:700;color:var(--color-primary);margin-top:0.5rem">...</p>
+        </div>
+        <div class="card card-pad">
+          <h3 style="font-size:var(--text-sm);color:var(--color-text-muted)">Total Patients</h3>
+          <p id="statPatients" style="font-size:2rem;font-weight:700;color:var(--color-primary);margin-top:0.5rem">...</p>
+        </div>
+        <div class="card card-pad">
+          <h3 style="font-size:var(--text-sm);color:var(--color-text-muted)">Today's Revenue</h3>
+          <p id="statRevenue" style="font-size:2rem;font-weight:700;color:var(--color-primary);margin-top:0.5rem">...</p>
+        </div>
+        <div class="card card-pad">
+          <h3 style="font-size:var(--text-sm);color:var(--color-text-muted)">Pending Invoices</h3>
+          <p id="statInvoices" style="font-size:2rem;font-weight:700;color:var(--color-primary);margin-top:0.5rem">...</p>
+        </div>
+      </div>
+
+      <div class="module-grid">
+        <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=patients]').click()">
+          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Patient Management</h3>
+          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Manage profiles, view regular vs past patients.</p>
+        </div>
+        <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=appointments]').click()">
+          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Appointments</h3>
+          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Track daily schedule and patient status.</p>
+        </div>
+        <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=ai]').click()">
+          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">AI Assistant</h3>
+          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Chat with your smart dental desk assistant.</p>
+        </div>
+        <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=settings]').click()">
+          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Settings & Link</h3>
+          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Manage your unique booking link and options.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: PATIENTS -->
+    <section id="section-patients" class="dashboard-section">
+      <h2>Patients Directory</h2>
+      <div class="tabs-nav" id="patientTabs">
+        <button class="tab-btn active" data-tab="all">All Patients</button>
+        <button class="tab-btn" data-tab="regular">Regulars (Last 6 Months)</button>
+        <button class="tab-btn" data-tab="past">Past (Inactive > 12 Months)</button>
+      </div>
+      <div class="card table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Last Visit</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="patientsTableBody">
+            <tr><td colspan="4" style="text-align:center;">Loading patients...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION: APPOINTMENTS -->
+    <section id="section-appointments" class="dashboard-section">
+      <h2>Appointments</h2>
+      <p class="text-muted" style="margin-bottom: var(--space-6);">Your upcoming schedule.</p>
+      <div class="card table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date & Time</th>
+              <th>Patient</th>
+              <th>Service</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="appointmentsTableBody">
+            <tr><td colspan="4" style="text-align:center;">Loading appointments...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION: AI ASSISTANT -->
+    <section id="section-ai" class="dashboard-section">
+      <div class="chat-container">
+
+        <div class="chat-header">
+          <div class="chat-header-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            AI Assistant
+          </div>
+          <div style="display: flex; gap: var(--space-2);">
+            <button class="btn btn-secondary btn-sm" id="newChatBtn" title="New Chat" style="padding: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="btn btn-secondary btn-sm" id="toggleHistoryBtn" title="History" style="padding: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="chat-main-wrapper" style="display: flex; flex: 1; overflow: hidden; position: relative;">
+          <!-- Main Chat Area -->
+          <div class="chat-history" id="chatHistory">
+            <div class="chat-msg">
+              <div class="chat-avatar">AI</div>
+              <div class="chat-bubble">Hello! I am your Smart Dental Desk assistant. How can I help you manage your clinic today?</div>
+            </div>
+          </div>
+
+          <!-- History Sidebar -->
+          <div class="chat-history-sidebar" id="chatHistorySidebar">
+            <div class="chat-history-sidebar-header">
+              <h4>Past Conversations</h4>
+              <button class="close-sidebar-btn" id="closeHistoryBtn">&times;</button>
+            </div>
+            <div class="chat-history-sidebar-content" id="chatHistorySidebarContent">
+              <p class="text-muted" style="font-size: var(--text-sm); text-align: center; margin-top: var(--space-4);">Loading history...</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-input-area">
+          <!-- Mode dropdown popup (appears above input) -->
+          <div class="mode-dropdown" id="modeDropdown">
+            <div class="mode-dropdown-header">AI Mode</div>
+            <button class="mode-option active" data-mode="thinking">
+              <span class="mode-option-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m3.343-5.657-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 14 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+              </span>
+              <span class="mode-option-body">
+                <span class="mode-option-name">Thinking</span>
+                <span class="mode-option-sub">Nemotron Ultra · Advice &amp; Planning</span>
+              </span>
+              <svg class="mode-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+            <button class="mode-option" data-mode="data">
+              <span class="mode-option-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+              </span>
+              <span class="mode-option-body">
+                <span class="mode-option-name">Data</span>
+                <span class="mode-option-sub">Nemotron Ultra · Reports &amp; Summaries</span>
+              </span>
+              <svg class="mode-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+            <button class="mode-option" data-mode="automation">
+              <span class="mode-option-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              </span>
+              <span class="mode-option-body">
+                <span class="mode-option-name">Automation</span>
+                <span class="mode-option-sub">Nemotron Nano · Actions &amp; Messages</span>
+              </span>
+              <svg class="mode-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+          </div>
+
+          <form id="chatForm" class="chat-input-wrapper">
+            <!-- Mode toggle button -->
+            <button type="button" class="mode-toggle-btn" id="modeToggleBtn" aria-haspopup="true" aria-expanded="false">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m3.343-5.657-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 14 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+              <span id="modeLabel">Thinking</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <input type="text" id="chatInput" placeholder="Ask for advice, workflow tips, treatment suggestions..." required>
+            <button type="submit" id="chatSendBtn">Send</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: SETTINGS -->
+    <section id="section-settings" class="dashboard-section">
+      <h2>Clinic Settings</h2>
+      <p class="text-muted" style="margin-bottom: var(--space-6);">Manage your clinic details and booking link.</p>
+      
+      <div class="settings-grid">
+        <div class="settings-panel">
+          <h3>Public Booking Link</h3>
+          <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-4);">Share this link with your patients so they can book appointments online.</p>
+          <div class="booking-link-display">
+            <span id="bookingLinkText">Loading...</span>
+            <button class="btn btn-secondary btn-sm" id="copyLinkBtn" style="margin-left: auto;">Copy</button>
+          </div>
+        </div>
+
+        <div class="settings-panel">
+          <h3>Appointment Preferences</h3>
+          <form id="settingsForm">
+            <div class="form-group">
+              <label>Default Slot Duration (minutes)</label>
+              <input type="number" id="slotDuration" class="form-control" value="30" step="5" min="10">
+            </div>
+            <div class="form-group">
+              <label>Auto-Approve Bookings?</label>
+              <select id="autoApprove" class="form-control">
+                <option value="false">No (Manual Review)</option>
+                <option value="true">Yes (Instantly Booked)</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+            <p id="settingsFeedback" style="color:var(--success); font-size:var(--text-sm); display:none; margin-top:var(--space-2);">Settings saved!</p>
+          </form>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+<script src="./assets/app.js"></script>
+<script>
+  // Auth Guard
+  if (!window.api.isAuthenticated()) {
+    window.location.href = './login.html';
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    // ── Setup & Auth ──────────────────────────────────────────────────────────
+    const userData = JSON.parse(localStorage.getItem('sdd_user') || '{}');
+    if (userData.name) {
+      document.getElementById('welcomeMsg').textContent = `Welcome, ${userData.name}`;
+    }
+    document.getElementById('logoutBtn').addEventListener('click', () => window.api.logout());
+
+    // ── SPA Navigation ────────────────────────────────────────────────────────
+    const links = document.querySelectorAll('#sidebarNav .sidebar-link, [data-target]');
+    const sections = document.querySelectorAll('.dashboard-section');
+
+    function showSection(targetId) {
+      sections.forEach(s => s.classList.remove('active'));
+      document.getElementById(`section-${targetId}`).classList.add('active');
+      
+      // Update sidebar active state
+      document.querySelectorAll('#sidebarNav .sidebar-link').forEach(l => l.classList.remove('active'));
+      const activeLink = document.querySelector(`#sidebarNav .sidebar-link[data-target="${targetId}"]`);
+      if (activeLink) activeLink.classList.add('active');
+
+      // Trigger section-specific loads
+      if (targetId === 'home') loadHomeStats();
+      if (targetId === 'patients') loadPatients('all');
+      if (targetId === 'appointments') loadAppointments();
+      if (targetId === 'settings') loadSettings();
+    }
+
+    links.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        showSection(link.getAttribute('data-target'));
+      });
+    });
+
+    // ── Home Stats ────────────────────────────────────────────────────────────
+    async function loadHomeStats() {
+      try {
+        const stats = await window.api.getDashboardStats();
+        document.getElementById('statAppointments').textContent = stats.today_appointments;
+        document.getElementById('statPatients').textContent = stats.total_patients;
+        document.getElementById('statRevenue').textContent = `₹${stats.today_revenue.toLocaleString()}`;
+        document.getElementById('statInvoices').textContent = stats.pending_invoices;
+      } catch (err) { console.error('Failed to load stats:', err); }
+    }
+
+    // ── Patients ──────────────────────────────────────────────────────────────
+    const patientTabs = document.querySelectorAll('#patientTabs .tab-btn');
+    patientTabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        patientTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        loadPatients(tab.getAttribute('data-tab'));
+      });
+    });
+
+    async function loadPatients(type) {
+      const tbody = document.getElementById('patientsTableBody');
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>';
+      try {
+        const res = await window.api.getPatients(type);
+        if (res.patients.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No patients found.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = res.patients.map(p => `
+          <tr>
+            <td><strong>${p.name}</strong></td>
+            <td>${p.phone}</td>
+            <td>${p.created_at.slice(0, 10)}</td>
+            <td><span style="color:var(--success)">Active</span></td>
+          </tr>
+        `).join('');
+      } catch (err) { tbody.innerHTML = `<tr><td colspan="4" style="color:red;text-align:center;">Error loading patients.</td></tr>`; }
+    }
+
+    // ── Appointments ──────────────────────────────────────────────────────────
+    async function loadAppointments() {
+      const tbody = document.getElementById('appointmentsTableBody');
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>';
+      try {
+        const res = await window.api.getAppointments();
+        if (res.appointments.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No upcoming appointments.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = res.appointments.map(a => `
+          <tr>
+            <td><strong>${a.date}</strong> <br> <span class="text-muted">${a.time}</span></td>
+            <td>${a.patients?.name || 'Unknown'}</td>
+            <td>${a.service}</td>
+            <td style="text-transform:capitalize;">${a.status}</td>
+          </tr>
+        `).join('');
+      } catch (err) { tbody.innerHTML = `<tr><td colspan="4" style="color:red;text-align:center;">Error loading appointments.</td></tr>`; }
+    }
+
+    // ── Settings & Booking Link ───────────────────────────────────────────────
+    let clinicSlug = '';
+    
+    async function loadSettings() {
+      try {
+        const res = await window.api.getSettings();
+        if (res.settings) {
+          const s = res.settings;
+          clinicSlug = s.booking_slug;
+          const fullLink = `${window.location.origin}/book.html?c=${s.booking_slug}`;
+          document.getElementById('bookingLinkText').textContent = fullLink;
+          
+          if (s.appointment_settings) {
+            document.getElementById('slotDuration').value = s.appointment_settings.slot_duration_minutes || 30;
+            document.getElementById('autoApprove').value = s.appointment_settings.auto_approve ? 'true' : 'false';
+          }
+        }
+      } catch (err) { console.error('Failed to load settings', err); }
+    }
+
+    document.getElementById('copyLinkBtn').addEventListener('click', () => {
+      const link = document.getElementById('bookingLinkText').textContent;
+      navigator.clipboard.writeText(link);
+      const btn = document.getElementById('copyLinkBtn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 2000);
+    });
+
+    document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        appointment_settings: {
+          slot_duration_minutes: parseInt(document.getElementById('slotDuration').value),
+          auto_approve: document.getElementById('autoApprove').value === 'true'
+        }
+      };
+      
+      const btn = document.getElementById('saveSettingsBtn');
+      btn.textContent = 'Saving...';
+      try {
+        await window.api.updateSettings(payload);
+        const fb = document.getElementById('settingsFeedback');
+        fb.style.display = 'block';
+        setTimeout(() => fb.style.display = 'none', 3000);
+      } catch (err) {
+        alert('Failed to save settings: ' + err.message);
+      } finally {
+        btn.textContent = 'Save Settings';
+      }
+    });
+
+    // ── AI Chat Assistant ─────────────────────────────────────────────────────
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const chatHistory = document.getElementById('chatHistory');
+    const sidebar = document.getElementById('chatHistorySidebar');
+    const sidebarContent = document.getElementById('chatHistorySidebarContent');
+    let historyLoaded = false;
+    let currentSessionId = null;
+
+    document.getElementById('toggleHistoryBtn').addEventListener('click', () => {
+      sidebar.classList.add('open');
+      if (!historyLoaded) loadChatHistorySidebar();
+    });
+    
+    document.getElementById('closeHistoryBtn').addEventListener('click', () => {
+      sidebar.classList.remove('open');
+    });
+
+    document.getElementById('newChatBtn').addEventListener('click', () => {
+      currentSessionId = null;
+      // Reset header title
+      const titleEl = document.querySelector('.chat-header-title');
+      if (titleEl) {
+        titleEl.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> AI Assistant`;
+      }
+      chatHistory.innerHTML = `
+        <div class="chat-msg assistant">
+          <div class="chat-avatar">AI</div>
+          <div class="chat-bubble">Hello! I am your Smart Dental Desk assistant. How can I help you manage your clinic today?</div>
+        </div>
+      `;
+    });
+
+    function renderMessage(role, content) {
+      const div = document.createElement('div');
+      div.className = `chat-msg ${role}`;
+      div.innerHTML = `
+        <div class="chat-avatar">${role === 'user' ? 'U' : 'AI'}</div>
+        <div class="chat-bubble">${content.replace(/\n/g, '<br>')}</div>
+      `;
+      chatHistory.appendChild(div);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    async function loadChatHistorySidebar() {
+      sidebarContent.innerHTML = '<p class="text-muted" style="text-align: center;">Loading...</p>';
+      try {
+        const res = await window.api.getChatSessions();
+        sidebarContent.innerHTML = '';
+        const sessions = res.sessions || [];
+
+        if (sessions.length > 0) {
+          sessions.forEach(session => {
+            const sid = session.session_id;
+            const name = session.session_name || 'Untitled Conversation';
+            const preview = session.preview || '';
+            const dateStr = session.created_at
+              ? new Date(session.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+              : '';
+
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.dataset.sessionId = sid;
+            div.innerHTML = `
+              <div class="history-item-header">
+                <div class="history-item-name" title="${name}">${name}</div>
+                <button class="history-item-delete" title="Delete this conversation" data-session-id="${sid}" onclick="event.stopPropagation()">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>
+              </div>
+              <div class="history-item-date">${dateStr}</div>
+              <div class="history-item-preview">${preview}</div>
+            `;
+
+            // Click to load session
+            div.addEventListener('click', async () => {
+              currentSessionId = sid;
+              chatHistory.innerHTML = '<div class="chat-msg"><div class="chat-avatar">AI</div><div class="chat-bubble text-muted">Loading conversation...</div></div>';
+              sidebar.classList.remove('open');
+              try {
+                const h = await window.api.getChatHistory(sid);
+                chatHistory.innerHTML = '';
+                (h.history || []).forEach(m => renderMessage(m.role, m.content));
+              } catch (e) {
+                chatHistory.innerHTML = '<div class="chat-msg"><div class="chat-avatar">AI</div><div class="chat-bubble" style="color:red">Failed to load conversation.</div></div>';
+              }
+            });
+
+            // Delete button
+            div.querySelector('.history-item-delete').addEventListener('click', async (e) => {
+              e.stopPropagation();
+              if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+              try {
+                await window.api.deleteChatSession(sid);
+                div.remove();
+                if (currentSessionId === sid) {
+                  currentSessionId = null;
+                  chatHistory.innerHTML = `
+                    <div class="chat-msg assistant">
+                      <div class="chat-avatar">AI</div>
+                      <div class="chat-bubble">Hello! I am your Smart Dental Desk assistant. How can I help you manage your clinic today?</div>
+                    </div>
+                  `;
+                }
+                if (!sidebarContent.querySelector('.history-item')) {
+                  sidebarContent.innerHTML = '<p class="text-muted" style="text-align: center;">No past conversations.</p>';
+                }
+              } catch (err) {
+                alert('Failed to delete conversation.');
+              }
+            });
+
+            sidebarContent.appendChild(div);
+          });
+        } else {
+          sidebarContent.innerHTML = '<p class="text-muted" style="text-align: center;">No past conversations.</p>';
+        }
+        historyLoaded = true;
+      } catch (err) {
+        sidebarContent.innerHTML = '<p style="color:red; text-align: center;">Error loading history.</p>';
+        console.error('Failed to load chat history', err);
+      }
+    }
+
+    chatForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = chatInput.value.trim();
+      if (!text) return;
+
+      // Get active mode from dropdown
+      const activeMode = document.querySelector('.mode-option.active')?.dataset.mode || 'thinking';
+
+      // Remove default greeting if it's a brand new chat
+      if (!currentSessionId && chatHistory.children.length === 1 && chatHistory.textContent.includes('Hello!')) {
+        chatHistory.innerHTML = '';
+      }
+
+      renderMessage('user', text);
+      chatInput.value = '';
+
+      // Loading indicator
+      const loadDiv = document.createElement('div');
+      loadDiv.className = 'chat-msg assistant';
+      loadDiv.innerHTML = `<div class="chat-avatar">AI</div><div class="chat-bubble text-muted">Thinking...</div>`;
+      chatHistory.appendChild(loadDiv);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+
+      try {
+        const res = await window.api.sendChatMessage(text, activeMode, '', currentSessionId);
+        if (res.session_id) currentSessionId = res.session_id;
+        
+        chatHistory.removeChild(loadDiv);
+        renderMessage('assistant', res.reply.content);
+        historyLoaded = false; // Force refresh sidebar on next open
+
+        // Update header title with the auto-generated session name
+        if (res.session_name) {
+          const titleEl = document.querySelector('.chat-header-title');
+          if (titleEl) {
+            titleEl.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> ${res.session_name}`;
+          }
+        }
+      } catch (err) {
+        chatHistory.removeChild(loadDiv);
+        renderMessage('assistant', 'Sorry, I encountered an error. Please try again later.');
+      }
+    });
+
+    // ── Dropdown Mode Selector ────────────────────────────────────────────────
+    const modeToggleBtn  = document.getElementById('modeToggleBtn');
+    const modeDropdown   = document.getElementById('modeDropdown');
+    const modeLabel      = document.getElementById('modeLabel');
+    const modePlaceholders = {
+      thinking:   'Ask for advice, workflow tips, treatment suggestions...',
+      data:       'e.g. Patients who haven\'t visited in 6 months...',
+      automation: 'e.g. Draft reminders for tomorrow\'s appointments...'
+    };
+
+    // Toggle dropdown open/close
+    modeToggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = modeDropdown.classList.toggle('open');
+      modeToggleBtn.setAttribute('aria-expanded', isOpen);
+    });
+
+    // Select a mode from the dropdown
+    document.querySelectorAll('.mode-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        document.querySelectorAll('.mode-option').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        const mode = opt.dataset.mode;
+        modeLabel.textContent = opt.querySelector('.mode-option-name').textContent;
+        chatInput.placeholder = modePlaceholders[mode] || 'Ask me anything...';
+        // Update toggle button icon to match selected mode
+        modeToggleBtn.querySelector('svg:first-child').replaceWith(
+          opt.querySelector('.mode-option-icon svg').cloneNode(true)
+        );
+        modeDropdown.classList.remove('open');
+        modeToggleBtn.setAttribute('aria-expanded', 'false');
+        chatInput.focus();
+      });
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', () => {
+      modeDropdown.classList.remove('open');
+      modeToggleBtn.setAttribute('aria-expanded', 'false');
+    });
+
+    // Initial load
+    loadHomeStats();
+  });
+</script>
+</body>
+</html>

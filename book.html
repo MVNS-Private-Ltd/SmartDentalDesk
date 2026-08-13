@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Book Appointment - Smart Dental Desk</title>
+  <link rel="stylesheet" href="./assets/style.css">
+  <style>
+    .booking-container {
+      max-width: 600px;
+      margin: 4rem auto;
+      padding: var(--space-6);
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-divider);
+    }
+    .clinic-header {
+      text-align: center;
+      margin-bottom: var(--space-6);
+    }
+    .clinic-header h1 { color: var(--color-primary); font-size: 1.8rem; }
+    .clinic-header p { color: var(--color-text-muted); }
+  </style>
+</head>
+<body>
+
+<div class="booking-container">
+  <div class="clinic-header" id="clinicHeader">
+    <h1 id="clinicName">Loading...</h1>
+    <p id="clinicAddress">Please wait while we fetch clinic details</p>
+  </div>
+
+  <form id="bookingForm" style="display:none;">
+    <div class="form-group" style="margin-bottom:1rem">
+      <label>Your Full Name</label>
+      <input type="text" id="patientName" class="form-control" required>
+    </div>
+    <div class="form-group" style="margin-bottom:1rem">
+      <label>Phone Number</label>
+      <input type="tel" id="patientPhone" class="form-control" required>
+    </div>
+    <div class="form-group" style="margin-bottom:1rem">
+      <label>Date</label>
+      <input type="date" id="apptDate" class="form-control" required>
+    </div>
+    <div class="form-group" style="margin-bottom:1rem">
+      <label>Time</label>
+      <input type="time" id="apptTime" class="form-control" required>
+    </div>
+    <div class="form-group" style="margin-bottom:1.5rem">
+      <label>Reason for visit</label>
+      <select id="apptService" class="form-control" required>
+        <option value="Consultation">Consultation</option>
+        <option value="Cleaning">Cleaning</option>
+        <option value="Checkup">Checkup</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary w-full" id="submitBtn">Request Appointment</button>
+  </form>
+
+  <div id="successMsg" style="display:none; text-align:center; padding: 2rem 0;">
+    <h2 style="color:var(--success); margin-bottom:1rem;">Appointment Requested!</h2>
+    <p>The clinic has received your request and will confirm shortly.</p>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const slug = urlParams.get('c');
+    
+    if (!slug) {
+      document.getElementById('clinicName').textContent = 'Invalid Link';
+      document.getElementById('clinicAddress').textContent = 'Please make sure you have the correct booking link.';
+      return;
+    }
+
+    let clinicId = null;
+
+    try {
+      const res = await fetch(`http://localhost:3001/api/public/clinic/${slug}`);
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error);
+      
+      document.getElementById('clinicName').textContent = data.clinic.name;
+      document.getElementById('clinicAddress').textContent = data.clinic.address || 'Address not provided';
+      clinicId = data.clinic.id;
+      
+      // Set min date to today
+      document.getElementById('apptDate').min = new Date().toISOString().split('T')[0];
+      
+      document.getElementById('bookingForm').style.display = 'block';
+    } catch (err) {
+      document.getElementById('clinicName').textContent = 'Clinic Not Found';
+      document.getElementById('clinicAddress').textContent = err.message;
+    }
+
+    document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const payload = {
+        clinic_id: clinicId,
+        patient_name: document.getElementById('patientName').value,
+        patient_phone: document.getElementById('patientPhone').value,
+        date: document.getElementById('apptDate').value,
+        time: document.getElementById('apptTime').value,
+        service: document.getElementById('apptService').value
+      };
+
+      const btn = document.getElementById('submitBtn');
+      btn.textContent = 'Submitting...';
+      btn.disabled = true;
+
+      try {
+        // In a real scenario, we'd have a POST /api/public/book route.
+        // For now, we simulate success as requested for the prototype.
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        document.getElementById('bookingForm').style.display = 'none';
+        document.getElementById('successMsg').style.display = 'block';
+      } catch (err) {
+        alert('Failed to book appointment.');
+        btn.textContent = 'Request Appointment';
+        btn.disabled = false;
+      }
+    });
+  });
+</script>
+</body>
+</html>

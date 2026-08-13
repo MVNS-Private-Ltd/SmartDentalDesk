@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Account · Smart Dental Desk</title>
+<meta name="description" content="Create your Smart Dental Desk account and start managing your clinic smarter.">
+<meta property="og:title" content="Create Account · Smart Dental Desk">
+<meta property="og:description" content="Join Smart Dental Desk — the simplest way to manage your dental clinic.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue-500: #3b82f6;
+    --blue-600: #2563eb;
+    --blue-700: #1d4ed8;
+    --indigo-600: #4f46e5;
+    --indigo-700: #4338ca;
+    --gray-50:  #f9fafb;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --error:    #ef4444;
+    --success:  #22c55e;
+    --radius:   12px;
+    --radius-lg:20px;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--gray-50);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  /* ── Auth card ── */
+  .auth-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+    max-width: 920px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(37,99,235,.18), 0 4px 16px rgba(0,0,0,.08);
+  }
+
+  /* ── LEFT: form panel ── */
+  .form-panel {
+    background: #fff;
+    padding: 2.75rem 2.75rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .bottom-hint {
+    font-size: .875rem;
+    color: var(--gray-500);
+    margin-top: 1.5rem;
+    text-align: center;
+  }
+  .bottom-hint a {
+    color: var(--blue-600);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .bottom-hint a:hover { text-decoration: underline; }
+
+  .form-panel h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: .375rem;
+    line-height: 1.2;
+  }
+  .form-subtitle {
+    font-size: .875rem;
+    color: var(--gray-400);
+    margin-bottom: 1.75rem;
+  }
+
+  .field { margin-bottom: 1.1rem; }
+  .field label { display: none; }
+
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input-wrap input {
+    width: 100%;
+    padding: .78rem 2.75rem .78rem 1rem;
+    border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius);
+    font-size: .88rem;
+    font-family: inherit;
+    color: var(--gray-900);
+    background: var(--gray-50);
+    transition: border-color .2s, box-shadow .2s, background .2s;
+    outline: none;
+  }
+  .input-wrap input:focus {
+    border-color: var(--blue-500);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(59,130,246,.14);
+  }
+  .input-wrap input.error-input {
+    border-color: var(--error);
+    box-shadow: 0 0 0 3px rgba(239,68,68,.10);
+  }
+  .input-wrap input.valid-input {
+    border-color: var(--success);
+  }
+  .input-icon {
+    position: absolute;
+    right: .85rem;
+    color: var(--gray-400);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+  }
+  .toggle-pw {
+    position: absolute;
+    right: .85rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    transition: color .2s;
+  }
+  .toggle-pw:hover { color: var(--blue-600); }
+
+  /* Password strength */
+  .pw-strength {
+    margin-top: .4rem;
+    display: flex;
+    gap: .3rem;
+    align-items: center;
+  }
+  .pw-bar {
+    flex: 1;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--gray-200);
+    transition: background .3s;
+  }
+  .pw-label {
+    font-size: .68rem;
+    color: var(--gray-400);
+    min-width: 45px;
+    text-align: right;
+  }
+
+  /* Hints */
+  .field-hints {
+    margin-top: .45rem;
+    display: flex;
+    flex-direction: column;
+    gap: .2rem;
+  }
+  .field-hint {
+    font-size: .7rem;
+    color: var(--gray-400);
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    transition: color .2s;
+  }
+  .field-hint.met { color: var(--success); }
+  .field-hint svg { flex-shrink: 0; }
+
+  .error-msg {
+    font-size: .78rem;
+    color: var(--error);
+    margin-bottom: 1rem;
+    display: none;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: .5rem .75rem;
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: .85rem;
+    border: none;
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--blue-600), var(--indigo-600));
+    color: #fff;
+    font-size: .95rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s, filter .15s;
+    box-shadow: 0 4px 16px rgba(37,99,235,.35);
+    margin-top: .25rem;
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(37,99,235,.4);
+    filter: brightness(1.05);
+  }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: .7; cursor: not-allowed; transform: none; }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin: 1.25rem 0;
+    color: var(--gray-400);
+    font-size: .78rem;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--gray-200);
+  }
+
+  .social-row {
+    display: flex;
+    justify-content: center;
+    gap: .75rem;
+  }
+  .social-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px; height: 44px;
+    border: 1.5px solid var(--gray-200);
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color .2s, box-shadow .2s, transform .15s;
+    text-decoration: none;
+  }
+  .social-btn:hover {
+    border-color: var(--blue-500);
+    box-shadow: 0 2px 12px rgba(59,130,246,.18);
+    transform: translateY(-1px);
+  }
+
+  .brand-mini {
+    margin-top: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .75rem;
+    color: var(--gray-400);
+  }
+
+  /* ── RIGHT: illustration panel ── */
+  .illus-panel {
+    background: linear-gradient(145deg, #4f46e5 0%, #2563eb 40%, #1e40af 75%, #1e3a8a 100%);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem;
+    overflow: hidden;
+  }
+
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    opacity: .18;
+    filter: blur(48px);
+  }
+  .blob-1 { width: 260px; height: 260px; background: #818cf8; top: -60px; right: -60px; }
+  .blob-2 { width: 200px; height: 200px; background: #38bdf8; bottom: -40px; left: -40px; }
+  .blob-3 { width: 150px; height: 150px; background: #a78bfa; bottom: 120px; right: 20px; }
+
+  .illus-accent {
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(165,180,252,.4), rgba(129,140,248,.15));
+    border: 2px solid rgba(255,255,255,.15);
+  }
+
+  .feature-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    max-width: 260px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .fcard {
+    background: rgba(255,255,255,.13);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: var(--radius);
+    padding: 1rem 1.125rem;
+    color: #fff;
+    animation: float 4s ease-in-out infinite;
+  }
+  .fcard:nth-child(2) { animation-delay: 1.4s; }
+  .fcard:nth-child(3) { animation-delay: 2.8s; }
+
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+  }
+
+  .fcard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: .6rem;
+  }
+  .fcard-label {
+    font-size: .68rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: rgba(255,255,255,.65);
+  }
+  .fcard-icon {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .fcard-icon.teal   { background: rgba(20,184,166,.35); }
+  .fcard-icon.amber  { background: rgba(251,191,36,.25); }
+  .fcard-icon.purple { background: rgba(167,139,250,.3); }
+
+  .fcard-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: .5rem;
+  }
+
+  .fcard-desc {
+    font-size: .78rem;
+    color: rgba(255,255,255,.75);
+    line-height: 1.45;
+  }
+  .fcard-desc strong {
+    color: #fff;
+    font-weight: 600;
+    display: block;
+    margin-bottom: .2rem;
+  }
+
+  .pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    margin-top: .5rem;
+  }
+  .pill {
+    font-size: .68rem;
+    padding: .25rem .65rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,.18);
+    color: #fff;
+    font-weight: 500;
+  }
+
+  @media (max-width: 640px) {
+    .auth-card { grid-template-columns: 1fr; max-width: 420px; }
+    .illus-panel { display: none; }
+    .form-panel { padding: 2.5rem 1.75rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="auth-card">
+
+  <!-- LEFT: Form -->
+  <div class="form-panel">
+    <h1>Sign Up</h1>
+    <p class="form-subtitle">Create your free clinic account in seconds.</p>
+
+    <form id="registerForm" novalidate>
+      <div class="field">
+        <label for="name">Full Name</label>
+        <div class="input-wrap">
+          <input id="name" type="text" placeholder="Dr. Full Name" autocomplete="name" required>
+          <span class="input-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <div class="input-wrap">
+          <input id="email" type="email" placeholder="you@clinic.com" autocomplete="email" required>
+          <span class="input-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="input-wrap">
+          <input id="password" type="password" placeholder="Create a password" autocomplete="new-password" required>
+          <button type="button" class="toggle-pw" id="togglePw" aria-label="Toggle password">
+            <svg id="eyeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="pw-strength" id="pwStrength" style="display:none">
+          <div class="pw-bar" id="bar1"></div>
+          <div class="pw-bar" id="bar2"></div>
+          <div class="pw-bar" id="bar3"></div>
+          <div class="pw-bar" id="bar4"></div>
+          <span class="pw-label" id="pwLabel">Weak</span>
+        </div>
+        <div class="field-hints" id="pwHints">
+          <div class="field-hint" id="hint-len">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+            Minimum 8 characters
+          </div>
+          <div class="field-hint" id="hint-upper">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+            Contains uppercase letter
+          </div>
+          <div class="field-hint" id="hint-digit">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+            Contains a number
+          </div>
+        </div>
+      </div>
+
+      <p id="registerError" class="error-msg">Please fill in all fields correctly.</p>
+
+      <button type="submit" class="btn-primary" id="signUpBtn">Sign Up</button>
+    </form>
+
+    <p class="bottom-hint">Already a member? <a href="./login.html">Sign in</a></p>
+
+    <div class="divider">or sign up with</div>
+    <div class="social-row">
+      <a href="#" class="social-btn" aria-label="Sign up with Google">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      </a>
+    </div>
+
+    <div class="brand-mini">
+      <svg width="22" height="22" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#2563eb"/><path d="M16 8c-2.8 0-5 1.9-5 4.6 0 1.7.6 2.7 1.2 3.9.7 1.4 1.4 3 1.6 6.1.1 1.4 1 2.4 2.2 2.4s2.1-1 2.2-2.4c.2-3.1.9-4.7 1.6-6.1.6-1.2 1.2-2.2 1.2-3.9C21 9.9 18.8 8 16 8Z" fill="#fff"/></svg>
+      <span>Smart Dental Desk</span>
+    </div>
+  </div>
+
+  <!-- RIGHT: Illustration panel -->
+  <div class="illus-panel">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <div class="illus-accent"></div>
+
+    <div class="feature-cards">
+      <!-- Card 1: Patients -->
+      <div class="fcard">
+        <div class="fcard-header">
+          <span class="fcard-label">Active Patients</span>
+          <span class="fcard-icon teal">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </span>
+        </div>
+        <div class="fcard-value">176</div>
+        <div class="fcard-desc">↑ 12 new patients this month</div>
+      </div>
+
+      <!-- Card 2: Features pills -->
+      <div class="fcard">
+        <div class="fcard-header">
+          <span class="fcard-label">What you get</span>
+          <span class="fcard-icon purple">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </span>
+        </div>
+        <div class="fcard-desc">
+          <strong>Everything included</strong>
+        </div>
+        <div class="pill-row">
+          <span class="pill">Appointments</span>
+          <span class="pill">Records</span>
+          <span class="pill">Invoices</span>
+          <span class="pill">Reminders</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Secure data -->
+      <div class="fcard">
+        <div style="width:34px;height:34px;border-radius:10px;background:rgba(251,191,36,.25);display:flex;align-items:center;justify-content:center;margin-bottom:.6rem">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div class="fcard-desc">
+          <strong>Your data, your rules</strong>
+          HIPAA-friendly. Records stay private and encrypted.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="./assets/app.js"></script>
+<script>
+  // Toggle password visibility
+  const pwInput = document.getElementById('password');
+  const togglePw = document.getElementById('togglePw');
+  const eyeSlashSVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+  const eyeSVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>`;
+
+  togglePw.addEventListener('click', () => {
+    const isHidden = pwInput.type === 'password';
+    pwInput.type = isHidden ? 'text' : 'password';
+    togglePw.innerHTML = isHidden ? eyeSlashSVG : eyeSVG;
+  });
+
+  // Password strength meter
+  const bars    = [document.getElementById('bar1'), document.getElementById('bar2'), document.getElementById('bar3'), document.getElementById('bar4')];
+  const pwLabel = document.getElementById('pwLabel');
+  const barColors = ['#ef4444','#f97316','#eab308','#22c55e'];
+  const barLabels = ['Weak','Fair','Good','Strong'];
+
+  pwInput.addEventListener('input', () => {
+    const v = pwInput.value;
+    const strength = document.getElementById('pwStrength');
+
+    if (!v) { strength.style.display = 'none'; return; }
+    strength.style.display = 'flex';
+
+    let score = 0;
+    if (v.length >= 8)    score++;
+    if (/[A-Z]/.test(v))  score++;
+    if (/[0-9]/.test(v))  score++;
+    if (/[^A-Za-z0-9]/.test(v)) score++;
+
+    bars.forEach((b, i) => {
+      b.style.background = i < score ? barColors[score - 1] : '#e5e7eb';
+    });
+    pwLabel.textContent = barLabels[score - 1] || 'Weak';
+    pwLabel.style.color  = barColors[score - 1] || '#9ca3af';
+
+    // Hint states
+    document.getElementById('hint-len').classList.toggle('met',   v.length >= 8);
+    document.getElementById('hint-upper').classList.toggle('met', /[A-Z]/.test(v));
+    document.getElementById('hint-digit').classList.toggle('met', /[0-9]/.test(v));
+  });
+
+  // Form submission
+  document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const name  = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const pass  = document.getElementById('password').value;
+    const err   = document.getElementById('registerError');
+    const btn   = document.getElementById('signUpBtn');
+
+    let valid = true;
+    if (!name)  { document.getElementById('name').classList.add('error-input');  valid = false; }
+    if (!email) { document.getElementById('email').classList.add('error-input'); valid = false; }
+    if (!pass || pass.length < 6) { document.getElementById('password').classList.add('error-input'); valid = false; }
+
+    if (!valid) { 
+      err.textContent = 'Please fill out all fields correctly. Password must be at least 6 characters.';
+      err.style.display = 'block'; 
+      return; 
+    }
+
+    err.style.display = 'none';
+    const originalText = btn.textContent;
+    btn.textContent = 'Creating account…';
+    btn.disabled = true;
+
+    try {
+      // Call real API
+      const res = await window.api.register({ name, email, password: pass });
+      
+      // Store token and user data
+      localStorage.setItem('sdd_token',         res.access_token);
+      localStorage.setItem('sdd_refresh_token', res.refresh_token);
+      localStorage.setItem('sdd_user', JSON.stringify(res.user));
+      if (res.clinic) {
+        localStorage.setItem('sdd_clinic', JSON.stringify(res.clinic));
+      }
+
+      // Redirect to dashboard
+      window.location.href = './dashboard.html';
+    } catch (error) {
+      err.textContent = error.message || 'Registration failed. Please try again.';
+      err.style.display = 'block';
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  });
+
+  // Clear errors on input
+  ['name','email','password'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      document.getElementById(id).classList.remove('error-input');
+      document.getElementById('registerError').style.display = 'none';
+    });
+  });
+</script>
+</body>
+</html>

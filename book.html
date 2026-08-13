@@ -78,7 +78,9 @@
     let clinicId = null;
 
     try {
-      const res = await fetch(`http://localhost:3001/api/public/clinic/${slug}`);
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const API_BASE = isLocalhost ? 'http://localhost:3001/api' : 'https://smartdentaldesk.onrender.com/api';
+      const res = await fetch(`${API_BASE}/public/clinic/${slug}`);
       const data = await res.json();
       
       if (!res.ok) throw new Error(data.error);

@@ -46,7 +46,9 @@ window.api = (function() {
       const data = await response.json();
 
       // If 401 and not already a retry, attempt a silent token refresh then retry once
-      if (response.status === 401 && !isRetry) {
+      // Skip this for auth endpoints — a 401 there means bad credentials, not an expired token
+      const isAuthEndpoint = endpoint.startsWith('/auth/');
+      if (response.status === 401 && !isRetry && !isAuthEndpoint) {
         try {
           await refreshAccessToken();
           return request(endpoint, options, true); // retry with new token

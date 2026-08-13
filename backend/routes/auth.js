@@ -150,6 +150,70 @@ router.post('/login', loginRules, async (req, res, next) => {
   }
 });
 
+// ── POST /api/auth/oauth-session ──────────────────────────────────────────────
+// Called after Google OAuth redirect — verifies the token, fetches or auto-creates
+// the clinic record for first-time Google sign-ins, returns the standard session shape.
+router.post('/oauth-session', async (req, res, next) => {
+  try {
+    const { access_token, refresh_token } = req.body;
+    if (!access_token) {
+      return res.status(400).json({ error: 'access_token is required.' });
+    }
+
+    // Verify the token with Supabase and get the user
+    const { data: { user }, error: userError } = await supabase.auth.getUser(access_token);
+    if (userError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired Google token.' });
+    }
+
+    // Try to fetch an existing clinic for this user
+    let { data: clinic } = await supabase
+      .from('clinics')
+      .select('id, name, owner_name, subscription_plan')
+      .eq('owner_id', user.id)
+      .single();
+
+    // First-time Google sign-in: auto-create a clinic record
+    if (!clinic) {
+      const crypto = require('crypto');
+      const bookingSlug = crypto.randomBytes(3).toString('hex') + Math.random().toString(36).substring(2, 5);
+      const displayName = user.user_metadata?.full_name || user.email.split('@')[0];
+
+      const { data: newClinic, error: clinicError } = await supabase
+        .from('clinics')
+        .insert({
+          owner_id         : user.id,
+          owner_name       : displayName,
+          name             : `${displayName}'s Clinic`,
+          email            : user.email,
+          phone            : null,
+          subscription_plan: 'free',
+          booking_slug     : bookingSlug
+        })
+        .select('id, name, owner_name, subscription_plan')
+        .single();
+
+      if (clinicError) throw clinicError;
+      clinic = newClinic;
+    }
+
+    res.json({
+      message      : 'Signed in with Google successfully!',
+      access_token,
+      refresh_token : refresh_token || null,
+      user: {
+        id   : user.id,
+        email: user.email,
+        name : clinic.owner_name
+      },
+      clinic
+    });
+
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── POST /api/auth/logout ─────────────────────────────────────────────────────
 router.post('/logout', requireAuth, async (req, res, next) => {
   try {

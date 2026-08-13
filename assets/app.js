@@ -4,6 +4,8 @@ window.api = (function() {
   const BASE_URL       = 'https://smartdentaldesk.onrender.com/api';
   const SUPABASE_URL   = 'https://qxioydfqnuuphgisbqxx.supabase.co';
   const SUPABASE_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4aW95ZGZxbnV1cGhnaXNicXh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxODc1NjMsImV4cCI6MjEwMTc2MzU2M30.LZAeQdUADzSRyL2ydBs3mdOAm681PHFUmKkCXtZErec';
+  // Redirect URI — must match what is set in Supabase dashboard > Auth > URL Configuration
+  const OAUTH_REDIRECT = 'https://smart-dental-desk.vercel.app/login.html';
 
   function getToken()        { return localStorage.getItem('sdd_token'); }
   function getRefreshToken() { return localStorage.getItem('sdd_refresh_token'); }
@@ -74,9 +76,56 @@ window.api = (function() {
     }
   }
 
+  // ── Google OAuth ────────────────────────────────────────────────────────────
+
+  // Step 1: Redirect user to Google via Supabase OAuth
+  async function loginWithGoogle() {
+    const url = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(OAUTH_REDIRECT)}`;
+    window.location.href = url;
+  }
+
+  // Step 2: Called on login.html load — checks if Google just redirected back with a token
+  // Returns true if a callback was handled (page will redirect to dashboard), false otherwise
+  async function handleOAuthCallback() {
+    const hash = window.location.hash;
+    if (!hash || !hash.includes('access_token')) return false;
+
+    // Parse the fragment (Supabase puts tokens in the hash after OAuth)
+    const params = new URLSearchParams(hash.slice(1)); // remove leading '#'
+    const accessToken  = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+
+    if (!accessToken) return false;
+
+    // Clear the hash from the URL so it doesn't persist
+    history.replaceState(null, '', window.location.pathname);
+
+    // Call backend to verify token + fetch/create clinic
+    const res = await fetch(`${BASE_URL}/auth/oauth-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ access_token: accessToken, refresh_token: refreshToken })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Google sign-in failed. Please try again.');
+    }
+
+    const data = await res.json();
+    localStorage.setItem('sdd_token',         data.access_token);
+    localStorage.setItem('sdd_refresh_token', data.refresh_token);
+    localStorage.setItem('sdd_user',   JSON.stringify(data.user));
+    if (data.clinic) localStorage.setItem('sdd_clinic', JSON.stringify(data.clinic));
+
+    return true; // caller should redirect to dashboard
+  }
+
   return {
     login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
     register: (payload) => request('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+    loginWithGoogle,
+    handleOAuthCallback,
     getDashboardStats: () => request('/dashboard/stats'),
 
     // Endpoints

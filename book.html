@@ -78,7 +78,7 @@
     let clinicId = null;
 
     try {
-      const res = await fetch(`http://localhost:3001/api/public/clinic/${slug}`);
+      const res = await fetch(`https://smartdentaldesk.onrender.com/api/public/clinic/${slug}`);
       const data = await res.json();
       
       if (!res.ok) throw new Error(data.error);

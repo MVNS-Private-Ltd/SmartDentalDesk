@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In · Smart Dental Desk</title>
+<meta name="description" content="Sign in to your Smart Dental Desk dashboard and manage your clinic.">
+<meta property="og:title" content="Sign In · Smart Dental Desk">
+<meta property="og:description" content="Sign in to your Smart Dental Desk dashboard.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue-50:  #eff6ff;
+    --blue-100: #dbeafe;
+    --blue-500: #3b82f6;
+    --blue-600: #2563eb;
+    --blue-700: #1d4ed8;
+    --indigo-600: #4f46e5;
+    --indigo-700: #4338ca;
+    --violet-600: #7c3aed;
+    --gray-50:  #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --error:    #ef4444;
+    --radius:   12px;
+    --radius-lg:20px;
+    --shadow:   0 4px 24px rgba(37,99,235,.12);
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--gray-50);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  /* ── Auth card ── */
+  .auth-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+    max-width: 900px;
+    min-height: 560px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(37,99,235,.18), 0 4px 16px rgba(0,0,0,.08);
+  }
+
+  /* ── LEFT: form panel ── */
+  .form-panel {
+    background: #fff;
+    padding: 3rem 2.75rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .top-hint {
+    font-size: .75rem;
+    color: var(--gray-400);
+    margin-bottom: 2.25rem;
+    text-align: right;
+  }
+  .top-hint a {
+    color: var(--blue-600);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .top-hint a:hover { text-decoration: underline; }
+
+  .form-panel h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: .375rem;
+    line-height: 1.2;
+  }
+  .form-subtitle {
+    font-size: .875rem;
+    color: var(--gray-400);
+    margin-bottom: 2rem;
+  }
+
+  .field {
+    margin-bottom: 1.25rem;
+  }
+  .field label {
+    display: none; /* visually hidden; placeholder acts as label */
+  }
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input-wrap input {
+    width: 100%;
+    padding: .8rem 2.75rem .8rem 1rem;
+    border: 1.5px solid var(--gray-200, #e5e7eb);
+    border-radius: var(--radius);
+    font-size: .9rem;
+    font-family: inherit;
+    color: var(--gray-900);
+    background: var(--gray-50);
+    transition: border-color .2s, box-shadow .2s, background .2s;
+    outline: none;
+  }
+  .input-wrap input:focus {
+    border-color: var(--blue-500);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(59,130,246,.14);
+  }
+  .input-wrap input.error-input {
+    border-color: var(--error);
+    box-shadow: 0 0 0 3px rgba(239,68,68,.10);
+  }
+  .input-icon {
+    position: absolute;
+    right: .85rem;
+    color: var(--gray-400);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+  }
+  .toggle-pw {
+    position: absolute;
+    right: .85rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    transition: color .2s;
+  }
+  .toggle-pw:hover { color: var(--blue-600); }
+
+  .field-hints {
+    margin-top: .45rem;
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+  }
+  .field-hint {
+    font-size: .72rem;
+    color: var(--gray-400);
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+  }
+  .field-hint svg { flex-shrink: 0; }
+
+  .error-msg {
+    font-size: .78rem;
+    color: var(--error);
+    margin-bottom: 1rem;
+    display: none;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: .55rem .75rem;
+  }
+
+  .remember-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: 1.5rem;
+  }
+  .remember-row input[type="checkbox"] {
+    accent-color: var(--blue-600);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .remember-row label {
+    font-size: .8rem;
+    color: var(--gray-500);
+    cursor: pointer;
+    display: block;
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: .85rem;
+    border: none;
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--blue-600), var(--indigo-600));
+    color: #fff;
+    font-size: .95rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s, filter .15s;
+    box-shadow: 0 4px 16px rgba(37,99,235,.35);
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(37,99,235,.4);
+    filter: brightness(1.05);
+  }
+  .btn-primary:active { transform: translateY(0); }
+
+  .signup-hint {
+    text-align: center;
+    margin-top: .9rem;
+    font-size: .85rem;
+    color: var(--gray-400, #9ca3af);
+  }
+  .signup-hint a {
+    color: var(--color-primary, #2563eb);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .signup-hint a:hover {
+    text-decoration: underline;
+  }
+
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin: 1.5rem 0;
+    color: var(--gray-400);
+    font-size: .78rem;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--gray-200, #e5e7eb);
+  }
+
+  .social-row {
+    display: flex;
+    justify-content: center;
+    gap: .75rem;
+  }
+  .social-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 1.5px solid var(--gray-200, #e5e7eb);
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color .2s, box-shadow .2s, transform .15s;
+    text-decoration: none;
+  }
+  .social-btn:hover {
+    border-color: var(--blue-500);
+    box-shadow: 0 2px 12px rgba(59,130,246,.18);
+    transform: translateY(-1px);
+  }
+
+  .brand-mini {
+    margin-top: auto;
+    padding-top: 2rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .75rem;
+    color: var(--gray-400);
+  }
+  .brand-mini svg { flex-shrink: 0; }
+
+  /* ── RIGHT: illustration panel ── */
+  .illus-panel {
+    background: linear-gradient(145deg, #4f46e5 0%, #2563eb 40%, #1e40af 75%, #1e3a8a 100%);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem;
+    overflow: hidden;
+  }
+
+  /* Decorative blobs */
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    opacity: .18;
+    filter: blur(48px);
+  }
+  .blob-1 {
+    width: 260px; height: 260px;
+    background: #818cf8;
+    top: -60px; right: -60px;
+  }
+  .blob-2 {
+    width: 200px; height: 200px;
+    background: #38bdf8;
+    bottom: -40px; left: -40px;
+  }
+  .blob-3 {
+    width: 150px; height: 150px;
+    background: #a78bfa;
+    bottom: 120px; right: 20px;
+  }
+
+  /* Floating accent shape top-right */
+  .illus-accent {
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(165,180,252,.4), rgba(129,140,248,.15));
+    border: 2px solid rgba(255,255,255,.15);
+  }
+
+  .feature-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    max-width: 260px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .fcard {
+    background: rgba(255,255,255,.13);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: var(--radius);
+    padding: 1rem 1.125rem;
+    color: #fff;
+    animation: float 4s ease-in-out infinite;
+  }
+  .fcard:nth-child(2) { animation-delay: 1.4s; }
+
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+  }
+
+  .fcard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: .6rem;
+  }
+  .fcard-label {
+    font-size: .68rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: rgba(255,255,255,.65);
+  }
+  .fcard-icon {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .fcard-icon.teal { background: rgba(20,184,166,.35); }
+  .fcard-icon.amber { background: rgba(251,191,36,.25); }
+
+  .fcard-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: .5rem;
+  }
+
+  .mini-chart {
+    height: 36px;
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+  }
+  .mini-chart span {
+    flex: 1;
+    border-radius: 3px 3px 0 0;
+    background: rgba(255,255,255,.35);
+    transition: height .3s;
+  }
+  .mini-chart span.hi { background: rgba(255,255,255,.85); }
+
+  .fcard-desc {
+    font-size: .78rem;
+    color: rgba(255,255,255,.75);
+    line-height: 1.45;
+  }
+  .fcard-desc strong {
+    color: #fff;
+    font-weight: 600;
+    display: block;
+    margin-bottom: .2rem;
+  }
+
+  .fcard-key-icon {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    background: rgba(251,191,36,.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: .6rem;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .auth-card { grid-template-columns: 1fr; max-width: 420px; }
+    .illus-panel { display: none; }
+    .form-panel { padding: 2.5rem 1.75rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="auth-card">
+
+  <!-- LEFT: Form -->
+  <div class="form-panel">
+
+    <h1>Sign In</h1>
+    <p class="form-subtitle">Welcome back — enter your details below.</p>
+
+    <form id="loginForm" novalidate>
+      <div class="field">
+        <label for="email">Email</label>
+        <div class="input-wrap">
+          <input id="email" type="email" placeholder="Email address" autocomplete="email" required>
+          <span class="input-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="input-wrap">
+          <input id="password" type="password" placeholder="Password" autocomplete="current-password" required>
+          <button type="button" class="toggle-pw" id="togglePw" aria-label="Toggle password visibility">
+            <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <p id="loginError" class="error-msg">Please enter both email and password.</p>
+
+      <div class="remember-row">
+        <input type="checkbox" id="rememberMe">
+        <label for="rememberMe">Remember me on this device</label>
+      </div>
+
+      <button type="submit" class="btn-primary" id="signInBtn">Sign In</button>
+      <p class="signup-hint">Don't have an account? <a href="./register.html">Sign up</a></p>
+    </form>
+
+    <div class="divider">or continue with</div>
+
+    <div class="social-row">
+      <!-- Google -->
+      <a href="#" class="social-btn" aria-label="Sign in with Google">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      </a>
+
+    </div>
+
+    <div class="brand-mini">
+      <svg width="22" height="22" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#2563eb"/><path d="M16 8c-2.8 0-5 1.9-5 4.6 0 1.7.6 2.7 1.2 3.9.7 1.4 1.4 3 1.6 6.1.1 1.4 1 2.4 2.2 2.4s2.1-1 2.2-2.4c.2-3.1.9-4.7 1.6-6.1.6-1.2 1.2-2.2 1.2-3.9C21 9.9 18.8 8 16 8Z" fill="#fff"/></svg>
+      <span>Smart Dental Desk</span>
+    </div>
+  </div>
+
+  <!-- RIGHT: Illustration panel -->
+  <div class="illus-panel">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <div class="illus-accent"></div>
+
+    <div class="feature-cards">
+      <!-- Card 1: Appointments today -->
+      <div class="fcard">
+        <div class="fcard-header">
+          <span class="fcard-label">Today's Appointments</span>
+          <span class="fcard-icon teal">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </span>
+        </div>
+        <div class="fcard-value">12</div>
+        <div class="mini-chart">
+          <span style="height:40%"></span>
+          <span style="height:65%"></span>
+          <span style="height:45%"></span>
+          <span class="hi" style="height:85%"></span>
+          <span style="height:55%"></span>
+          <span style="height:70%"></span>
+          <span class="hi" style="height:100%"></span>
+        </div>
+      </div>
+
+      <!-- Card 2: Secure data -->
+      <div class="fcard">
+        <div class="fcard-key-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        </div>
+        <div class="fcard-desc">
+          <strong>Your data, your rules</strong>
+          Patient records are encrypted and only accessible to your clinic.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="./assets/app.js"></script>
+<script>
+  // Toggle password visibility
+  const pwInput = document.getElementById('password');
+  const togglePw = document.getElementById('togglePw');
+  const eyeIcon = document.getElementById('eyeIcon');
+  const eyeSlashSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+  const eyeSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>`;
+
+  togglePw.addEventListener('click', () => {
+    const isHidden = pwInput.type === 'password';
+    pwInput.type = isHidden ? 'text' : 'password';
+    togglePw.innerHTML = isHidden ? eyeSlashSVG : eyeSVG;
+  });
+
+  // Form submission
+  document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const pass  = document.getElementById('password').value;
+    const err   = document.getElementById('loginError');
+    const btn   = document.getElementById('signInBtn');
+
+    if (!email || !pass) {
+      err.textContent = 'Please enter both email and password.';
+      err.style.display = 'block';
+      document.getElementById('email').classList.toggle('error-input', !email);
+      document.getElementById('password').classList.toggle('error-input', !pass);
+      return;
+    }
+    
+    err.style.display = 'none';
+    const originalText = btn.textContent;
+    btn.textContent = 'Signing in…';
+    btn.disabled = true;
+
+    try {
+      // Call real API
+      const res = await window.api.login(email, pass);
+      
+      // Store token and user data
+      localStorage.setItem('sdd_token',         res.access_token);
+      localStorage.setItem('sdd_refresh_token', res.refresh_token);
+      localStorage.setItem('sdd_user', JSON.stringify(res.user));
+      if (res.clinic) {
+        localStorage.setItem('sdd_clinic', JSON.stringify(res.clinic));
+      }
+
+      // Redirect to dashboard
+      window.location.href = './dashboard.html';
+    } catch (error) {
+      err.textContent = error.message || 'Login failed. Please try again.';
+      err.style.display = 'block';
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  });
+
+  // Clear error on input
+  ['email','password'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      document.getElementById(id).classList.remove('error-input');
+      document.getElementById('loginError').style.display = 'none';
+    });
+  });
+</script>
+</body>
+</html>

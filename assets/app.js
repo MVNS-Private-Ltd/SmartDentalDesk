@@ -1,8 +1,7 @@
 
 // SmartDentalDesk API Client
 window.api = (function() {
-  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  const BASE_URL       = isLocalhost ? 'http://localhost:3001/api' : 'https://smartdentaldesk.onrender.com/api';
+  const BASE_URL       = 'http://localhost:3001/api';
   const SUPABASE_URL   = 'https://qxioydfqnuuphgisbqxx.supabase.co';
   const SUPABASE_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4aW95ZGZxbnV1cGhnaXNicXh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxODc1NjMsImV4cCI6MjEwMTc2MzU2M30.LZAeQdUADzSRyL2ydBs3mdOAm681PHFUmKkCXtZErec';
 

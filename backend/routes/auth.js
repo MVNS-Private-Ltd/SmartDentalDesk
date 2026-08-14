@@ -237,4 +237,57 @@ router.get('/me', requireAuth, async (req, res) => {
   });
 });
 
+// ── POST /api/auth/forgot-password ────────────────────────────────────────────
+//  Sends a Supabase password-reset email to the given address.
+//  Always responds 200 to prevent email-enumeration attacks.
+router.post('/forgot-password', [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required')
+], async (req, res, next) => {
+  try {
+    if (!validate(req, res)) return;
+
+    const { email }     = req.body;
+    const redirectTo    = process.env.RESET_PASSWORD_REDIRECT;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      ...(redirectTo && { redirectTo })
+    });
+
+    if (error) throw error;
+
+    // Always return success — never reveal whether the email exists
+    res.json({ message: 'If an account with that email exists, a reset link has been sent.' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/auth/reset-password ─────────────────────────────────────────────
+//  Verifies the Supabase recovery access_token from the reset-link hash and
+//  updates the user's password.
+router.post('/reset-password', [
+  body('access_token').notEmpty().withMessage('Reset token is required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], async (req, res, next) => {
+  try {
+    if (!validate(req, res)) return;
+
+    const { access_token, password } = req.body;
+
+    // Verify the recovery token and get the associated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser(access_token);
+    if (userError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired reset link. Please request a new one.' });
+    }
+
+    // Update password via admin client (bypasses RLS)
+    const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, { password });
+    if (updateError) throw updateError;
+
+    res.json({ message: 'Password updated successfully! You can now sign in.' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

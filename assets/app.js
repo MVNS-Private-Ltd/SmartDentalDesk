@@ -4,8 +4,8 @@ window.api = (function() {
   const BASE_URL       = 'https://smartdentaldesk.onrender.com/api';
   const SUPABASE_URL   = 'https://qxioydfqnuuphgisbqxx.supabase.co';
   const SUPABASE_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4aW95ZGZxbnV1cGhnaXNicXh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxODc1NjMsImV4cCI6MjEwMTc2MzU2M30.LZAeQdUADzSRyL2ydBs3mdOAm681PHFUmKkCXtZErec';
-  // Redirect URI — must match what is set in Supabase dashboard > Auth > URL Configuration
-  const OAUTH_REDIRECT = 'https://smart-dental-desk.vercel.app/login.html';
+  // Redirect URIs — must match what is set in Supabase dashboard > Auth > URL Configuration
+  const OAUTH_REDIRECT  = 'https://smart-dental-desk.vercel.app/login.html';
 
   function getToken()        { return localStorage.getItem('sdd_token'); }
   function getRefreshToken() { return localStorage.getItem('sdd_refresh_token'); }
@@ -124,6 +124,8 @@ window.api = (function() {
   return {
     login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
     register: (payload) => request('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+    forgotPassword: (email) => request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+    resetPassword: (access_token, password) => request('/auth/reset-password', { method: 'POST', body: JSON.stringify({ access_token, password }) }),
     loginWithGoogle,
     handleOAuthCallback,
     getDashboardStats: () => request('/dashboard/stats'),

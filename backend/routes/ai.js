@@ -216,8 +216,8 @@ router.put('/sessions/:sessionId/rename', [
 // ── POST /api/ai/chat ─────────────────────────────────────────────────────────
 const chatRules = [
   body('message').trim().notEmpty().withMessage('Message is required'),
-  body('mode').optional().isIn(['data', 'thinking', 'automation']).withMessage('Invalid mode'),
-  body('session_id').optional().isUUID().withMessage('Invalid session ID'),
+  body('mode').optional({ nullable: true, checkFalsy: true }).isIn(['data', 'thinking', 'automation']).withMessage('Invalid mode'),
+  body('session_id').optional({ nullable: true, checkFalsy: true }).isUUID().withMessage('Invalid session ID'),
 ];
 
 router.post('/chat', chatRules, async (req, res, next) => {

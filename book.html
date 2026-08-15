@@ -3,129 +3,516 @@
 <head>
   <meta charset="UTF-8">
   <title>Book Appointment - Smart Dental Desk</title>
-  <link rel="stylesheet" href="./assets/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
   <style>
-    .booking-container {
-      max-width: 600px;
-      margin: 4rem auto;
-      padding: var(--space-6);
-      background: var(--color-surface);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--color-divider);
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #16a34a;
+      --success-hover: #15803d;
+      --bg-color: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --radius: 12px;
+      --shadow: 0 10px 25px rgba(0,0,0,0.05);
     }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+
+    .booking-card {
+      background: var(--surface);
+      width: 100%;
+      max-width: 550px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: none; /* hidden until clinic loads */
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
     .clinic-header {
+      padding: 2rem;
       text-align: center;
-      margin-bottom: var(--space-6);
+      border-bottom: 1px solid var(--border);
+      background: #fafafa;
     }
-    .clinic-header h1 { color: var(--color-primary); font-size: 1.8rem; }
-    .clinic-header p { color: var(--color-text-muted); }
+    .clinic-header h1 { font-size: 1.4rem; color: var(--text-main); font-weight: 700; margin-bottom: 0.25rem; }
+    .clinic-header p { font-size: 0.9rem; color: var(--text-muted); }
+
+    /* ── STEPS PROGRESS ── */
+    .steps-nav {
+      display: flex;
+      padding: 1.5rem 2rem 0;
+      justify-content: space-between;
+      position: relative;
+    }
+    .steps-nav::before {
+      content: '';
+      position: absolute;
+      top: 2.25rem; left: 3rem; right: 3rem;
+      height: 2px;
+      background: var(--border);
+      z-index: 1;
+    }
+    .step-dot {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 600;
+      position: relative; z-index: 2;
+      transition: all 0.3s;
+    }
+    .step-dot.active {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+    .step-dot.completed {
+      border-color: var(--primary);
+      background: var(--surface);
+      color: var(--primary);
+    }
+
+    /* ── FORM PANELS ── */
+    .step-panel {
+      padding: 2rem;
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+    .step-panel.active { display: block; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    .panel-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .panel-subtitle { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.4rem; color: var(--text-main); }
+    .form-control {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-control:focus { border-color: var(--primary); }
+
+    .btn {
+      width: 100%;
+      padding: 0.85rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    
+    .btn-secondary { background: var(--border); color: var(--text-main); margin-top: 0.75rem; }
+    .btn-secondary:hover { background: #cbd5e1; }
+
+    /* ── TIME SLOT GRID (Calendly style) ── */
+    .calendar-wrap {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    .time-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .time-btn {
+      padding: 0.75rem 0.5rem;
+      border: 1px solid var(--success);
+      background: #f0fdf4;
+      color: var(--success-hover);
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .time-btn:hover { background: var(--success); color: #fff; }
+    .time-btn.selected { background: var(--success); color: #fff; box-shadow: 0 4px 10px rgba(22,163,74,0.3); }
+
+    .error-msg { color: #dc2626; font-size: 0.85rem; margin-top: 0.5rem; display: none; }
+    
+    .summary-box {
+      background: #f1f5f9;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    .summary-box strong { color: var(--text-main); }
   </style>
 </head>
 <body>
 
-<div class="booking-container">
-  <div class="clinic-header" id="clinicHeader">
-    <h1 id="clinicName">Loading...</h1>
-    <p id="clinicAddress">Please wait while we fetch clinic details</p>
+  <!-- Loading State -->
+  <div id="initialLoader" style="text-align:center; color: var(--text-muted);">
+    <p>Loading clinic details...</p>
   </div>
 
-  <form id="bookingForm" style="display:none;">
-    <div class="form-group" style="margin-bottom:1rem">
-      <label>Your Full Name</label>
-      <input type="text" id="patientName" class="form-control" required>
+  <div class="booking-card" id="bookingCard">
+    <div class="clinic-header">
+      <h1 id="clinicName">Clinic Name</h1>
+      <p id="clinicAddress">123 Dental Way, Smile City</p>
     </div>
-    <div class="form-group" style="margin-bottom:1rem">
-      <label>Phone Number</label>
-      <input type="tel" id="patientPhone" class="form-control" required>
-    </div>
-    <div class="form-group" style="margin-bottom:1rem">
-      <label>Date</label>
-      <input type="date" id="apptDate" class="form-control" required>
-    </div>
-    <div class="form-group" style="margin-bottom:1rem">
-      <label>Time</label>
-      <input type="time" id="apptTime" class="form-control" required>
-    </div>
-    <div class="form-group" style="margin-bottom:1.5rem">
-      <label>Reason for visit</label>
-      <select id="apptService" class="form-control" required>
-        <option value="Consultation">Consultation</option>
-        <option value="Cleaning">Cleaning</option>
-        <option value="Checkup">Checkup</option>
-        <option value="Other">Other</option>
-      </select>
-    </div>
-    <button type="submit" class="btn btn-primary w-full" id="submitBtn">Request Appointment</button>
-  </form>
 
-  <div id="successMsg" style="display:none; text-align:center; padding: 2rem 0;">
-    <h2 style="color:var(--success); margin-bottom:1rem;">Appointment Requested!</h2>
-    <p>The clinic has received your request and will confirm shortly.</p>
+    <!-- Steps Progress -->
+    <div class="steps-nav" id="stepsNav">
+      <div class="step-dot active" data-step="1">1</div>
+      <div class="step-dot" data-step="2">2</div>
+      <div class="step-dot" data-step="3">3</div>
+      <div class="step-dot" data-step="4">4</div>
+    </div>
+
+    <!-- STEP 1: Details -->
+    <div class="step-panel active" id="step1">
+      <h2 class="panel-title">Your Details</h2>
+      <p class="panel-subtitle">Please enter your information to get started.</p>
+      
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="pName" class="form-control" placeholder="John Doe">
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="pEmail" class="form-control" placeholder="john@example.com">
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" id="pPhone" class="form-control" placeholder="+1 555-0198">
+      </div>
+      
+      <p class="error-msg" id="err1"></p>
+      <button class="btn btn-primary" id="btnStep1">Continue to Verification</button>
+    </div>
+
+    <!-- STEP 2: OTP Verification -->
+    <div class="step-panel" id="step2">
+      <h2 class="panel-title">Verify Email</h2>
+      <p class="panel-subtitle">We sent a 6-digit verification code to <strong id="verifyEmailDisplay"></strong>.</p>
+      
+      <div class="form-group">
+        <label>Verification Code</label>
+        <input type="text" id="pOtp" class="form-control" placeholder="123456" maxlength="6" style="text-align:center; font-size:1.2rem; letter-spacing:4px;">
+      </div>
+      
+      <p class="error-msg" id="err2"></p>
+      <button class="btn btn-primary" id="btnStep2">Verify & Continue</button>
+      <button class="btn btn-secondary" id="btnBack1">Back</button>
+    </div>
+
+    <!-- STEP 3: Date & Time -->
+    <div class="step-panel" id="step3">
+      <h2 class="panel-title">Choose a Time</h2>
+      <p class="panel-subtitle">Select your preferred date and available time slot.</p>
+      
+      <div class="calendar-wrap">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Select Date</label>
+          <input type="date" id="pDate" class="form-control">
+        </div>
+        
+        <div>
+          <label style="font-size:0.85rem; font-weight:500;">Available Slots</label>
+          <div class="time-grid" id="timeGrid">
+            <!-- Populated via JS -->
+          </div>
+          <p class="error-msg" id="err3"></p>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btnStep3" style="margin-top:1.5rem;">Continue to Details</button>
+      <button class="btn btn-secondary" id="btnBack2">Back</button>
+    </div>
+
+    <!-- STEP 4: Reason & Confirm -->
+    <div class="step-panel" id="step4">
+      <h2 class="panel-title">Final Details</h2>
+      <p class="panel-subtitle">Review your appointment and provide a reason for the visit.</p>
+      
+      <div class="summary-box" id="summaryBox">
+        Date: <strong id="sumDate"></strong><br>
+        Time: <strong id="sumTime"></strong><br>
+        Patient: <strong id="sumName"></strong>
+      </div>
+
+      <div class="form-group">
+        <label>Type of Service</label>
+        <select id="pService" class="form-control">
+          <option value="Consultation">Consultation</option>
+          <option value="Cleaning">Teeth Cleaning</option>
+          <option value="Checkup">General Checkup</option>
+          <option value="Whitening">Teeth Whitening</option>
+          <option value="Other">Other (specify below)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Reason for visit (Optional)</label>
+        <textarea id="pReason" class="form-control" rows="2" placeholder="Any specific concerns?"></textarea>
+      </div>
+      
+      <p class="error-msg" id="err4"></p>
+      <button class="btn btn-primary" id="btnStep4">Confirm Appointment</button>
+      <button class="btn btn-secondary" id="btnBack3">Back</button>
+    </div>
+
+    <!-- SUCCESS STATE -->
+    <div class="step-panel" id="stepSuccess" style="text-align:center; padding: 3rem 2rem;">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" style="margin-bottom:1rem;">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
+      <h2 style="font-size:1.5rem; margin-bottom:0.5rem; color:var(--text-main);">Booking Confirmed!</h2>
+      <p style="color:var(--text-muted);">Your appointment has been successfully scheduled. We look forward to seeing you.</p>
+    </div>
+
   </div>
-</div>
 
 <script>
-  document.addEventListener('DOMContentLoaded', async () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const slug = urlParams.get('c');
+const API_URL = 'https://smartdentaldesk.onrender.com/api/public';
+// For local testing: const API_URL = 'http://localhost:3001/api/public';
+
+let clinicId = null;
+let currentStep = 1;
+let selectedTime = null;
+
+// Store data across steps
+const bookingData = {
+  name: '', email: '', phone: '', date: '', time: '', service: '', reason: ''
+};
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const slug = urlParams.get('c');
+  
+  if (!slug) {
+    document.getElementById('initialLoader').innerHTML = 'Invalid booking link. Please request a new link from the clinic.';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/clinic/${slug}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    clinicId = data.clinic.id;
+    document.getElementById('clinicName').textContent = data.clinic.name;
+    document.getElementById('clinicAddress').textContent = data.clinic.address || '';
     
-    if (!slug) {
-      document.getElementById('clinicName').textContent = 'Invalid Link';
-      document.getElementById('clinicAddress').textContent = 'Please make sure you have the correct booking link.';
-      return;
-    }
+    // Setup date picker
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('pDate').min = today;
+    document.getElementById('pDate').value = today;
+    generateTimeGrid();
 
-    let clinicId = null;
+    document.getElementById('initialLoader').style.display = 'none';
+    document.getElementById('bookingCard').style.display = 'flex';
+  } catch (err) {
+    document.getElementById('initialLoader').innerHTML = 'Clinic not found. The link may have expired.';
+  }
+});
 
-    try {
-      const res = await fetch(`https://smartdentaldesk.onrender.com/api/public/clinic/${slug}`);
-      const data = await res.json();
-      
-      if (!res.ok) throw new Error(data.error);
-      
-      document.getElementById('clinicName').textContent = data.clinic.name;
-      document.getElementById('clinicAddress').textContent = data.clinic.address || 'Address not provided';
-      clinicId = data.clinic.id;
-      
-      // Set min date to today
-      document.getElementById('apptDate').min = new Date().toISOString().split('T')[0];
-      
-      document.getElementById('bookingForm').style.display = 'block';
-    } catch (err) {
-      document.getElementById('clinicName').textContent = 'Clinic Not Found';
-      document.getElementById('clinicAddress').textContent = err.message;
-    }
-
-    document.getElementById('bookingForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const payload = {
-        clinic_id: clinicId,
-        patient_name: document.getElementById('patientName').value,
-        patient_phone: document.getElementById('patientPhone').value,
-        date: document.getElementById('apptDate').value,
-        time: document.getElementById('apptTime').value,
-        service: document.getElementById('apptService').value
-      };
-
-      const btn = document.getElementById('submitBtn');
-      btn.textContent = 'Submitting...';
-      btn.disabled = true;
-
-      try {
-        // In a real scenario, we'd have a POST /api/public/book route.
-        // For now, we simulate success as requested for the prototype.
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        document.getElementById('bookingForm').style.display = 'none';
-        document.getElementById('successMsg').style.display = 'block';
-      } catch (err) {
-        alert('Failed to book appointment.');
-        btn.textContent = 'Request Appointment';
-        btn.disabled = false;
-      }
-    });
+function showStep(step) {
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`step${step}`).classList.add('active');
+  
+  // Update dots
+  document.querySelectorAll('.step-dot').forEach(dot => {
+    const ds = parseInt(dot.dataset.step);
+    dot.classList.remove('active', 'completed');
+    if (ds < step) dot.classList.add('completed');
+    if (ds === step) dot.classList.add('active');
   });
+}
+
+function showError(step, msg) {
+  const errEl = document.getElementById(`err${step}`);
+  errEl.textContent = msg;
+  errEl.style.display = msg ? 'block' : 'none';
+}
+
+// ── STEP 1: Details -> Send OTP ──
+document.getElementById('btnStep1').addEventListener('click', async () => {
+  showError(1, '');
+  const name = document.getElementById('pName').value.trim();
+  const email = document.getElementById('pEmail').value.trim();
+  const phone = document.getElementById('pPhone').value.trim();
+
+  if (!name || !email || !phone) return showError(1, 'All fields are required.');
+  
+  bookingData.name = name;
+  bookingData.email = email;
+  bookingData.phone = phone;
+
+  const btn = document.getElementById('btnStep1');
+  btn.textContent = 'Sending code...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API_URL}/send-otp`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email })
+    });
+    if (!res.ok) throw new Error((await res.json()).error);
+
+    document.getElementById('verifyEmailDisplay').textContent = email;
+    currentStep = 2;
+    showStep(2);
+  } catch (err) {
+    showError(1, err.message || 'Failed to send OTP.');
+  } finally {
+    btn.textContent = 'Continue to Verification';
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('btnBack1').addEventListener('click', () => { currentStep = 1; showStep(1); });
+
+// ── STEP 2: Verify OTP ──
+document.getElementById('btnStep2').addEventListener('click', async () => {
+  showError(2, '');
+  const otp = document.getElementById('pOtp').value.trim();
+  if (otp.length < 6) return showError(2, 'Please enter the 6-digit code.');
+
+  const btn = document.getElementById('btnStep2');
+  btn.textContent = 'Verifying...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API_URL}/verify-otp`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email: bookingData.email, otp })
+    });
+    if (!res.ok) throw new Error((await res.json()).error);
+
+    currentStep = 3;
+    showStep(3);
+  } catch (err) {
+    showError(2, err.message || 'Invalid OTP code.');
+  } finally {
+    btn.textContent = 'Verify & Continue';
+    btn.disabled = false;
+  }
+});
+
+// ── STEP 3: Date & Time ──
+document.getElementById('pDate').addEventListener('change', generateTimeGrid);
+
+function generateTimeGrid() {
+  const grid = document.getElementById('timeGrid');
+  grid.innerHTML = '';
+  selectedTime = null;
+  
+  // Mock time slots from 09:00 to 17:00
+  const slots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'];
+  
+  slots.forEach(time => {
+    const btn = document.createElement('div');
+    btn.className = 'time-btn';
+    btn.textContent = time;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedTime = time;
+      showError(3, '');
+    });
+    grid.appendChild(btn);
+  });
+}
+
+document.getElementById('btnStep3').addEventListener('click', () => {
+  showError(3, '');
+  bookingData.date = document.getElementById('pDate').value;
+  
+  if (!bookingData.date) return showError(3, 'Please select a date.');
+  if (!selectedTime) return showError(3, 'Please select a time slot.');
+  
+  bookingData.time = selectedTime;
+  
+  // Update summary
+  document.getElementById('sumDate').textContent = bookingData.date;
+  document.getElementById('sumTime').textContent = bookingData.time;
+  document.getElementById('sumName').textContent = bookingData.name;
+  
+  currentStep = 4;
+  showStep(4);
+});
+
+document.getElementById('btnBack2').addEventListener('click', () => { currentStep = 3; showStep(3); });
+document.getElementById('btnBack3').addEventListener('click', () => { currentStep = 3; showStep(3); });
+
+// ── STEP 4: Submit Booking ──
+document.getElementById('btnStep4').addEventListener('click', async () => {
+  showError(4, '');
+  bookingData.service = document.getElementById('pService').value;
+  bookingData.reason = document.getElementById('pReason').value;
+
+  const btn = document.getElementById('btnStep4');
+  btn.textContent = 'Confirming...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API_URL}/book`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        clinic_id: clinicId,
+        patient_name: bookingData.name,
+        patient_email: bookingData.email,
+        patient_phone: bookingData.phone,
+        date: bookingData.date,
+        time: bookingData.time,
+        service: bookingData.service,
+        reason: bookingData.reason
+      })
+    });
+    
+    if (!res.ok) throw new Error((await res.json()).error);
+
+    // Hide steps nav and show success
+    document.getElementById('stepsNav').style.display = 'none';
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('stepSuccess').classList.add('active');
+    
+  } catch (err) {
+    showError(4, err.message || 'Failed to book appointment.');
+    btn.textContent = 'Confirm Appointment';
+    btn.disabled = false;
+  }
+});
 </script>
 </body>
 </html>

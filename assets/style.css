@@ -748,13 +748,22 @@ input,textarea,select{font:inherit;color:inherit}
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   flex-shrink: 0;
 }
-.chat-input-wrapper button[type="submit"]:hover {
+.chat-input-wrapper button[type="submit"]:hover:not(:disabled) {
   background: var(--color-primary-dark, var(--color-primary));
   box-shadow: 0 4px 16px rgba(0,0,0,0.22);
   transform: scale(1.08);
 }
-.chat-input-wrapper button[type="submit"]:active { transform: scale(0.96); }
-.chat-input-wrapper button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.chat-input-wrapper button[type="submit"]:active:not(:disabled) { transform: scale(0.96); }
+.chat-input-wrapper button[type="submit"]:disabled { opacity: 0.55; cursor: default; }
+
+/* Three-state icon visibility */
+#chatSendBtn .icon-arrow-up,
+#chatSendBtn .icon-arrow-right,
+#chatSendBtn .icon-stop { display: none; }
+#chatSendBtn[data-state="arrow-up"]    .icon-arrow-up    { display: block; }
+#chatSendBtn[data-state="arrow-right"] .icon-arrow-right { display: block; }
+#chatSendBtn[data-state="stop"]        .icon-stop        { display: block; }
+#chatSendBtn[data-state="stop"] { cursor: pointer; opacity: 1; }
 
 /* ==========================================================================
    Settings Form

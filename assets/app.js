@@ -135,8 +135,11 @@ window.api = (function() {
     getAppointments: () => request('/appointments'),
     getSettings: () => request('/clinics/settings'),
     updateSettings: (payload) => request('/clinics/settings', { method: 'PUT', body: JSON.stringify(payload) }),
-    sendChatMessage: (message, mode = 'thinking', context = '', session_id = null) =>
-      request('/ai/chat', { method: 'POST', body: JSON.stringify({ message, mode, context, session_id }) }),
+    sendChatMessage: (message, mode = 'thinking', context = '', session_id = null) => {
+      const payload = { message, mode, context };
+      if (session_id) payload.session_id = session_id;
+      return request('/ai/chat', { method: 'POST', body: JSON.stringify(payload) });
+    },
     getChatHistory: (session_id = null) => request(`/ai/history${session_id ? '?session_id=' + session_id : ''}`),
     getChatSessions: () => request('/ai/sessions'),
     deleteChatSession: (session_id) => request(`/ai/sessions/${session_id}`, { method: 'DELETE' }),

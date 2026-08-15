@@ -266,17 +266,29 @@
     outline: none;
   }
   .chat-input-wrapper button[type="submit"] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
     background: var(--color-primary);
     color: #fff;
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: var(--space-2) var(--space-4);
+    border: 2.5px solid var(--color-primary);
+    border-radius: 50%;
+    padding: 0;
     cursor: pointer;
-    font-weight: 500;
-    transition: opacity 0.2s;
-    font-family: inherit;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    flex-shrink: 0;
   }
-  .chat-input-wrapper button[type="submit"]:hover { opacity: 0.9; }
+  .chat-input-wrapper button[type="submit"]:hover {
+    background: var(--color-primary-dark, var(--color-primary));
+    box-shadow: 0 4px 16px rgba(0,0,0,0.22);
+    transform: scale(1.08);
+  }
+  .chat-input-wrapper button[type="submit"]:active { transform: scale(0.96); }
+  .chat-input-wrapper button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
   /* Mode Dropdown */
   .mode-dropdown {
@@ -590,7 +602,11 @@
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             <input type="text" id="chatInput" placeholder="Ask for advice, workflow tips, treatment suggestions..." required>
-            <button type="submit" id="chatSendBtn">Send</button>
+            <button type="submit" id="chatSendBtn" aria-label="Send message">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <rect x="6" y="6" width="12" height="12" rx="1.5" ry="1.5"/>
+              </svg>
+            </button>
           </form>
         </div>
       </div>

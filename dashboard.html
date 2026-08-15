@@ -913,8 +913,11 @@
       }
     }
 
+    let isAiThinking = false;
     chatForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (isAiThinking) return;
+      
       const text = chatInput.value.trim();
       if (!text) return;
 
@@ -936,6 +939,10 @@
       chatHistory.appendChild(loadDiv);
       chatHistory.scrollTop = chatHistory.scrollHeight;
 
+      isAiThinking = true;
+      const sendBtn = chatForm.querySelector('button[type="submit"]');
+      if (sendBtn) sendBtn.disabled = true;
+
       try {
         const res = await window.api.sendChatMessage(text, activeMode, '', currentSessionId);
         if (res.session_id) currentSessionId = res.session_id;
@@ -954,6 +961,11 @@
       } catch (err) {
         chatHistory.removeChild(loadDiv);
         renderMessage('assistant', 'Sorry, I encountered an error. Please try again later.');
+      } finally {
+        isAiThinking = false;
+        const sendBtn = chatForm.querySelector('button[type="submit"]');
+        if (sendBtn) sendBtn.disabled = false;
+        chatInput.focus();
       }
     });
 

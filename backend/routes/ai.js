@@ -8,6 +8,9 @@
 //  Tier:   basic    → nano for thinking/automation, ultra for data
 //          starter  → ultra for data + thinking, nano for automation
 //          premium  → ultra for data + automation, super for thinking
+//
+//  v2:     Before every LLM call, real clinic data is fetched from Supabase
+//          and injected as grounded context so the AI can answer factually.
 // ─────────────────────────────────────────────────────────────────────────────
 const express     = require('express');
 const { body, validationResult } = require('express-validator');
@@ -22,27 +25,6 @@ const MODELS = {
   ultra:  'nvidia/nemotron-3-ultra-550b-a55b:free',     // Best reasoning, large context
   super:  'nvidia/nemotron-3-super-120b-a12b:free',     // Premium thinking
   nano:   'nvidia/nemotron-3-nano-30b-a3b:free',        // Fast, cheap, automation
-};
-
-// ── System prompts per mode ───────────────────────────────────────────────────
-const SYSTEM_PROMPTS = {
-  data: `You are a dental clinic data analyst AI for Smart Dental Desk.
-Your job is to analyze patient data, appointments, invoices, and clinic statistics
-and return clear, concise summaries and insights to the clinic owner.
-Always respond in plain language. When listing data, use bullet points or tables.
-Never make up data — if information is not provided, say so.`,
-
-  thinking: `You are a senior dental practice management consultant AI for Smart Dental Desk.
-You provide strategic advice, workflow suggestions, and operational recommendations
-to help the clinic owner improve efficiency, reduce no-shows, and grow their practice.
-You have deep knowledge of dentistry workflows, patient communication best practices,
-and clinic operations. Be specific and actionable in your recommendations.`,
-
-  automation: `You are an automation assistant AI for Smart Dental Desk.
-Your job is to generate structured, precise outputs for clinic write-actions such as
-rescheduling appointments, drafting patient messages, or generating reminder text.
-When asked to produce structured output, always respond with valid, parseable JSON.
-Follow instructions exactly. Do not add commentary — only produce the requested output.`,
 };
 
 // ── Model selection logic ─────────────────────────────────────────────────────
@@ -62,7 +44,7 @@ function getModel(subscriptionPlan, mode) {
     },
     premium: {
       data:       MODELS.ultra,
-      thinking:   MODELS.super,  // Best reasoning for premium
+      thinking:   MODELS.super,
       automation: MODELS.nano,
     },
   };
@@ -82,6 +64,318 @@ function validate(req, res) {
     return false;
   }
   return true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  fetchClinicContext — pulls live data from Supabase for the AI to reason on
+// ─────────────────────────────────────────────────────────────────────────────
+async function fetchClinicContext(clinicId) {
+  const today = new Date().toISOString().slice(0, 10);
+  const in7Days = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const [
+    statsResult,
+    todayApptResult,
+    recentPatientsResult,
+    unpaidInvoicesResult,
+    upcomingApptResult,
+    recentRevenueResult,
+  ] = await Promise.allSettled([
+    // 1. Dashboard summary stats
+    Promise.all([
+      supabase.from('appointments').select('*', { count: 'exact', head: true })
+        .eq('clinic_id', clinicId).eq('date', today).neq('status', 'cancelled'),
+      supabase.from('patients').select('*', { count: 'exact', head: true })
+        .eq('clinic_id', clinicId).eq('is_deleted', false),
+      supabase.from('invoices').select('total_amount')
+        .eq('clinic_id', clinicId).eq('status', 'paid')
+        .gte('paid_at', `${today}T00:00:00.000Z`),
+      supabase.from('invoices').select('*', { count: 'exact', head: true })
+        .eq('clinic_id', clinicId).eq('status', 'unpaid'),
+    ]),
+
+    // 2. Today's appointments with patient names
+    supabase.from('appointments')
+      .select('date, time, service, reason, status, patients(name, phone)')
+      .eq('clinic_id', clinicId)
+      .eq('date', today)
+      .neq('status', 'cancelled')
+      .order('time', { ascending: true }),
+
+    // 3. Most recent 10 patients
+    supabase.from('patients')
+      .select('name, phone, email, dob, gender, created_at')
+      .eq('clinic_id', clinicId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false })
+      .limit(10),
+
+    // 4. Unpaid invoices (top 10)
+    supabase.from('invoices')
+      .select('invoice_number, total_amount, due_date, patients(name)')
+      .eq('clinic_id', clinicId)
+      .eq('status', 'unpaid')
+      .order('due_date', { ascending: true })
+      .limit(10),
+
+    // 5. Upcoming 7-day appointments
+    supabase.from('appointments')
+      .select('date, time, service, status, patients(name)')
+      .eq('clinic_id', clinicId)
+      .gt('date', today)
+      .lte('date', in7Days)
+      .neq('status', 'cancelled')
+      .order('date', { ascending: true })
+      .order('time', { ascending: true })
+      .limit(20),
+
+    // 6. Revenue last 30 days (paid invoices)
+    supabase.from('invoices')
+      .select('total_amount, paid_at')
+      .eq('clinic_id', clinicId)
+      .eq('status', 'paid')
+      .gte('paid_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+  ]);
+
+  // ── Parse stats ──────────────────────────────────────────────────────────────
+  let todayApptCount = 0, totalPatients = 0, todayRevenue = 0, pendingInvoiceCount = 0;
+  if (statsResult.status === 'fulfilled') {
+    const [apptRes, patientRes, revenueRes, pendingRes] = statsResult.value;
+    todayApptCount    = apptRes.count   || 0;
+    totalPatients     = patientRes.count || 0;
+    pendingInvoiceCount = pendingRes.count || 0;
+    todayRevenue      = (revenueRes.data || []).reduce((s, i) => s + Number(i.total_amount), 0);
+  }
+
+  // ── Parse today's appointments ───────────────────────────────────────────────
+  const todayAppts = todayApptResult.status === 'fulfilled'
+    ? (todayApptResult.value.data || [])
+    : [];
+
+  // ── Parse recent patients ────────────────────────────────────────────────────
+  const recentPatients = recentPatientsResult.status === 'fulfilled'
+    ? (recentPatientsResult.value.data || [])
+    : [];
+
+  // ── Parse unpaid invoices ────────────────────────────────────────────────────
+  const unpaidInvoices = unpaidInvoicesResult.status === 'fulfilled'
+    ? (unpaidInvoicesResult.value.data || [])
+    : [];
+
+  // ── Parse upcoming appointments ──────────────────────────────────────────────
+  const upcomingAppts = upcomingApptResult.status === 'fulfilled'
+    ? (upcomingApptResult.value.data || [])
+    : [];
+
+  // ── Parse 30-day revenue ─────────────────────────────────────────────────────
+  let revenue30 = 0;
+  if (recentRevenueResult.status === 'fulfilled') {
+    revenue30 = (recentRevenueResult.value.data || [])
+      .reduce((s, i) => s + Number(i.total_amount), 0);
+  }
+
+  return {
+    today,
+    todayApptCount,
+    totalPatients,
+    todayRevenue,
+    pendingInvoiceCount,
+    todayAppts,
+    recentPatients,
+    unpaidInvoices,
+    upcomingAppts,
+    revenue30,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  searchPatientByName — fuzzy-find a patient mentioned in the user's message
+// ─────────────────────────────────────────────────────────────────────────────
+async function searchPatientByName(clinicId, userMessage) {
+  // Extract potential names: words that start with uppercase and are 3+ chars,
+  // but skip common dental/clinic keywords.
+  const STOP_WORDS = new Set([
+    'show', 'tell', 'give', 'find', 'get', 'the', 'for', 'about', 'what',
+    'who', 'how', 'when', 'today', 'this', 'week', 'last', 'all', 'any',
+    'patient', 'patients', 'appointment', 'appointments', 'invoice', 'invoices',
+    'treatment', 'treatments', 'revenue', 'report', 'summary', 'clinic',
+  ]);
+
+  const words = userMessage.split(/\s+/);
+  const candidates = words.filter(w => {
+    const clean = w.replace(/[^a-zA-Z]/g, '');
+    return clean.length >= 3 && /^[A-Z]/.test(clean) && !STOP_WORDS.has(clean.toLowerCase());
+  });
+
+  if (candidates.length === 0) return null;
+
+  // Try each candidate — return the first match
+  for (const name of candidates) {
+    const { data } = await supabase
+      .from('patients')
+      .select('id, name, phone, email, dob, gender, address, notes')
+      .eq('clinic_id', clinicId)
+      .eq('is_deleted', false)
+      .ilike('name', `%${name}%`)
+      .limit(3);
+
+    if (data && data.length > 0) {
+      // Fetch their appointments + treatments
+      const patientIds = data.map(p => p.id);
+      const [apptRes, treatRes] = await Promise.all([
+        supabase.from('appointments')
+          .select('date, time, service, reason, status, notes')
+          .in('patient_id', patientIds)
+          .eq('clinic_id', clinicId)
+          .order('date', { ascending: false })
+          .limit(10),
+        supabase.from('treatment_records')
+          .select('procedure, notes, prescription, cost, created_at')
+          .in('patient_id', patientIds)
+          .eq('clinic_id', clinicId)
+          .order('created_at', { ascending: false })
+          .limit(10),
+      ]);
+
+      return {
+        patients:     data,
+        appointments: apptRes.data || [],
+        treatments:   treatRes.data || [],
+      };
+    }
+  }
+
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  serializeContext — converts fetched data into a readable text block
+// ─────────────────────────────────────────────────────────────────────────────
+function serializeContext(ctx, patientMatch) {
+  const lines = [];
+  const fmt   = (n) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+  lines.push(`=== LIVE CLINIC DATA (as of ${ctx.today}) ===`);
+  lines.push('');
+
+  // Summary stats
+  lines.push('--- SUMMARY ---');
+  lines.push(`Today's appointments : ${ctx.todayApptCount}`);
+  lines.push(`Total active patients: ${ctx.totalPatients}`);
+  lines.push(`Today's revenue      : ${fmt(ctx.todayRevenue)}`);
+  lines.push(`Pending invoices     : ${ctx.pendingInvoiceCount}`);
+  lines.push(`Revenue (last 30d)   : ${fmt(ctx.revenue30)}`);
+  lines.push('');
+
+  // Today's schedule
+  if (ctx.todayAppts.length > 0) {
+    lines.push(`--- TODAY'S SCHEDULE (${ctx.todayAppts.length} appointments) ---`);
+    ctx.todayAppts.forEach(a => {
+      const name = a.patients?.name || 'Unknown';
+      lines.push(`  ${a.time} — ${name} · ${a.service}${a.reason ? ` (${a.reason})` : ''} [${a.status}]`);
+    });
+    lines.push('');
+  } else {
+    lines.push('--- TODAY\'S SCHEDULE ---');
+    lines.push('  No appointments scheduled for today.');
+    lines.push('');
+  }
+
+  // Upcoming 7 days
+  if (ctx.upcomingAppts.length > 0) {
+    lines.push('--- UPCOMING (next 7 days) ---');
+    ctx.upcomingAppts.forEach(a => {
+      const name = a.patients?.name || 'Unknown';
+      lines.push(`  ${a.date} ${a.time} — ${name} · ${a.service} [${a.status}]`);
+    });
+    lines.push('');
+  }
+
+  // Unpaid invoices
+  if (ctx.unpaidInvoices.length > 0) {
+    lines.push(`--- UNPAID INVOICES (${ctx.pendingInvoiceCount} total, showing top ${ctx.unpaidInvoices.length}) ---`);
+    ctx.unpaidInvoices.forEach(inv => {
+      const name = inv.patients?.name || 'Unknown';
+      const due  = inv.due_date ? ` · Due: ${inv.due_date}` : '';
+      lines.push(`  ${inv.invoice_number} — ${name} · ${fmt(inv.total_amount)}${due}`);
+    });
+    lines.push('');
+  }
+
+  // Recent patients
+  if (ctx.recentPatients.length > 0) {
+    lines.push('--- RECENTLY ADDED PATIENTS ---');
+    ctx.recentPatients.forEach(p => {
+      const dob = p.dob ? ` · DOB: ${p.dob}` : '';
+      lines.push(`  ${p.name} · ${p.phone}${dob} · Added: ${p.created_at?.slice(0,10)}`);
+    });
+    lines.push('');
+  }
+
+  // Patient-specific data (if a name was matched)
+  if (patientMatch) {
+    lines.push('--- PATIENT SEARCH RESULTS ---');
+    patientMatch.patients.forEach(p => {
+      lines.push(`  Name   : ${p.name}`);
+      lines.push(`  Phone  : ${p.phone}`);
+      if (p.email)   lines.push(`  Email  : ${p.email}`);
+      if (p.dob)     lines.push(`  DOB    : ${p.dob}`);
+      if (p.gender)  lines.push(`  Gender : ${p.gender}`);
+      if (p.address) lines.push(`  Address: ${p.address}`);
+      if (p.notes)   lines.push(`  Notes  : ${p.notes}`);
+      lines.push('');
+    });
+
+    if (patientMatch.appointments.length > 0) {
+      lines.push('  Appointment history:');
+      patientMatch.appointments.forEach(a => {
+        lines.push(`    ${a.date} ${a.time} — ${a.service}${a.reason ? ` (${a.reason})` : ''} [${a.status}]`);
+        if (a.notes) lines.push(`      Notes: ${a.notes}`);
+      });
+      lines.push('');
+    }
+
+    if (patientMatch.treatments.length > 0) {
+      lines.push('  Treatment history:');
+      patientMatch.treatments.forEach(t => {
+        lines.push(`    ${t.created_at?.slice(0,10)} — ${t.procedure}${t.cost ? ` · ${fmt(t.cost)}` : ''}`);
+        if (t.notes)        lines.push(`      Notes: ${t.notes}`);
+        if (t.prescription) lines.push(`      Rx   : ${t.prescription}`);
+      });
+      lines.push('');
+    }
+  }
+
+  lines.push('=== END OF CLINIC DATA ===');
+  return lines.join('\n');
+}
+
+// ── System prompts per mode ───────────────────────────────────────────────────
+function buildSystemPrompt(mode, contextBlock) {
+  const base = {
+    data: `You are a dental clinic data analyst AI for Smart Dental Desk.
+You have been provided with LIVE, REAL clinic data pulled directly from the database — it is injected below before this conversation.
+Your job is to analyze and answer questions about patients, appointments, invoices, revenue, and clinic statistics using ONLY the data provided.
+Be specific: use exact names, numbers, dates, and amounts from the data. Format answers clearly with bullet points or tables when listing items.
+If a specific data point is not in the provided context, say so — but NEVER say you don't have access to the database.
+The data is always current as of today.`,
+
+    thinking: `You are a senior dental practice management consultant AI for Smart Dental Desk.
+You have access to REAL, LIVE clinic data injected below — use it to ground your advice in actual figures and situations.
+Provide strategic advice, workflow suggestions, and operational recommendations that are specific to this clinic's actual data.
+Reference real numbers (patient counts, revenue, appointment volumes) when giving recommendations.
+Be specific and actionable.`,
+
+    automation: `You are an automation assistant AI for Smart Dental Desk.
+You have access to real clinic data injected below — use it to produce accurate, data-grounded outputs.
+When asked to produce structured output, always respond with valid, parseable JSON.
+Follow instructions exactly. Do not add commentary outside of the requested JSON structure.`,
+  };
+
+  const prompt = base[mode] || base.thinking;
+  return `${prompt}
+
+${contextBlock}`;
 }
 
 // ── Auto-generate a session name from the first user message ──────────────────
@@ -120,7 +414,6 @@ async function generateSessionName(firstMessage) {
 // ── GET /api/ai/sessions — list all unique sessions with name + preview ───────
 router.get('/sessions', async (req, res, next) => {
   try {
-    // Get the first message of each session to use as preview
     const { data, error } = await supabase
       .from('ai_chats')
       .select('session_id, session_name, role, content, created_at')
@@ -136,10 +429,10 @@ router.get('/sessions', async (req, res, next) => {
       if (!sid) return;
       if (!sessionsMap[sid]) {
         sessionsMap[sid] = {
-          session_id:   sid,
-          session_name: row.session_name || null,
-          preview:      null,
-          created_at:   row.created_at,
+          session_id:    sid,
+          session_name:  row.session_name || null,
+          preview:       null,
+          created_at:    row.created_at,
           message_count: 0,
         };
       }
@@ -227,9 +520,17 @@ router.post('/chat', chatRules, async (req, res, next) => {
     const { message, mode: requestedMode = 'thinking', context = '', session_id } = req.body;
     const subscriptionPlan = req.clinic?.subscription_plan || 'basic';
     const { model, mode } = getModel(subscriptionPlan, requestedMode);
-    const systemPrompt = SYSTEM_PROMPTS[mode];
 
-    // 1. Fetch recent chat history for conversation context (only for this session)
+    // 1. Fetch live clinic context + optional patient search — in parallel
+    const [clinicCtx, patientMatch] = await Promise.all([
+      fetchClinicContext(req.clinicId),
+      searchPatientByName(req.clinicId, message),
+    ]);
+
+    const contextBlock = serializeContext(clinicCtx, patientMatch);
+    const systemPrompt = buildSystemPrompt(mode, contextBlock);
+
+    // 2. Fetch recent chat history for conversation continuity (this session only)
     let history = [];
     let isFirstMessage = true;
     let existingSessionName = null;
@@ -248,17 +549,17 @@ router.post('/chat', chatRules, async (req, res, next) => {
     }
 
     const conversationHistory = history.reverse().map(m => ({
-      role: m.role,
+      role:    m.role,
       content: m.content,
     }));
 
-    // 2. Auto-generate a session name if this is the first message in a new session
+    // 3. Auto-generate a session name if first message in a new session
     let sessionName = existingSessionName;
     if (isFirstMessage || !sessionName) {
       sessionName = await generateSessionName(message);
     }
 
-    // 3. Save user message to DB
+    // 4. Save user message to DB
     const insertPayload = {
       clinic_id:    req.clinicId,
       role:         'user',
@@ -276,18 +577,17 @@ router.post('/chat', chatRules, async (req, res, next) => {
       .single();
     if (userSaveErr) throw userSaveErr;
 
-    // Use the generated session_id if none was provided
     const activeSessionId   = session_id || userMsgInsert.session_id;
     const activeSessionName = sessionName || userMsgInsert.session_name;
 
-    // 4. Build messages array for OpenRouter
+    // 5. Build messages array — system prompt now contains live clinic data
     const messages = [
       { role: 'system', content: systemPrompt },
       ...conversationHistory,
       { role: 'user', content: context ? `${context}\n\n${message}` : message },
     ];
 
-    // 5. Call OpenRouter API
+    // 6. Call OpenRouter API
     const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -315,7 +615,7 @@ router.post('/chat', chatRules, async (req, res, next) => {
 
     if (!replyText) throw new Error('Empty response from AI model.');
 
-    // 6. Save assistant reply to DB
+    // 7. Save assistant reply to DB
     const { data: aiMsg, error: saveErr } = await supabase.from('ai_chats').insert({
       clinic_id:    req.clinicId,
       role:         'assistant',

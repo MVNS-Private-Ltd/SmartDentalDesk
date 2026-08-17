@@ -14,6 +14,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 const express     = require('express');
 const { body, validationResult } = require('express-validator');
+const { CLINIC_INTELLIGENCE } = require('../lib/clinic_intelligence');
 const supabase    = require('../lib/supabase');
 const requireAuth = require('../middleware/auth');
 
@@ -357,7 +358,9 @@ function buildSystemPrompt(mode, contextBlock) {
     data: `You are a dental clinic data analyst AI for Smart Dental Desk.
 You have been provided with LIVE, REAL clinic data pulled directly from the database — it is injected below before this conversation.
 Your job is to analyze and answer questions about patients, appointments, invoices, revenue, and clinic statistics using ONLY the data provided.
-CRITICAL: You must be extremely concise. Keep your answers to 1-2 sentences maximum. Give the user exactly what they asked for and STOP. Do not be conversational.
+ADAPTIVE VERBOSITY: 
+- If the user just says "hi", "hello", or asks a very simple question, respond in 1-2 lines maximum.
+- If the user asks for detailed analysis, provide a structured, detailed, but punchy response. Do not use unnecessary conversational filler.
 Be specific: use exact names, numbers, dates, and amounts from the data. Format answers clearly with bullet points or tables when listing items.
 If a specific data point is not in the provided context, say so concisely — but NEVER say you don't have access to the database.
 The data is always current as of today.`,
@@ -366,7 +369,11 @@ The data is always current as of today.`,
 You have access to REAL, LIVE clinic data injected below — use it to ground your advice in actual figures and situations.
 Provide strategic advice, workflow suggestions, and operational recommendations that are specific to this clinic's actual data.
 Reference real numbers (patient counts, revenue, appointment volumes) when giving recommendations.
-CRITICAL: You must be extremely concise. Keep your answers to 2-3 sentences maximum. Give actionable, punchy advice. Do not write essays, long lists, or add conversational filler. Get straight to the point.`,
+ADAPTIVE VERBOSITY: 
+- If the user just says "hi", "hello", or asks a very simple question, respond in 1-2 lines maximum.
+- If the user asks for deep operational advice, provide a detailed response applying your clinic intelligence. Do not write huge essays, use bullet points for readability, and get straight to the point.
+
+${CLINIC_INTELLIGENCE}`,
 
     automation: `You are an automation assistant AI for Smart Dental Desk.
 You have access to real clinic data injected below — use it to produce accurate, data-grounded outputs.
@@ -601,7 +608,7 @@ router.post('/chat', chatRules, async (req, res, next) => {
       body: JSON.stringify({
         model:       model,
         messages:    messages,
-        max_tokens:  mode === 'automation' ? 1024 : 300,
+        max_tokens:  2048,
         temperature: mode === 'automation' ? 0.1 : 0.7,
       }),
     });

@@ -11,9 +11,13 @@ const express     = require('express');
 const { body, query, validationResult } = require('express-validator');
 const supabase    = require('../lib/supabase');
 const requireAuth = require('../middleware/auth');
+const multer      = require('multer');
+const Papa        = require('papaparse');
 
 const router = express.Router();
 router.use(requireAuth); // All patient routes require auth
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 function validate(req, res) {
   const errors = validationResult(req);
@@ -63,6 +67,104 @@ router.get('/search', [query('q').notEmpty()], async (req, res, next) => {
 
     if (error) throw error;
     res.json({ patients: data });
+  } catch (err) { next(err); }
+});
+
+// ── GET /api/patients/import/template ─────────────────────────────────────────
+router.get('/import/template', (req, res) => {
+  const csv = Papa.unparse([
+    {
+      patient_name: 'Priya Sharma',
+      phone: '9876543210',
+      email: 'priya.s@example.com',
+      date_of_birth: '1990-05-15',
+      gender: 'female',
+      address: '123 Main St, Mumbai',
+      notes: 'Allergic to penicillin'
+    },
+    {
+      patient_name: 'Rahul Kumar',
+      phone: '9123456789',
+      email: '',
+      date_of_birth: '1985-11-20',
+      gender: 'male',
+      address: '45 Park Ave, Delhi',
+      notes: ''
+    }
+  ]);
+  
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="smartdentaldesk_patients_template.csv"');
+  res.status(200).send(csv);
+});
+
+// ── POST /api/patients/import ─────────────────────────────────────────────────
+router.post('/import', upload.single('file'), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    
+    const fileContent = req.file.buffer.toString('utf8');
+    const parsed = Papa.parse(fileContent, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: h => h.trim().toLowerCase()
+    });
+    
+    if (parsed.errors && parsed.errors.length > 0) {
+      return res.status(400).json({ error: 'Failed to parse CSV', details: parsed.errors });
+    }
+    
+    const rows = parsed.data;
+    let imported = 0;
+    let skipped = 0;
+    let errors = [];
+    
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const name = row.patient_name?.trim();
+      const phone = row.phone?.trim();
+      
+      if (!name || !phone) {
+        skipped++;
+        errors.push({ row: i + 2, message: 'Missing required fields (patient_name, phone)', data: row });
+        continue;
+      }
+      
+      const { data: existing } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('clinic_id', req.clinicId)
+        .eq('phone', phone)
+        .maybeSingle();
+        
+      if (existing) {
+        skipped++;
+        errors.push({ row: i + 2, message: 'Duplicate phone number', data: row });
+        continue;
+      }
+      
+      const { error: insertErr } = await supabase
+        .from('patients')
+        .insert({
+          clinic_id: req.clinicId,
+          name: name,
+          phone: phone,
+          email: row.email?.trim() || null,
+          dob: row.date_of_birth?.trim() || null,
+          gender: row.gender?.trim().toLowerCase() || null,
+          address: row.address?.trim() || null,
+          notes: row.notes?.trim() || null
+        });
+        
+      if (insertErr) {
+        skipped++;
+        errors.push({ row: i + 2, message: insertErr.message, data: row });
+      } else {
+        imported++;
+      }
+    }
+    
+    res.json({ success: true, imported, skipped, errors });
   } catch (err) { next(err); }
 });
 

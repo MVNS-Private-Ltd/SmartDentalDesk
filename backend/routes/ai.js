@@ -307,7 +307,8 @@ function serializeContext(ctx, patientMatch) {
     lines.push('--- RECENTLY ADDED PATIENTS ---');
     ctx.recentPatients.forEach(p => {
       const dob = p.dob ? ` · DOB: ${p.dob}` : '';
-      lines.push(`  ${p.name} · ${p.phone}${dob} · Added: ${p.created_at?.slice(0,10)}`);
+      const email = p.email ? ` · Email: ${p.email}` : '';
+      lines.push(`  ${p.name} · Phone: ${p.phone}${email}${dob} · Added: ${p.created_at?.slice(0,10)}`);
     });
     lines.push('');
   }
@@ -356,15 +357,16 @@ function buildSystemPrompt(mode, contextBlock) {
     data: `You are a dental clinic data analyst AI for Smart Dental Desk.
 You have been provided with LIVE, REAL clinic data pulled directly from the database — it is injected below before this conversation.
 Your job is to analyze and answer questions about patients, appointments, invoices, revenue, and clinic statistics using ONLY the data provided.
+Be concise and direct in your answers. Do not be overly verbose. Give the user exactly what they asked for without unnecessary filler.
 Be specific: use exact names, numbers, dates, and amounts from the data. Format answers clearly with bullet points or tables when listing items.
-If a specific data point is not in the provided context, say so — but NEVER say you don't have access to the database.
+If a specific data point is not in the provided context, say so concisely — but NEVER say you don't have access to the database.
 The data is always current as of today.`,
 
     thinking: `You are a senior dental practice management consultant AI for Smart Dental Desk.
 You have access to REAL, LIVE clinic data injected below — use it to ground your advice in actual figures and situations.
 Provide strategic advice, workflow suggestions, and operational recommendations that are specific to this clinic's actual data.
 Reference real numbers (patient counts, revenue, appointment volumes) when giving recommendations.
-Be specific and actionable.`,
+Be concise and actionable. Do not give long, verbose essays unless explicitly asked for. Get straight to the point.`,
 
     automation: `You are an automation assistant AI for Smart Dental Desk.
 You have access to real clinic data injected below — use it to produce accurate, data-grounded outputs.

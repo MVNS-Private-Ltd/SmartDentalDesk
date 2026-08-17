@@ -483,7 +483,10 @@
 
     <!-- SECTION: PATIENTS -->
     <section id="section-patients" class="dashboard-section">
-      <h2>Patients Directory</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
+        <h2 style="margin: 0;">Patients Directory</h2>
+        <button class="btn btn-primary" onclick="openImportModal()">Import CSV</button>
+      </div>
       <div class="tabs-nav" id="patientTabs">
         <button class="tab-btn active" data-tab="all">All Patients</button>
         <button class="tab-btn" data-tab="regular">Regulars (Last 6 Months)</button>
@@ -1065,6 +1068,184 @@
     // Initial load
     loadHomeStats();
   });
+
+  // ── Import Patients Logic ──────────────────────────────────────────────────
+  function openImportModal() {
+    document.getElementById('importModal').style.display = 'flex';
+    resetImportModal();
+  }
+
+  function closeImportModal() {
+    document.getElementById('importModal').style.display = 'none';
+  }
+
+  function resetImportModal() {
+    document.getElementById('fileInput').value = '';
+    document.getElementById('previewArea').style.display = 'none';
+    document.getElementById('startImportBtn').disabled = true;
+    document.getElementById('dropZone').style.borderColor = 'var(--color-divider)';
+    window.selectedImportFile = null;
+  }
+
+  async function downloadTemplate(e) {
+    e.preventDefault();
+    try {
+      const res = await fetch(window.api.BASE_URL + '/patients/import/template', {
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+      });
+      if (!res.ok) throw new Error('Failed to download template');
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'smartdentaldesk_patients_template.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--color-primary)';
+  });
+
+  dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--color-divider)';
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--color-divider)';
+    if (e.dataTransfer.files.length) {
+      handleFileSelect(e.dataTransfer.files[0]);
+    }
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length) {
+      handleFileSelect(e.target.files[0]);
+    }
+  });
+
+  function handleFileSelect(file) {
+    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+      alert('Please select a valid CSV file.');
+      return;
+    }
+    window.selectedImportFile = file;
+    document.getElementById('startImportBtn').disabled = false;
+    
+    // Preview with PapaParse
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      preview: 5,
+      complete: function(results) {
+        const previewArea = document.getElementById('previewArea');
+        const thead = document.querySelector('#previewTable thead tr');
+        const tbody = document.querySelector('#previewTable tbody');
+        
+        thead.innerHTML = '';
+        tbody.innerHTML = '';
+        
+        if (results.meta.fields) {
+          results.meta.fields.forEach(f => {
+            const th = document.createElement('th');
+            th.textContent = f;
+            thead.appendChild(th);
+          });
+        }
+        
+        results.data.forEach(row => {
+          const tr = document.createElement('tr');
+          results.meta.fields.forEach(f => {
+            const td = document.createElement('td');
+            td.textContent = row[f] || '';
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        
+        previewArea.style.display = 'block';
+        document.getElementById('previewStats').textContent = `Showing first ${results.data.length} rows preview.`;
+      }
+    });
+  }
+
+  async function submitImport() {
+    if (!window.selectedImportFile) return;
+    
+    const btn = document.getElementById('startImportBtn');
+    btn.textContent = 'Importing...';
+    btn.disabled = true;
+    
+    const formData = new FormData();
+    formData.append('file', window.selectedImportFile);
+    
+    try {
+      const res = await fetch(window.api.BASE_URL + '/patients/import', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+        body: formData
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Import failed');
+      
+      alert(`Import Complete!\n\nImported: ${data.imported}\nSkipped: ${data.skipped}`);
+      closeImportModal();
+      // Reload patients table
+      document.querySelector('.tab-btn[data-tab="all"]').click();
+      
+    } catch (err) {
+      alert('Error: ' + err.message);
+      btn.textContent = 'Start Import';
+      btn.disabled = false;
+    }
+  }
 </script>
+
+<!-- Import Patients Modal -->
+<div id="importModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 100;">
+  <div class="modal-content" style="background: var(--color-surface); padding: var(--space-6); border-radius: var(--radius-lg); width: 100%; max-width: 600px; position: relative;">
+    <button onclick="closeImportModal()" style="position: absolute; right: var(--space-4); top: var(--space-4); background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--color-text);">&times;</button>
+    <h2 style="margin-top: 0;">Import Patients</h2>
+    <p class="text-muted" style="margin-bottom: var(--space-4);">Upload a CSV file to import patients. <a href="#" onclick="downloadTemplate(event)" style="color: var(--color-primary);">Download Template</a></p>
+    
+    <div id="dropZone" style="border: 2px dashed var(--color-divider); border-radius: var(--radius-md); padding: var(--space-8); text-align: center; cursor: pointer; margin-bottom: var(--space-4);">
+      <p style="margin: 0;">Drag & drop your .csv file here or <strong>click to browse</strong></p>
+      <input type="file" id="fileInput" accept=".csv" style="display: none;">
+    </div>
+
+    <div id="previewArea" style="display: none; margin-bottom: var(--space-4);">
+      <h3 style="font-size: var(--text-sm); margin-bottom: var(--space-2);">Preview (First 5 rows)</h3>
+      <div class="table-responsive" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--color-divider); border-radius: var(--radius-sm);">
+        <table class="data-table" id="previewTable" style="margin: 0; width: 100%;">
+          <thead><tr></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p id="previewStats" class="text-muted" style="font-size: 0.75rem; margin-top: var(--space-2); margin-bottom: 0;"></p>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: var(--space-3);">
+      <button class="btn btn-secondary" onclick="closeImportModal()">Cancel</button>
+      <button class="btn btn-primary" id="startImportBtn" onclick="submitImport()" disabled>Start Import</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 </body>
 </html>

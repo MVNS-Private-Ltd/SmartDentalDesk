@@ -1186,19 +1186,11 @@
     }
 
     // \u2500\u2500 Hamburger \u2192 opens LEFT nav overlay \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-    const aiNavOverlay = document.getElementById('aiNavOverlay');
-    const aiNavBackdrop = document.getElementById('aiNavBackdrop');
-
-    window.closeAiNav = function() {
-      aiNavOverlay.classList.remove('open');
-      aiNavBackdrop.classList.remove('open');
-    };
-
     document.getElementById('toggleHistoryBtn').addEventListener('click', () => {
-      aiNavOverlay.classList.toggle('open');
-      aiNavBackdrop.classList.toggle('open');
+      sidebar.classList.toggle('open');
+      backdrop.classList.toggle('open');
+      if (!historyLoaded) loadChatHistorySidebar();
     });
-    aiNavBackdrop.addEventListener('click', closeAiNav);
 
     document.getElementById('closeHistoryBtn').addEventListener('click', closeSidebar);
 

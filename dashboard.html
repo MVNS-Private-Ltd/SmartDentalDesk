@@ -79,14 +79,16 @@
     padding: 0 !important;
     height: 100vh;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
   .ai-fullscreen #section-ai {
-    height: 100vh;
+    height: 100%;
+    flex: 1;
     padding: 0;
     margin: 0;
-  }
-  .ai-fullscreen #section-ai {
-    transform: translateX(0);
+    display: flex;
+    flex-direction: column;
   }
 
   /* ── AI NAV OVERLAY (the left sidebar shown via hamburger) ── */
@@ -189,7 +191,8 @@
   .chat-container {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 120px);
+    height: 100%;
+    flex: 1;
     background: var(--color-surface);
     border-radius: var(--radius-lg);
     border: 1px solid var(--color-divider);
@@ -333,6 +336,7 @@
 
   .chat-history {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: var(--space-6);
     display: flex;
@@ -847,7 +851,7 @@
           </div>
         </div>
 
-        <div class="chat-main-wrapper" style="display: flex; flex-direction: column; flex: 1; overflow: hidden; position: relative;">
+        <div class="chat-main-wrapper" style="display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; position: relative;">
           <!-- Main Chat Area -->
           <div class="chat-history" id="chatHistory" style="flex: 1;">
             <div class="ai-greeting" id="aiGreeting"></div>

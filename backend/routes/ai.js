@@ -387,8 +387,8 @@ Follow instructions exactly. Do not add commentary outside of the requested JSON
 ${contextBlock}`;
 }
 
-// ── Auto-generate a session name from the first user message ──────────────────
-async function generateSessionName(firstMessage) {
+// ── Auto-generate a session name from the context ───────────────────────────
+async function generateSessionName(conversationText) {
   try {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -403,12 +403,12 @@ async function generateSessionName(firstMessage) {
         messages:   [
           {
             role: 'system',
-            content: 'Generate a short, descriptive title (4-6 words max) for a conversation that starts with the following message. Return ONLY the title, no quotes, no punctuation at the end.',
+            content: 'You are a helpful assistant that generates a short, descriptive title (2-6 words max) for a conversation. Return ONLY the title text, no quotes, no extra words.',
           },
-          { role: 'user', content: firstMessage },
+          { role: 'user', content: conversationText },
         ],
         max_tokens:  20,
-        temperature: 0.5,
+        temperature: 0.3,
       }),
     });
     if (!res.ok) return null;
@@ -444,6 +444,9 @@ router.get('/sessions', async (req, res, next) => {
           created_at:    row.created_at,
           message_count: 0,
         };
+      }
+      if (!sessionsMap[sid].session_name && row.session_name) {
+        sessionsMap[sid].session_name = row.session_name;
       }
       // First user message as preview
       if (!sessionsMap[sid].preview && row.role === 'user') {
@@ -562,10 +565,26 @@ router.post('/chat', chatRules, async (req, res, next) => {
       content: m.content,
     }));
 
-    // 3. Auto-generate a session name if first message in a new session
+    const userMessageCount = history.filter(m => m.role === 'user').length + 1;
+
+    // 3. Auto-generate a session name on the 2nd user message (or 3rd if still null)
     let sessionName = existingSessionName;
-    if (isFirstMessage || !sessionName) {
-      sessionName = await generateSessionName(message);
+    if (!sessionName && userMessageCount >= 2) {
+      const chatContextForNaming = history
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => `${m.role.toUpperCase()}: ${m.content}`)
+        .join('\n');
+      const namingPrompt = `Conversation:\n${chatContextForNaming}\nUSER: ${message}\n\nTitle:`;
+      sessionName = await generateSessionName(namingPrompt);
+
+      // If we generated a name, let's also update the previous messages in this session
+      if (sessionName && session_id) {
+        supabase.from('ai_chats')
+          .update({ session_name: sessionName })
+          .eq('session_id', session_id)
+          .then(() => {}) // fire and forget
+          .catch(e => console.error('Failed to backfill session name', e));
+      }
     }
 
     // 4. Save user message to DB

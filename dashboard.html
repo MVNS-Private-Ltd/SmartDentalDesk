@@ -14,15 +14,27 @@
     display: grid;
     grid-template-columns: 240px 1fr;
     min-height: 100vh;
+    transition: grid-template-columns 0.3s ease;
+  }
+  .dashboard-layout.sidebar-closed {
+    grid-template-columns: 0px 1fr;
   }
   @media (max-width: 800px) {
-    .dashboard-layout { grid-template-columns: 1fr; }
-    .sidebar { display: none; }
+    .dashboard-layout { grid-template-columns: 1fr !important; }
+    .sidebar { display: none !important; }
   }
   .sidebar {
     background: var(--color-surface);
     border-right: 1px solid var(--color-divider);
     padding: var(--space-6) var(--space-4);
+    overflow: hidden;
+    white-space: nowrap;
+    transition: padding 0.3s ease, border-color 0.3s ease;
+  }
+  .dashboard-layout.sidebar-closed .sidebar {
+    padding-left: 0;
+    padding-right: 0;
+    border-right-color: transparent;
   }
   .sidebar-nav {
     display: flex;
@@ -59,13 +71,10 @@
   }
 
   /* ── AI FULLSCREEN MODE ─────────────────────────────── */
-  .ai-fullscreen .sidebar,
   .ai-fullscreen .dashboard-header {
     display: none !important;
   }
-  .ai-fullscreen {
-    grid-template-columns: 1fr !important;
-  }
+  /* The sidebar is handled via .sidebar-closed class now */
   .ai-fullscreen .dashboard-content {
     padding: 0 !important;
     height: 100vh;
@@ -75,6 +84,9 @@
     height: 100vh;
     padding: 0;
     margin: 0;
+  }
+  .ai-fullscreen #section-ai {
+    transform: translateX(0);
   }
 
   /* ── AI NAV OVERLAY (the left sidebar shown via hamburger) ── */
@@ -654,7 +666,14 @@
 
   <main class="dashboard-content">
     <header class="dashboard-header">
-      <h1 style="font-size:var(--text-xl)" id="welcomeMsg">Welcome to your Clinic Dashboard</h1>
+      <div style="display: flex; align-items: center; gap: var(--space-3);">
+        <button class="chat-hamburger" id="globalHamburgerBtn" title="Toggle Sidebar" aria-label="Toggle Sidebar">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12h18M3 6h18M3 18h18"/>
+          </svg>
+        </button>
+        <h1 style="font-size:var(--text-xl)" id="welcomeMsg">Welcome to your Clinic Dashboard</h1>
+      </div>
       <button id="logoutBtn" class="btn btn-secondary btn-sm">Sign out</button>
     </header>
 
@@ -671,7 +690,7 @@
         </div>
         <div class="card card-pad">
           <h3 style="font-size:var(--text-sm);color:var(--color-text-muted)">Today's Revenue</h3>
-          <p id="statRevenue" style="font-size:2rem;font-weight:700;color:var(--color-primary);margin-top:0.5rem">...</p>
+          <p id="statRevenue" style="font-size:2rem;font-weight:700;color:var(--color-primary);margin-top:0.5rem">₹...</p>
         </div>
         <div class="card card-pad">
           <h3 style="font-size:var(--text-sm);color:var(--color-text-muted)">Pending Invoices</h3>
@@ -753,20 +772,25 @@
       <div class="chat-container is-empty">
 
         <div class="chat-header">
-          <!-- Left: hamburger + back -->
-          <div style="display:flex;align-items:center;gap:var(--space-2);">
-            <button class="chat-hamburger" id="toggleHistoryBtn" title="Chat history" aria-label="Open chat history">
-              <span></span><span></span><span></span>
+          <div class="chat-header-title">
+            <button class="chat-hamburger" id="aiHamburgerBtn" title="Toggle Sidebar" aria-label="Toggle Sidebar">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12h18M3 6h18M3 18h18"/>
+              </svg>
             </button>
             <button class="chat-back-btn" id="aiBackBtn" title="Back to dashboard">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
               Dashboard
             </button>
           </div>
-          <!-- Right: new chat -->
-          <div style="display: flex; gap: var(--space-2);">
-            <button class="btn btn-secondary btn-sm" id="newChatBtn" title="New Chat" style="padding: 6px;">
+          <!-- Right: history and new chat -->
+          <div style="display: flex; gap: var(--space-2); align-items: center;">
+            <button class="btn btn-secondary btn-sm" id="toggleHistoryBtn" title="Chat history" aria-label="Open chat history" style="padding: 6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+            </button>
+            <button class="btn btn-primary btn-sm" id="newChatBtn" title="New Chat" style="padding: 6px 12px; display: flex; align-items: center; gap: 4px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              New Chat
             </button>
           </div>
         </div>
@@ -835,17 +859,14 @@
             </button>
             <input type="text" id="chatInput" placeholder="How can I help you today?" required>
             <button type="submit" id="chatSendBtn" data-state="arrow-up" aria-label="Send message">
-              <!-- Arrow Up (default, empty input) -->
               <svg class="icon-arrow-up" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="19" x2="12" y2="5"/>
                 <polyline points="5 12 12 5 19 12"/>
               </svg>
-              <!-- Arrow Right (user has typed something) -->
               <svg class="icon-arrow-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12"/>
                 <polyline points="12 5 19 12 12 19"/>
               </svg>
-              <!-- Stop Square (AI is replying) -->
               <svg class="icon-stop" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <rect x="5" y="5" width="14" height="14" rx="2" ry="2"/>
               </svg>
@@ -926,6 +947,22 @@
       document.getElementById('welcomeMsg').textContent = `Welcome, ${userData.name}`;
     }
     document.getElementById('logoutBtn').addEventListener('click', () => window.api.logout());
+
+    // ── Global Hamburger → toggles MAIN sidebar ─────────────────────────
+    const layout = document.querySelector('.dashboard-layout');
+    
+    function toggleSidebar() {
+      layout.classList.toggle('sidebar-closed');
+    }
+
+    const globalHamburgerBtn = document.getElementById('globalHamburgerBtn');
+    if (globalHamburgerBtn) {
+      globalHamburgerBtn.addEventListener('click', toggleSidebar);
+    }
+    const aiHamburgerBtn = document.getElementById('aiHamburgerBtn');
+    if (aiHamburgerBtn) {
+      aiHamburgerBtn.addEventListener('click', toggleSidebar);
+    }
 
     // ── SPA Navigation ────────────────────────────────────────────────────────
     const links = document.querySelectorAll('#sidebarNav .sidebar-link');
@@ -1011,14 +1048,6 @@
       link.addEventListener('click', (e) => {
         e.preventDefault();
         showSection(link.getAttribute('data-target'));
-      });
-    });
-
-    // ── Nav Overlay links ────────────────────────────────────────────
-    document.querySelectorAll('#aiNavOverlay button[data-target]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        closeAiNav();
-        showSection(btn.getAttribute('data-target'));
       });
     });
 
@@ -1569,24 +1598,6 @@
   </div>
 </div>
 
-<!-- AI Nav Overlay (shown when hamburger clicked in AI fullscreen) -->
-<div class="ai-nav-backdrop" id="aiNavBackdrop"></div>
-<div class="ai-nav-overlay" id="aiNavOverlay">
-  <a href="./index.html" class="brand" aria-label="Smart Dental Clinic home">
-    <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
-      <rect width="32" height="32" rx="8" fill="#2563eb"/>
-      <path d="M16 8c-2.8 0-5 1.9-5 4.6 0 1.7.6 2.7 1.2 3.9.7 1.4 1.4 3 1.6 6.1.1 1.4 1 2.4 2.2 2.4s2.1-1 2.2-2.4c.2-3.1.9-4.7 1.6-6.1.6-1.2 1.2-2.2 1.2-3.9C21 9.9 18.8 8 16 8Z" fill="#fff"/>
-    </svg>
-    <span class="brand-name">Smart Dental Clinic</span>
-  </a>
-  <nav class="sidebar-nav">
-    <button class="sidebar-link" data-target="home">Dashboard Home</button>
-    <button class="sidebar-link" data-target="patients">Patients</button>
-    <button class="sidebar-link" data-target="appointments">Appointments</button>
-    <button class="sidebar-link active" data-target="ai">AI Assistant</button>
-    <button class="sidebar-link" data-target="settings">Settings</button>
-  </nav>
-</div>
 
 
 </html>

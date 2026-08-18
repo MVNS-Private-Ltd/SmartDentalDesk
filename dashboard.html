@@ -642,6 +642,56 @@
     border-color: var(--color-primary);
     color: var(--color-primary);
   }
+
+  /* Chat session title in header */
+  .chat-session-title {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-text-muted);
+    max-width: 260px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .chat-session-title.visible {
+    opacity: 1;
+  }
+
+  /* Rename controls in history sidebar */
+  .history-item-rename {
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+    flex-shrink: 0;
+  }
+  .history-item:hover .history-item-rename {
+    opacity: 1;
+  }
+  .history-item-rename:hover {
+    color: var(--color-primary);
+  }
+  .history-item-name-input {
+    flex: 1;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text);
+    background: var(--color-bg);
+    border: 1px solid var(--color-primary);
+    border-radius: 4px;
+    padding: 1px 6px;
+    outline: none;
+    font-family: inherit;
+    min-width: 0;
+  }
 </style>
 </head>
 <body>
@@ -782,6 +832,7 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
               Dashboard
             </button>
+            <span class="chat-session-title" id="chatSessionTitle"></span>
           </div>
           <!-- Right: history and new chat -->
           <div style="display: flex; gap: var(--space-2); align-items: center;">
@@ -795,9 +846,9 @@
           </div>
         </div>
 
-        <div class="chat-main-wrapper" style="display: flex; flex: 1; overflow: hidden; position: relative;">
+        <div class="chat-main-wrapper" style="display: flex; flex-direction: column; flex: 1; overflow: hidden; position: relative;">
           <!-- Main Chat Area -->
-          <div class="chat-history" id="chatHistory">
+          <div class="chat-history" id="chatHistory" style="flex: 1;">
             <div class="ai-greeting" id="aiGreeting"></div>
           </div>
         </div>
@@ -1199,6 +1250,9 @@
       chatHistory.innerHTML = `<div class="ai-greeting" id="aiGreeting"></div>`;
       document.querySelector('.chat-container').classList.add('is-empty');
       setAiGreeting();
+      // Clear session title in header
+      const titleEl = document.getElementById('chatSessionTitle');
+      if (titleEl) { titleEl.textContent = ''; titleEl.classList.remove('visible'); }
     });
 
     function renderMessage(role, content) {
@@ -1234,13 +1288,72 @@
             div.innerHTML = `
               <div class="history-item-header">
                 <div class="history-item-name" title="${name}">${name}</div>
-                <button class="history-item-delete" title="Delete this conversation" data-session-id="${sid}" onclick="event.stopPropagation()">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                </button>
+                <div style="display:flex;gap:2px;flex-shrink:0;" onclick="event.stopPropagation()">
+                  <button class="history-item-rename" title="Rename" data-session-id="${sid}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button class="history-item-delete" title="Delete this conversation" data-session-id="${sid}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                  </button>
+                </div>
               </div>
               <div class="history-item-date">${dateStr}</div>
               <div class="history-item-preview">${preview}</div>
             `;
+
+            // Rename button handler
+            div.querySelector('.history-item-rename').addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const nameEl = div.querySelector('.history-item-name');
+              const currentName = nameEl.textContent;
+              // Switch to inline input
+              const input = document.createElement('input');
+              input.className = 'history-item-name-input';
+              input.value = currentName;
+              nameEl.replaceWith(input);
+              input.focus();
+              input.select();
+
+              const commitRename = async () => {
+                const newName = input.value.trim();
+                if (newName && newName !== currentName) {
+                  try {
+                    await window.api.renameChatSession(sid, newName);
+                    // Update the DOM name label
+                    const newNameEl = document.createElement('div');
+                    newNameEl.className = 'history-item-name';
+                    newNameEl.title = newName;
+                    newNameEl.textContent = newName;
+                    input.replaceWith(newNameEl);
+                    div.querySelector('.history-item-name');
+                    // If this is the active session, update header title too
+                    if (sid === currentSessionId) {
+                      const titleEl = document.getElementById('chatSessionTitle');
+                      if (titleEl) { titleEl.textContent = newName; titleEl.classList.add('visible'); }
+                    }
+                  } catch (err) {
+                    alert('Failed to rename. Please try again.');
+                    const fallbackEl = document.createElement('div');
+                    fallbackEl.className = 'history-item-name';
+                    fallbackEl.title = currentName;
+                    fallbackEl.textContent = currentName;
+                    input.replaceWith(fallbackEl);
+                  }
+                } else {
+                  const fallbackEl = document.createElement('div');
+                  fallbackEl.className = 'history-item-name';
+                  fallbackEl.title = currentName;
+                  fallbackEl.textContent = currentName;
+                  input.replaceWith(fallbackEl);
+                }
+              };
+
+              input.addEventListener('blur', commitRename);
+              input.addEventListener('keydown', (ev) => {
+                if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+                if (ev.key === 'Escape') { input.value = currentName; input.blur(); }
+              });
+            });
 
             // Click to load session
             div.addEventListener('click', async () => {
@@ -1249,6 +1362,9 @@
               chatHistory.innerHTML = '<div class="chat-msg"><div class="chat-avatar">AI</div><div class="chat-bubble text-muted">Loading conversation...</div></div>';
               sidebar.classList.remove('open');
               backdrop.classList.remove('open');
+              // Show session name in header
+              const titleEl = document.getElementById('chatSessionTitle');
+              if (titleEl) { titleEl.textContent = name; titleEl.classList.add('visible'); }
               try {
                 const h = await window.api.getChatHistory(sid);
                 chatHistory.innerHTML = '';
@@ -1335,9 +1451,10 @@
 
         // Update header title with the auto-generated session name
         if (res.session_name) {
-          const titleEl = document.querySelector('.chat-header-title');
+          const titleEl = document.getElementById('chatSessionTitle');
           if (titleEl) {
-            titleEl.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> ${res.session_name}`;
+            titleEl.textContent = res.session_name;
+            titleEl.classList.add('visible');
           }
         }
       } catch (err) {

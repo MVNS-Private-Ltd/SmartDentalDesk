@@ -705,6 +705,49 @@ input,textarea,select{font:inherit;color:inherit}
   color: var(--color-text);
   border: 1px solid var(--color-divider);
 }
+.chat-msg.assistant {
+  max-width: 100%;
+}
+.chat-msg.assistant .chat-bubble {
+  background: transparent;
+  border: none;
+  padding: var(--space-2) 0;
+}
+.chat-msg.assistant .chat-bubble table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: var(--space-4) 0;
+}
+.chat-msg.assistant .chat-bubble th,
+.chat-msg.assistant .chat-bubble td {
+  border: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+}
+.chat-msg.assistant .chat-bubble th {
+  background: var(--color-surface-offset);
+  font-weight: 600;
+}
+.chat-msg.assistant .chat-bubble p {
+  margin-bottom: var(--space-4);
+}
+.chat-msg.assistant .chat-bubble p:last-child {
+  margin-bottom: 0;
+}
+.chat-msg.assistant .chat-bubble pre {
+  background: var(--color-bg);
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  border: 1px solid var(--color-divider);
+  margin-bottom: var(--space-4);
+}
+.chat-msg.assistant .chat-bubble code {
+  background: var(--color-bg);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+}
 .chat-input-area {
   padding: var(--space-4);
   border-top: 1px solid var(--color-divider);

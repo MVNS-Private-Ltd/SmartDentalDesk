@@ -750,14 +750,17 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
       throw new Error(errBody?.error?.message || `OpenRouter error: ${openRouterRes.status}`);
     }
 
-    // Set SSE headers
+    // Set SSE headers — X-Accel-Buffering:no disables Nginx/Render proxy buffering
     res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
     // Send metadata first so frontend knows session_id
-    res.write(`data: ${JSON.stringify({ type: 'meta', session_id: activeSessionId, session_name: activeSessionName })}\n\n`);
+    const metaMsg = `data: ${JSON.stringify({ type: 'meta', session_id: activeSessionId, session_name: activeSessionName })}\n\n`;
+    res.write(metaMsg);
+    if (typeof res.flush === 'function') res.flush();
 
     let fullReply = '';
     const reader = openRouterRes.body;
@@ -779,6 +782,7 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
           if (delta) {
             fullReply += delta;
             res.write(`data: ${JSON.stringify({ type: 'delta', content: delta })}\n\n`);
+            if (typeof res.flush === 'function') res.flush();
           }
         } catch { /* skip malformed */ }
       }

@@ -141,6 +141,42 @@ window.api = (function() {
       if (session_id) payload.session_id = session_id;
       return request('/ai/chat', { method: 'POST', body: JSON.stringify(payload) });
     },
+    streamChatMessage: async (message, mode = 'thinking', context = '', session_id = null, { onDelta, onMeta, onDone, onError } = {}) => {
+      const payload = { message, mode, context };
+      if (session_id) payload.session_id = session_id;
+      const token = getToken();
+      const res = await fetch(`${BASE_URL}/ai/chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`Stream error: ${res.status}`);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const raw = trimmed.slice(5).trim();
+          try {
+            const evt = JSON.parse(raw);
+            if (evt.type === 'meta'  && onMeta)  onMeta(evt);
+            if (evt.type === 'delta' && onDelta)  onDelta(evt.content);
+            if (evt.type === 'done'  && onDone)   onDone(evt);
+            if (evt.type === 'error' && onError)  onError(new Error(evt.message));
+          } catch { /* skip */ }
+        }
+      }
+    },
     getChatHistory: (session_id = null) => request(`/ai/history${session_id ? '?session_id=' + session_id : ''}`),
     getChatSessions: () => request('/ai/sessions'),
     deleteChatSession: (session_id) => request(`/ai/sessions/${session_id}`, { method: 'DELETE' }),

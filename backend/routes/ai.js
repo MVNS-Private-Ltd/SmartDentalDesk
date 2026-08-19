@@ -668,4 +668,145 @@ router.post('/chat', chatRules, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── POST /api/ai/chat/stream — streaming version ──────────────────────────────
+router.post('/chat/stream', chatRules, async (req, res, next) => {
+  try {
+    if (!validate(req, res)) return;
+
+    const { message, mode: requestedMode = 'thinking', context = '', session_id } = req.body;
+    const subscriptionPlan = req.clinic?.subscription_plan || 'basic';
+    const { model, mode } = getModel(subscriptionPlan, requestedMode);
+
+    const [clinicCtx, patientMatch] = await Promise.all([
+      fetchClinicContext(req.clinicId),
+      searchPatientByName(req.clinicId, message),
+    ]);
+
+    const contextBlock = serializeContext(clinicCtx, patientMatch);
+    const systemPrompt = buildSystemPrompt(mode, contextBlock);
+
+    let history = [];
+    let existingSessionName = null;
+    if (session_id) {
+      const { data } = await supabase
+        .from('ai_chats')
+        .select('role, content, session_name')
+        .eq('clinic_id', req.clinicId)
+        .eq('session_id', session_id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      history = data || [];
+      existingSessionName = history.find(m => m.session_name)?.session_name || null;
+    }
+
+    const conversationHistory = history.reverse().map(m => ({ role: m.role, content: m.content }));
+    const userMessageCount = history.filter(m => m.role === 'user').length + 1;
+
+    let sessionName = existingSessionName;
+    if (!sessionName && userMessageCount >= 2) {
+      const chatContext = history
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n');
+      sessionName = await generateSessionName(`${chatContext}\nUSER: ${message}\n\nTitle:`);
+      if (sessionName && session_id) {
+        supabase.from('ai_chats').update({ session_name: sessionName }).eq('session_id', session_id).then(() => {}).catch(() => {});
+      }
+    }
+
+    const insertPayload = { clinic_id: req.clinicId, role: 'user', content: message, mode, model_used: model, session_name: sessionName };
+    if (session_id) insertPayload.session_id = session_id;
+
+    const { data: userMsgInsert, error: userSaveErr } = await supabase.from('ai_chats').insert(insertPayload).select('session_id, session_name').single();
+    if (userSaveErr) throw userSaveErr;
+
+    const activeSessionId   = session_id || userMsgInsert.session_id;
+    const activeSessionName = sessionName || userMsgInsert.session_name;
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...conversationHistory,
+      { role: 'user', content: context ? `${context}\n\n${message}` : message },
+    ];
+
+    const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type':  'application/json',
+        'HTTP-Referer':  'https://smartdentaldesk.app',
+        'X-Title':       'Smart Dental Desk',
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        max_tokens:  2048,
+        temperature: mode === 'automation' ? 0.1 : 0.7,
+        stream:      true,
+      }),
+    });
+
+    if (!openRouterRes.ok) {
+      const errBody = await openRouterRes.json().catch(() => ({}));
+      throw new Error(errBody?.error?.message || `OpenRouter error: ${openRouterRes.status}`);
+    }
+
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    // Send metadata first so frontend knows session_id
+    res.write(`data: ${JSON.stringify({ type: 'meta', session_id: activeSessionId, session_name: activeSessionName })}\n\n`);
+
+    let fullReply = '';
+    const reader = openRouterRes.body;
+    let buffer = '';
+
+    for await (const chunk of reader) {
+      buffer += chunk.toString();
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // keep incomplete line
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice(5).trim();
+        if (payload === '[DONE]') continue;
+        try {
+          const parsed = JSON.parse(payload);
+          const delta = parsed?.choices?.[0]?.delta?.content;
+          if (delta) {
+            fullReply += delta;
+            res.write(`data: ${JSON.stringify({ type: 'delta', content: delta })}\n\n`);
+          }
+        } catch { /* skip malformed */ }
+      }
+    }
+
+    // Save full reply to DB
+    try {
+      await supabase.from('ai_chats').insert({
+        clinic_id:    req.clinicId,
+        role:         'assistant',
+        content:      fullReply,
+        mode,
+        model_used:   model,
+        session_id:   activeSessionId,
+        session_name: activeSessionName,
+      });
+    } catch (saveErr) {
+      console.error('[AI Stream] Failed to save reply:', saveErr);
+    }
+
+    res.write(`data: ${JSON.stringify({ type: 'done', session_id: activeSessionId, session_name: activeSessionName })}\n\n`);
+    res.end();
+
+  } catch (err) {
+    if (!res.headersSent) return next(err);
+    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+    res.end();
+  }
+});
+
 module.exports = router;

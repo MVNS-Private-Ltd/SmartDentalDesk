@@ -145,6 +145,11 @@ window.api = (function() {
       const payload = { message, mode, context };
       if (session_id) payload.session_id = session_id;
       const token = getToken();
+
+      const controller = new AbortController();
+      // Abort if no response starts within 12 seconds
+      const timeout = setTimeout(() => controller.abort(), 12000);
+
       const res = await fetch(`${BASE_URL}/ai/chat/stream`, {
         method: 'POST',
         headers: {
@@ -152,14 +157,23 @@ window.api = (function() {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeout);
       if (!res.ok) throw new Error(`Stream error: ${res.status}`);
+
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      // Reset timeout for each chunk — abort if 20s of silence mid-stream
+      let chunkTimeout = setTimeout(() => controller.abort(), 20000);
+
       while (true) {
         const { done, value } = await reader.read();
+        clearTimeout(chunkTimeout);
         if (done) break;
+        chunkTimeout = setTimeout(() => controller.abort(), 20000);
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop();
@@ -176,6 +190,7 @@ window.api = (function() {
           } catch { /* skip */ }
         }
       }
+      clearTimeout(chunkTimeout);
     },
     getChatHistory: (session_id = null) => request(`/ai/history${session_id ? '?session_id=' + session_id : ''}`),
     getChatSessions: () => request('/ai/sessions'),

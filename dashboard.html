@@ -1491,8 +1491,22 @@
           },
         });
       } catch (err) {
-        streamBubble.innerHTML = '<span style="color:var(--color-error)">Sorry, I encountered an error. Please try again.</span>';
-        console.error('Chat error:', err);
+        console.warn('Streaming failed, falling back to standard request:', err);
+        // Fallback to non-streaming
+        try {
+          const res = await window.api.sendChatMessage(text, activeMode, '', currentSessionId);
+          if (res.session_id) currentSessionId = res.session_id;
+          const replyText = res.reply?.content || '';
+          streamBubble.innerHTML = typeof marked !== 'undefined' ? marked.parse(replyText) : replyText.replace(/\n/g, '<br>');
+          historyLoaded = false;
+          if (res.session_name) {
+            const titleEl = document.getElementById('chatSessionTitle');
+            if (titleEl) { titleEl.textContent = res.session_name; titleEl.classList.add('visible'); }
+          }
+        } catch (fallbackErr) {
+          streamBubble.innerHTML = '<span style="color:var(--color-error)">Sorry, I encountered an error. Please try again.</span>';
+          console.error('Fallback also failed:', fallbackErr);
+        }
       } finally {
         isAiThinking = false;
         const sendBtn = document.getElementById('chatSendBtn');

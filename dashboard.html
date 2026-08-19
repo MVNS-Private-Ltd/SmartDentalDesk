@@ -370,13 +370,15 @@
     color: var(--color-text);
   }
   .chat-bubble {
-    padding: var(--space-4);
-    background: var(--color-bg);
-    border-radius: var(--radius-md);
+    padding: var(--space-2) 0;
+    background: transparent;
     font-size: var(--text-sm);
     line-height: 1.6;
     color: var(--color-text);
-    border: 1px solid var(--color-divider);
+    border: none;
+  }
+  .chat-msg.user .chat-bubble {
+    text-align: right;
   }
   .chat-input-area {
     padding: var(--space-4);

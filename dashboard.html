@@ -1467,10 +1467,14 @@
       renderMessage('user', text);
       chatInput.value = '';
 
-      // Animated thinking bubble
+      // Animated thinking dots (shown until first streaming token)
       const loadDiv = document.createElement('div');
       loadDiv.className = 'chat-msg assistant';
-      loadDiv.innerHTML = `<div class="chat-avatar">AI</div><div class="chat-bubble thinking-dots"><span></span><span></span><span></span></div>`;
+      const streamBubble = document.createElement('div');
+      streamBubble.className = 'chat-bubble thinking-dots';
+      streamBubble.innerHTML = '<span></span><span></span><span></span>';
+      loadDiv.innerHTML = '<div class="chat-avatar">AI</div>';
+      loadDiv.appendChild(streamBubble);
       chatHistory.appendChild(loadDiv);
       chatHistory.scrollTop = chatHistory.scrollHeight;
 
@@ -1478,19 +1482,44 @@
       const sendBtn = document.getElementById('chatSendBtn');
       if (sendBtn) { sendBtn.dataset.state = 'stop'; sendBtn.disabled = false; }
 
+      let accumulated = '';
+      let firstToken = true;
+
       try {
-        const res = await window.api.sendChatMessage(text, activeMode, '', currentSessionId);
-        if (res.session_id) currentSessionId = res.session_id;
-        chatHistory.removeChild(loadDiv);
-        renderMessage('assistant', res.reply.content);
-        historyLoaded = false;
-        if (res.session_name) {
-          const titleEl = document.getElementById('chatSessionTitle');
-          if (titleEl) { titleEl.textContent = res.session_name; titleEl.classList.add('visible'); }
-        }
+        await window.api.streamChatMessage(text, activeMode, '', currentSessionId, {
+          onMeta: (evt) => {
+            if (evt.session_id) currentSessionId = evt.session_id;
+            if (evt.session_name) {
+              const titleEl = document.getElementById('chatSessionTitle');
+              if (titleEl) { titleEl.textContent = evt.session_name; titleEl.classList.add('visible'); }
+            }
+          },
+          onDelta: (chunk) => {
+            if (firstToken) {
+              // Switch from dots to real text on first token
+              streamBubble.className = 'chat-bubble markdown-body';
+              streamBubble.innerHTML = '';
+              firstToken = false;
+            }
+            accumulated += chunk;
+            streamBubble.innerHTML = typeof marked !== 'undefined' ? marked.parse(accumulated) : accumulated.replace(/\n/g, '<br>');
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+          },
+          onDone: (evt) => {
+            if (evt.session_name) {
+              const titleEl = document.getElementById('chatSessionTitle');
+              if (titleEl) { titleEl.textContent = evt.session_name; titleEl.classList.add('visible'); }
+            }
+            historyLoaded = false;
+          },
+          onError: (err) => {
+            streamBubble.className = 'chat-bubble';
+            streamBubble.innerHTML = '<span style="color:var(--color-error)">Sorry, I encountered an error. Please try again.</span>';
+          },
+        });
       } catch (err) {
-        chatHistory.removeChild(loadDiv);
-        renderMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+        streamBubble.className = 'chat-bubble';
+        streamBubble.innerHTML = '<span style="color:var(--color-error)">Sorry, I encountered an error. Please try again.</span>';
         console.error('Chat error:', err);
       } finally {
         isAiThinking = false;

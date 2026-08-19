@@ -697,21 +697,16 @@ input,textarea,select{font:inherit;color:inherit}
   color: var(--color-text);
 }
 .chat-bubble {
-  padding: var(--space-4);
-  background: var(--color-bg);
+  padding: var(--space-2) 0;
+  background: transparent;
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   line-height: 1.6;
   color: var(--color-text);
-  border: 1px solid var(--color-divider);
+  border: none;
 }
 .chat-msg.assistant {
   max-width: 100%;
-}
-.chat-msg.assistant .chat-bubble {
-  background: transparent;
-  border: none;
-  padding: var(--space-2) 0;
 }
 .chat-msg.assistant .chat-bubble table {
   border-collapse: collapse;

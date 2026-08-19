@@ -991,6 +991,7 @@
 
   </main>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="./assets/app.js"></script>
 <script>
   // Auth Guard
@@ -1265,9 +1266,13 @@
     function renderMessage(role, content) {
       const div = document.createElement('div');
       div.className = `chat-msg ${role}`;
+      let htmlContent = content.replace(/\n/g, '<br>');
+      if (role === 'assistant' && typeof marked !== 'undefined') {
+        htmlContent = marked.parse(content);
+      }
       div.innerHTML = `
         <div class="chat-avatar">${role === 'user' ? 'U' : 'AI'}</div>
-        <div class="chat-bubble">${content.replace(/\n/g, '<br>')}</div>
+        <div class="chat-bubble ${role === 'assistant' ? 'markdown-body' : ''}">${htmlContent}</div>
       `;
       chatHistory.appendChild(div);
       chatHistory.scrollTop = chatHistory.scrollHeight;

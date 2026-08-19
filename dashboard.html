@@ -1434,10 +1434,9 @@
       const text = chatInput.value.trim();
       if (!text) return;
 
-      // Get active mode from dropdown
       const activeMode = document.querySelector('.mode-option.active')?.dataset.mode || 'thinking';
 
-      // Remove greeting if it's a brand new chat
+      // Remove greeting if brand new chat
       if (!currentSessionId && (chatHistory.children.length === 1 || chatHistory.querySelector('.ai-greeting'))) {
         chatHistory.innerHTML = '';
         document.querySelector('.chat-container').classList.remove('is-empty');
@@ -1446,44 +1445,58 @@
       renderMessage('user', text);
       chatInput.value = '';
 
-      // Loading indicator
-      const loadDiv = document.createElement('div');
-      loadDiv.className = 'chat-msg assistant';
-      loadDiv.innerHTML = `<div class="chat-avatar">AI</div><div class="chat-bubble text-muted">Thinking...</div>`;
-      chatHistory.appendChild(loadDiv);
+      // Create a live streaming bubble
+      const streamDiv = document.createElement('div');
+      streamDiv.className = 'chat-msg assistant';
+      const streamBubble = document.createElement('div');
+      streamBubble.className = 'chat-bubble markdown-body';
+      streamBubble.innerHTML = '<span class="text-muted">Thinking...</span>';
+      streamDiv.innerHTML = '<div class="chat-avatar">AI</div>';
+      streamDiv.appendChild(streamBubble);
+      chatHistory.appendChild(streamDiv);
       chatHistory.scrollTop = chatHistory.scrollHeight;
 
       isAiThinking = true;
       const sendBtn = document.getElementById('chatSendBtn');
-      if (sendBtn) {
-        sendBtn.dataset.state = 'stop';
-        sendBtn.disabled = false; // keep clickable so user can stop (future use)
-      }
+      if (sendBtn) { sendBtn.dataset.state = 'stop'; sendBtn.disabled = false; }
+
+      let accumulated = '';
+      let firstDelta = true;
 
       try {
-        const res = await window.api.sendChatMessage(text, activeMode, '', currentSessionId);
-        if (res.session_id) currentSessionId = res.session_id;
-        
-        chatHistory.removeChild(loadDiv);
-        renderMessage('assistant', res.reply.content);
-        historyLoaded = false; // Force refresh sidebar on next open
-
-        // Update header title with the auto-generated session name
-        if (res.session_name) {
-          const titleEl = document.getElementById('chatSessionTitle');
-          if (titleEl) {
-            titleEl.textContent = res.session_name;
-            titleEl.classList.add('visible');
-          }
-        }
+        await window.api.streamChatMessage(text, activeMode, '', currentSessionId, {
+          onMeta: (evt) => {
+            if (evt.session_id) currentSessionId = evt.session_id;
+            if (evt.session_name) {
+              const titleEl = document.getElementById('chatSessionTitle');
+              if (titleEl) { titleEl.textContent = evt.session_name; titleEl.classList.add('visible'); }
+            }
+          },
+          onDelta: (chunk) => {
+            if (firstDelta) { streamBubble.innerHTML = ''; firstDelta = false; }
+            accumulated += chunk;
+            streamBubble.innerHTML = typeof marked !== 'undefined' ? marked.parse(accumulated) : accumulated.replace(/\n/g, '<br>');
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+          },
+          onDone: (evt) => {
+            if (evt.session_name) {
+              const titleEl = document.getElementById('chatSessionTitle');
+              if (titleEl) { titleEl.textContent = evt.session_name; titleEl.classList.add('visible'); }
+            }
+            historyLoaded = false;
+          },
+          onError: (err) => {
+            streamBubble.innerHTML = '<span style="color:var(--color-error)">Sorry, I encountered an error. Please try again.</span>';
+            console.error('Stream error:', err);
+          },
+        });
       } catch (err) {
-        chatHistory.removeChild(loadDiv);
-        renderMessage('assistant', 'Sorry, I encountered an error. Please try again later.');
+        streamBubble.innerHTML = '<span style="color:var(--color-error)">Sorry, I encountered an error. Please try again.</span>';
+        console.error('Chat error:', err);
       } finally {
         isAiThinking = false;
         const sendBtn = document.getElementById('chatSendBtn');
         if (sendBtn) {
-          // Restore arrow state based on current input value
           sendBtn.dataset.state = chatInput.value.trim() ? 'arrow-right' : 'arrow-up';
           sendBtn.disabled = false;
         }

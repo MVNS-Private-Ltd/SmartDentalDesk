@@ -706,7 +706,7 @@ input,textarea,select{font:inherit;color:inherit}
   border: 1px solid var(--color-divider);
 }
 .chat-input-area {
-  padding: var(--space-4) var(--space-4) var(--space-8);
+  padding: var(--space-4);
   border-top: 1px solid var(--color-divider);
   background: var(--color-surface);
   position: relative;

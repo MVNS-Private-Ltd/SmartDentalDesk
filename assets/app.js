@@ -147,8 +147,8 @@ window.api = (function() {
       const token = getToken();
 
       const controller = new AbortController();
-      // Abort if no response starts within 12 seconds
-      const timeout = setTimeout(() => controller.abort(), 12000);
+      // Wait up to 90s for first response (Render free tier can cold-start in 50-60s)
+      const timeout = setTimeout(() => controller.abort(), 90000);
 
       const res = await fetch(`${BASE_URL}/ai/chat/stream`, {
         method: 'POST',

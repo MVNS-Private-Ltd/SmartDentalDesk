@@ -1278,7 +1278,7 @@
         htmlContent = marked.parse(content);
       }
       div.innerHTML = `
-        <div class="chat-avatar">${role === 'user' ? 'U' : 'AI'}</div>
+        ${role === 'assistant' ? '<div class="chat-avatar">AI</div>' : ''}
         <div class="chat-bubble ${role === 'assistant' ? 'markdown-body' : ''}">${htmlContent}</div>
       `;
       chatHistory.appendChild(div);

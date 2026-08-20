@@ -1529,6 +1529,8 @@
           streamBubble.className = 'chat-bubble';
           streamBubble.innerHTML = `<span style="color:var(--color-error)">Sorry, I encountered an error: ${err.message}</span>`;
           console.error('Chat error:', err);
+        } else if (firstToken) {
+          loadDiv.remove();
         }
       } finally {
         isAiThinking = false;

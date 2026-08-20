@@ -170,14 +170,14 @@ window.api = (function() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      // Reset timeout for each chunk — abort if 20s of silence mid-stream
-      let chunkTimeout = setTimeout(() => controller.abort(), 20000);
+      // Reset timeout for each chunk — abort if 90s of silence mid-stream
+      let chunkTimeout = setTimeout(() => controller.abort(), 90000);
 
       while (true) {
         const { done, value } = await reader.read();
         clearTimeout(chunkTimeout);
         if (done) break;
-        chunkTimeout = setTimeout(() => controller.abort(), 20000);
+        chunkTimeout = setTimeout(() => controller.abort(), 90000);
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop();

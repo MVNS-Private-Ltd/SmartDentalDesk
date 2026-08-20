@@ -407,6 +407,124 @@
     0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
     40%           { transform: scale(1.1); opacity: 1; }
   }
+  /* ── Email Action Card ─────────────────────────────────────────────────── */
+  .email-action-card {
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-divider);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-top: 10px;
+    font-size: var(--text-sm);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+    animation: slideUp 0.3s ease;
+    max-width: 480px;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .email-action-card .eac-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 14px;
+    font-size: 13px;
+  }
+  .email-action-card .eac-header svg { flex-shrink: 0; }
+  .email-action-card .eac-badge {
+    background: linear-gradient(135deg,#667eea,#764ba2);
+    color: #fff;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .email-action-card .eac-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 10px;
+  }
+  .email-action-card .eac-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--color-text-muted);
+    font-weight: 600;
+  }
+  .email-action-card .eac-value {
+    color: var(--color-text);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .email-action-card .eac-body-preview {
+    color: var(--color-text-muted);
+    font-size: 12px;
+    line-height: 1.55;
+    max-height: 72px;
+    overflow: hidden;
+    position: relative;
+  }
+  .email-action-card .eac-body-preview::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 24px;
+    background: linear-gradient(transparent, var(--color-surface));
+  }
+  .email-action-card .eac-divider {
+    border: none;
+    border-top: 1px solid var(--color-divider);
+    margin: 14px 0;
+  }
+  .email-action-card .eac-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .eac-send-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: linear-gradient(135deg,#667eea,#764ba2);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  .eac-send-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+  .eac-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .eac-cancel-btn {
+    padding: 9px 14px;
+    background: transparent;
+    color: var(--color-text-muted);
+    border: 1.5px solid var(--color-divider);
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .eac-cancel-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .eac-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 0;
+    animation: slideUp 0.25s ease;
+  }
+  .eac-status.success { color: #16a34a; }
+  .eac-status.error   { color: var(--color-error, #dc2626); }
   .chat-input-area {
     padding: var(--space-4);
     border-top: 1px solid var(--color-divider);
@@ -1653,6 +1771,90 @@
               if (titleEl) { titleEl.textContent = evt.session_name; titleEl.classList.add('visible'); }
             }
             historyLoaded = false;
+
+            // ── Automation: detect send_email JSON action ──────────────────
+            if (activeMode === 'automation' && accumulated) {
+              let parsed = null;
+              try {
+                // Strip any accidental markdown code fences
+                const clean = accumulated.trim().replace(/^```[\w]*\n?/,'').replace(/\n?```$/,'').trim();
+                parsed = JSON.parse(clean);
+              } catch { /* not JSON — display as plain text */ }
+
+              if (parsed && parsed.action_type === 'send_email') {
+                // Hide the raw JSON bubble, replace with a human-friendly preview
+                streamBubble.style.display = 'none';
+
+                const bodyPreview = (parsed.body || '').replace(/\n/g, ' ');
+
+                const card = document.createElement('div');
+                card.className = 'email-action-card';
+                card.innerHTML = `
+                  <div class="eac-header">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                    Ready to send patient email
+                    <span class="eac-badge">Automation</span>
+                  </div>
+                  <div class="eac-field">
+                    <span class="eac-label">To</span>
+                    <span class="eac-value">${parsed.patient_name || '—'}</span>
+                  </div>
+                  <div class="eac-field">
+                    <span class="eac-label">Subject</span>
+                    <span class="eac-value">${parsed.subject || '—'}</span>
+                  </div>
+                  <div class="eac-field">
+                    <span class="eac-label">Message</span>
+                    <div class="eac-body-preview">${bodyPreview}</div>
+                  </div>
+                  <hr class="eac-divider">
+                  <div class="eac-actions">
+                    <button class="eac-send-btn" id="eacSendBtn">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                      Send Now
+                    </button>
+                    <button class="eac-cancel-btn" id="eacCancelBtn">Cancel</button>
+                  </div>
+                `;
+
+                loadDiv.appendChild(card);
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+
+                // Send Now
+                card.querySelector('#eacSendBtn').addEventListener('click', async () => {
+                  const sendBtn2 = card.querySelector('#eacSendBtn');
+                  const cancelBtn = card.querySelector('#eacCancelBtn');
+                  sendBtn2.disabled = true;
+                  sendBtn2.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg> Sending...`;
+                  cancelBtn.disabled = true;
+                  try {
+                    const result = await window.api.sendPatientEmail(parsed.patient_name, parsed.subject, parsed.body);
+                    card.querySelector('.eac-actions').innerHTML = `
+                      <div class="eac-status success">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        Email sent to ${result.sent_to}
+                      </div>`;
+                  } catch (err) {
+                    const isNoEmail = err.message && err.message.includes('no email');
+                    card.querySelector('.eac-actions').innerHTML = `
+                      <div class="eac-status error">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        ${err.message || 'Failed to send email. Please try again.'}
+                      </div>`;
+                  }
+                });
+
+                // Cancel
+                card.querySelector('#eacCancelBtn').addEventListener('click', () => {
+                  card.querySelector('.eac-actions').innerHTML = `
+                    <div class="eac-status" style="color:var(--color-text-muted)">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                      Email cancelled.
+                    </div>`;
+                });
+              }
+            }
+            // ── end automation email handling ─────────────────────────────
           },
           onError: (err) => {
             if (firstToken) {

@@ -377,8 +377,21 @@ ${CLINIC_INTELLIGENCE}`,
 
     automation: `You are an automation assistant AI for Smart Dental Desk.
 You have access to real clinic data injected below — use it to produce accurate, data-grounded outputs.
-When asked to produce structured output, always respond with valid, parseable JSON.
-Follow instructions exactly. Do not add commentary outside of the requested JSON structure.`,
+
+CRITICAL RULE — EMAIL SENDING:
+When the user asks you to SEND, EMAIL, MESSAGE, or NOTIFY a patient (e.g. "send a msg to X", "email Y that...", "notify Z about..."):
+You MUST respond with ONLY a JSON object in this exact format — no markdown fences, no extra text, nothing else:
+{
+  "action_type": "send_email",
+  "patient_name": "<exact name as mentioned by user>",
+  "subject": "<concise, professional email subject>",
+  "body": "<full, professional email body text ready to send. Use \\n for line breaks. Sign off with the clinic name.>"
+}
+
+For ALL OTHER automation tasks (drafting templates, generating reports, creating reminders, etc.):
+Respond with plain text or markdown as appropriate. Do not force JSON.
+
+Follow instructions exactly.`,
   };
 
   const prompt = base[mode] || base.thinking;

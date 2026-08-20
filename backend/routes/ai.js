@@ -728,26 +728,43 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
       { role: 'user', content: context ? `${context}\n\n${message}` : message },
     ];
 
-    const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type':  'application/json',
-        'HTTP-Referer':  'https://smartdentaldesk.app',
-        'X-Title':       'Smart Dental Desk',
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        max_tokens:  2048,
-        temperature: mode === 'automation' ? 0.1 : 0.7,
-        stream:      true,
-      }),
-    });
+    let openRouterRes;
+    let usedModel = model;
+    const fallbackModels = [
+      model,
+      'google/gemini-2.0-flash-lite-preview-02-05:free',
+      'meta-llama/llama-3.1-8b-instruct:free'
+    ];
 
-    if (!openRouterRes.ok) {
+    let lastError = null;
+    for (const testModel of fallbackModels) {
+      usedModel = testModel;
+      openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type':  'application/json',
+          'HTTP-Referer':  'https://smartdentaldesk.app',
+          'X-Title':       'Smart Dental Desk',
+        },
+        body: JSON.stringify({
+          model: testModel,
+          messages,
+          max_tokens:  2048,
+          temperature: mode === 'automation' ? 0.1 : 0.7,
+          stream:      true,
+        }),
+      });
+
+      if (openRouterRes.ok) break;
+      
       const errBody = await openRouterRes.json().catch(() => ({}));
-      throw new Error(errBody?.error?.message || `OpenRouter error: ${openRouterRes.status}`);
+      lastError = errBody?.error?.message || `OpenRouter error: ${openRouterRes.status}`;
+      console.warn(`[AI Stream] Model ${testModel} failed: ${lastError} — Retrying...`);
+    }
+
+    if (!openRouterRes || !openRouterRes.ok) {
+      throw new Error(lastError || 'All models failed to respond.');
     }
 
     // Set SSE headers — X-Accel-Buffering:no disables Nginx/Render proxy buffering
@@ -795,7 +812,7 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
         role:         'assistant',
         content:      fullReply,
         mode,
-        model_used:   model,
+        model_used:   usedModel,
         session_id:   activeSessionId,
         session_name: activeSessionName,
       });

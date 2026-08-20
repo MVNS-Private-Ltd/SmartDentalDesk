@@ -1513,8 +1513,12 @@
             historyLoaded = false;
           },
           onError: (err) => {
-            streamBubble.className = 'chat-bubble';
-            streamBubble.innerHTML = '<span style="color:var(--color-error)">Sorry, I encountered an error. Please try again.</span>';
+            if (firstToken) {
+              streamBubble.className = 'chat-bubble';
+              streamBubble.innerHTML = `<span style="color:var(--color-error)">Sorry, I encountered an error: ${err.message}</span>`;
+            } else {
+              streamBubble.innerHTML += `<br><br><span style="color:var(--color-error)">[Connection dropped: ${err.message}]</span>`;
+            }
           },
         });
       } catch (err) {

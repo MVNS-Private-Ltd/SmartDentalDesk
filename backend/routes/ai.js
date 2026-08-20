@@ -23,9 +23,9 @@ router.use(requireAuth);
 
 // ── Model IDs (OpenRouter) ────────────────────────────────────────────────────
 const MODELS = {
-  ultra:  'nvidia/nemotron-3-ultra-550b-a55b:free',     // Best reasoning, large context
-  super:  'nvidia/nemotron-3-super-120b-a12b:free',     // Premium thinking
-  nano:   'nvidia/nemotron-3-nano-30b-a3b:free',        // Fast, cheap, automation
+  ultra:  'google/gemma-4-31b-it:free',         // Most reliable, largest free model
+  super:  'google/gemma-4-26b-a4b-it:free',     // Reliable, fast
+  nano:   'openrouter/free',                    // Automatically routes to best healthy free model
 };
 
 // ── Model selection logic ─────────────────────────────────────────────────────

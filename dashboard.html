@@ -728,6 +728,58 @@
     font-family: inherit;
     min-width: 0;
   }
+  /* ── ADMIN TIME SLOT GRID ─────────────────────────────── */
+  .admin-slot-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: var(--space-3);
+  }
+  .admin-slot-btn {
+    padding: 0.55rem 0.3rem;
+    border: 1.5px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text-muted);
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.18s;
+    font-family: inherit;
+  }
+  .admin-slot-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: var(--color-primary-highlight);
+  }
+  .admin-slot-btn.selected {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(37,99,235,0.25);
+  }
+  .slot-grid-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: var(--space-3);
+    flex-wrap: wrap;
+  }
+  .slot-grid-actions button {
+    font-size: 0.78rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .slot-grid-actions button:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
 </style>
 </head>
 <body>
@@ -1012,8 +1064,13 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Available Time Slots (comma-separated)</label>
-              <input type="text" id="timeSlots" class="form-control" placeholder="e.g. 09:00, 09:30, 10:00, 14:00" value="09:00, 09:30, 10:00, 10:30, 11:00, 11:30, 12:00, 13:00, 13:30, 14:00, 14:30, 15:00, 15:30, 16:00, 16:30">
+              <label>Available Time Slots <span style="font-weight:400; color:var(--color-text-muted); font-size:0.8rem;">(click to toggle on/off)</span></label>
+              <div class="admin-slot-grid" id="adminSlotGrid"></div>
+              <div class="slot-grid-actions">
+                <button type="button" id="slotSelectAll">Select All</button>
+                <button type="button" id="slotClearAll">Clear All</button>
+                <button type="button" id="slotAddCustom">+ Custom Time</button>
+              </div>
             </div>
             <div class="form-group">
               <label>Max Bookings Per Day</label>
@@ -1224,9 +1281,8 @@
           if (s.appointment_settings) {
             document.getElementById('slotDuration').value = s.appointment_settings.slot_duration_minutes || 30;
             document.getElementById('autoApprove').value = s.appointment_settings.auto_approve ? 'true' : 'false';
-            if (s.appointment_settings.time_slots) {
-              document.getElementById('timeSlots').value = s.appointment_settings.time_slots.join(', ');
-            }
+            const savedSlots = s.appointment_settings.time_slots || [];
+            renderAdminSlotGrid(savedSlots);
             if (s.appointment_settings.max_bookings_per_day) {
               document.getElementById('maxBookingsPerDay').value = s.appointment_settings.max_bookings_per_day;
             }
@@ -1243,16 +1299,76 @@
       setTimeout(() => btn.textContent = 'Copy', 2000);
     });
 
+    // ── Admin Slot Grid Logic ─────────────────────────────────────────────────
+    const ALL_POSSIBLE_SLOTS = [
+      '07:00','07:30','08:00','08:30',
+      '09:00','09:30','10:00','10:30','11:00','11:30',
+      '12:00','12:30',
+      '13:00','13:30','14:00','14:30','15:00','15:30',
+      '16:00','16:30','17:00','17:30','18:00','18:30'
+    ];
+    const DEFAULT_SLOTS = ['09:00','09:30','10:00','10:30','11:00','11:30','12:00','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30'];
+
+    function renderAdminSlotGrid(selectedSlots) {
+      const grid = document.getElementById('adminSlotGrid');
+      grid.innerHTML = '';
+      // Merge ALL_POSSIBLE_SLOTS with any custom slots that may have been added
+      const allSlots = [...new Set([...ALL_POSSIBLE_SLOTS, ...selectedSlots])].sort();
+      allSlots.forEach(time => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'admin-slot-btn' + (selectedSlots.includes(time) ? ' selected' : '');
+        btn.textContent = time;
+        btn.dataset.time = time;
+        btn.addEventListener('click', () => btn.classList.toggle('selected'));
+        grid.appendChild(btn);
+      });
+    }
+
+    function getSelectedSlots() {
+      return [...document.querySelectorAll('#adminSlotGrid .admin-slot-btn.selected')]
+        .map(b => b.dataset.time);
+    }
+
+    // Render grid with defaults on page load (will be overwritten when settings load)
+    renderAdminSlotGrid(DEFAULT_SLOTS);
+
+    document.getElementById('slotSelectAll').addEventListener('click', () => {
+      document.querySelectorAll('#adminSlotGrid .admin-slot-btn').forEach(b => b.classList.add('selected'));
+    });
+    document.getElementById('slotClearAll').addEventListener('click', () => {
+      document.querySelectorAll('#adminSlotGrid .admin-slot-btn').forEach(b => b.classList.remove('selected'));
+    });
+    document.getElementById('slotAddCustom').addEventListener('click', () => {
+      const val = prompt('Enter a custom time (e.g. 13:45 or 19:00):');
+      if (!val) return;
+      const trimmed = val.trim();
+      if (!/^\d{2}:\d{2}$/.test(trimmed)) { alert('Please enter time in HH:MM format.'); return; }
+      const grid = document.getElementById('adminSlotGrid');
+      // Check if already exists
+      const existing = grid.querySelector(`[data-time="${trimmed}"]`);
+      if (existing) { existing.classList.add('selected'); return; }
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'admin-slot-btn selected';
+      btn.textContent = trimmed;
+      btn.dataset.time = trimmed;
+      btn.addEventListener('click', () => btn.classList.toggle('selected'));
+      // Insert in sorted order
+      const allBtns = [...grid.querySelectorAll('.admin-slot-btn')];
+      const after = allBtns.find(b => b.dataset.time > trimmed);
+      if (after) grid.insertBefore(btn, after); else grid.appendChild(btn);
+    });
+
     document.getElementById('settingsForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const timeSlotsRaw = document.getElementById('timeSlots').value;
-      const timeSlotsArr = timeSlotsRaw.split(',').map(s => s.trim()).filter(s => s !== '');
+      const timeSlotsArr = getSelectedSlots();
 
       const payload = {
         appointment_settings: {
           slot_duration_minutes: parseInt(document.getElementById('slotDuration').value),
           auto_approve: document.getElementById('autoApprove').value === 'true',
-          time_slots: timeSlotsArr.length > 0 ? timeSlotsArr : ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'],
+          time_slots: timeSlotsArr.length > 0 ? timeSlotsArr : DEFAULT_SLOTS,
           max_bookings_per_day: parseInt(document.getElementById('maxBookingsPerDay').value) || 20
         }
       };

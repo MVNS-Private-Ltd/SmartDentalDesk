@@ -307,6 +307,7 @@ const API_URL = 'https://smartdentaldesk.onrender.com/api/public';
 // For local testing: const API_URL = 'http://localhost:3001/api/public';
 
 let clinicId = null;
+let clinicData = null;
 let currentStep = 1;
 let selectedTime = null;
 
@@ -330,6 +331,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!res.ok) throw new Error(data.error);
 
     clinicId = data.clinic.id;
+    clinicData = data.clinic;
     document.getElementById('clinicName').textContent = data.clinic.name;
     document.getElementById('clinicAddress').textContent = data.clinic.address || '';
     
@@ -437,8 +439,12 @@ function generateTimeGrid() {
   grid.innerHTML = '';
   selectedTime = null;
   
-  // Mock time slots from 09:00 to 17:00
-  const slots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'];
+  // Mock time slots fallback
+  let slots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'];
+  
+  if (clinicData && clinicData.appointment_settings && clinicData.appointment_settings.time_slots) {
+    slots = clinicData.appointment_settings.time_slots;
+  }
   
   slots.forEach(time => {
     const btn = document.createElement('div');

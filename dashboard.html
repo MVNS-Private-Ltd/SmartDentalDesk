@@ -1011,6 +1011,14 @@
                 <option value="true">Yes (Instantly Booked)</option>
               </select>
             </div>
+            <div class="form-group">
+              <label>Available Time Slots (comma-separated)</label>
+              <input type="text" id="timeSlots" class="form-control" placeholder="e.g. 09:00, 09:30, 10:00, 14:00" value="09:00, 09:30, 10:00, 10:30, 11:00, 11:30, 12:00, 13:00, 13:30, 14:00, 14:30, 15:00, 15:30, 16:00, 16:30">
+            </div>
+            <div class="form-group">
+              <label>Max Bookings Per Day</label>
+              <input type="number" id="maxBookingsPerDay" class="form-control" value="20" min="1">
+            </div>
             <button type="submit" class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
             <p id="settingsFeedback" style="color:var(--success); font-size:var(--text-sm); display:none; margin-top:var(--space-2);">Settings saved!</p>
           </form>
@@ -1216,6 +1224,12 @@
           if (s.appointment_settings) {
             document.getElementById('slotDuration').value = s.appointment_settings.slot_duration_minutes || 30;
             document.getElementById('autoApprove').value = s.appointment_settings.auto_approve ? 'true' : 'false';
+            if (s.appointment_settings.time_slots) {
+              document.getElementById('timeSlots').value = s.appointment_settings.time_slots.join(', ');
+            }
+            if (s.appointment_settings.max_bookings_per_day) {
+              document.getElementById('maxBookingsPerDay').value = s.appointment_settings.max_bookings_per_day;
+            }
           }
         }
       } catch (err) { console.error('Failed to load settings', err); }
@@ -1231,10 +1245,15 @@
 
     document.getElementById('settingsForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const timeSlotsRaw = document.getElementById('timeSlots').value;
+      const timeSlotsArr = timeSlotsRaw.split(',').map(s => s.trim()).filter(s => s !== '');
+
       const payload = {
         appointment_settings: {
           slot_duration_minutes: parseInt(document.getElementById('slotDuration').value),
-          auto_approve: document.getElementById('autoApprove').value === 'true'
+          auto_approve: document.getElementById('autoApprove').value === 'true',
+          time_slots: timeSlotsArr.length > 0 ? timeSlotsArr : ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'],
+          max_bookings_per_day: parseInt(document.getElementById('maxBookingsPerDay').value) || 20
         }
       };
       

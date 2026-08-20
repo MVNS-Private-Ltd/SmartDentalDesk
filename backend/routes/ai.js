@@ -732,8 +732,8 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
     let usedModel = model;
     const fallbackModels = [
       model,
-      'google/gemini-2.0-flash-lite-preview-02-05:free',
-      'meta-llama/llama-3.1-8b-instruct:free'
+      'google/gemma-4-31b-it:free',
+      'openrouter/free'
     ];
 
     let lastError = null;

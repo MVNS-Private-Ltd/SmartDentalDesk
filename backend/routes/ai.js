@@ -782,9 +782,10 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
     let fullReply = '';
     const reader = openRouterRes.body;
     let buffer = '';
+    const decoder = new TextDecoder();
 
     for await (const chunk of reader) {
-      buffer += chunk.toString();
+      buffer += decoder.decode(chunk, { stream: true });
       const lines = buffer.split('\n');
       buffer = lines.pop(); // keep incomplete line
 

@@ -1483,7 +1483,11 @@
 
       isAiThinking = true;
       const sendBtn = document.getElementById('chatSendBtn');
-      if (sendBtn) { sendBtn.dataset.state = 'stop'; sendBtn.disabled = false; }
+      if (sendBtn) { 
+        sendBtn.dataset.state = 'stop'; 
+        sendBtn.disabled = false; 
+        sendBtn.title = 'Stop the response';
+      }
 
       let accumulated = '';
       let firstToken = true;
@@ -1529,8 +1533,13 @@
           streamBubble.className = 'chat-bubble';
           streamBubble.innerHTML = `<span style="color:var(--color-error)">Sorry, I encountered an error: ${err.message}</span>`;
           console.error('Chat error:', err);
-        } else if (firstToken) {
-          loadDiv.remove();
+        } else {
+          streamBubble.className = 'chat-bubble';
+          if (firstToken) {
+            streamBubble.innerHTML = `smart dental clinic ai was terminated`;
+          } else {
+            streamBubble.innerHTML += `<br><br>[smart dental clinic ai was terminated]`;
+          }
         }
       } finally {
         isAiThinking = false;
@@ -1538,6 +1547,7 @@
         if (sendBtn) {
           sendBtn.dataset.state = chatInput.value.trim() ? 'arrow-right' : 'arrow-up';
           sendBtn.disabled = false;
+          sendBtn.title = 'Send message';
         }
         chatInput.focus();
       }
@@ -1549,6 +1559,7 @@
       const sendBtn = document.getElementById('chatSendBtn');
       if (sendBtn) {
         sendBtn.dataset.state = chatInput.value.trim() ? 'arrow-right' : 'arrow-up';
+        sendBtn.title = 'Send message';
       }
     });
 

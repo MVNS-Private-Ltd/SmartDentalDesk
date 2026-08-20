@@ -8,6 +8,8 @@ window.api = (function() {
   // Redirect URIs — must match what is set in Supabase dashboard > Auth > URL Configuration
   const OAUTH_REDIRECT  = 'https://smart-dental-desk.vercel.app/login.html';
 
+  let activeChatController = null;
+
   function getToken()        { return localStorage.getItem('sdd_token'); }
   function getRefreshToken() { return localStorage.getItem('sdd_refresh_token'); }
 
@@ -130,6 +132,7 @@ window.api = (function() {
     loginWithGoogle,
     handleOAuthCallback,
     getDashboardStats: () => request('/dashboard/stats'),
+    stopChatStream: () => { if (activeChatController) { activeChatController.abort(); activeChatController = null; } },
 
     // Endpoints
     getPatients: (type = 'all') => request(`/patients?type=${type}`),
@@ -146,7 +149,10 @@ window.api = (function() {
       if (session_id) payload.session_id = session_id;
       const token = getToken();
 
+      if (activeChatController) activeChatController.abort();
       const controller = new AbortController();
+      activeChatController = controller;
+
       // Wait up to 90s for first response (Render free tier can cold-start in 50-60s)
       const timeout = setTimeout(() => controller.abort(), 90000);
 
@@ -195,6 +201,7 @@ window.api = (function() {
         }
       }
       clearTimeout(chunkTimeout);
+      if (activeChatController === controller) activeChatController = null;
     },
     getChatHistory: (session_id = null) => request(`/ai/history${session_id ? '?session_id=' + session_id : ''}`),
     getChatSessions: () => request('/ai/sessions'),

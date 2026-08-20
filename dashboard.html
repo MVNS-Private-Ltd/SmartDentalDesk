@@ -1451,7 +1451,10 @@
     let isAiThinking = false;
     chatForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (isAiThinking) return;
+      if (isAiThinking) {
+        if (window.api.stopChatStream) window.api.stopChatStream();
+        return;
+      }
       
       const text = chatInput.value.trim();
       if (!text) return;
@@ -1522,9 +1525,11 @@
           },
         });
       } catch (err) {
-        streamBubble.className = 'chat-bubble';
-        streamBubble.innerHTML = `<span style="color:var(--color-error)">Sorry, I encountered an error: ${err.message}</span>`;
-        console.error('Chat error:', err);
+        if (err.name !== 'AbortError' && !err.message.includes('abort')) {
+          streamBubble.className = 'chat-bubble';
+          streamBubble.innerHTML = `<span style="color:var(--color-error)">Sorry, I encountered an error: ${err.message}</span>`;
+          console.error('Chat error:', err);
+        }
       } finally {
         isAiThinking = false;
         const sendBtn = document.getElementById('chatSendBtn');

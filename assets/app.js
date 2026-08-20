@@ -207,6 +207,7 @@ window.api = (function() {
     getChatSessions: () => request('/ai/sessions'),
     deleteChatSession: (session_id) => request(`/ai/sessions/${session_id}`, { method: 'DELETE' }),
     renameChatSession: (session_id, name) => request(`/ai/sessions/${session_id}/rename`, { method: 'PUT', body: JSON.stringify({ name }) }),
+    sendPatientEmail: (patient_name, subject, body) => request('/email/send-patient', { method: 'POST', body: JSON.stringify({ patient_name, subject, body }) }),
 
     logout: () => {
       localStorage.removeItem('sdd_token');

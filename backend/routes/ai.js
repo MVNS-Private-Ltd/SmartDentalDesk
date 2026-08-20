@@ -786,6 +786,11 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
 
     for await (const chunk of reader) {
       buffer += decoder.decode(chunk, { stream: true });
+      
+      // Send a keep-alive ping to the frontend so it doesn't hit the 90s chunk timeout
+      res.write(':\n\n');
+      if (typeof res.flush === 'function') res.flush();
+
       const lines = buffer.split('\n');
       buffer = lines.pop(); // keep incomplete line
 

@@ -1519,7 +1519,7 @@
         });
       } catch (err) {
         streamBubble.className = 'chat-bubble';
-        streamBubble.innerHTML = '<span style="color:var(--color-error)">Sorry, I encountered an error. Please try again.</span>';
+        streamBubble.innerHTML = `<span style="color:var(--color-error)">Sorry, I encountered an error: ${err.message}</span>`;
         console.error('Chat error:', err);
       } finally {
         isAiThinking = false;

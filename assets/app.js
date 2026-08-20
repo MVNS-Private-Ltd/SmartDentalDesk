@@ -161,7 +161,11 @@ window.api = (function() {
       });
 
       clearTimeout(timeout);
-      if (!res.ok) throw new Error(`Stream error: ${res.status}`);
+      if (!res.ok) {
+        let errMessage = `Stream error: ${res.status}`;
+        try { const errData = await res.json(); errMessage = errData.error || errMessage; } catch {}
+        throw new Error(errMessage);
+      }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();

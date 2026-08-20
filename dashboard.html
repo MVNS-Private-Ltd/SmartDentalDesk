@@ -1776,8 +1776,11 @@
             if (activeMode === 'automation' && accumulated) {
               let parsed = null;
               try {
-                // Strip any accidental markdown code fences
-                const clean = accumulated.trim().replace(/^```[\w]*\n?/,'').replace(/\n?```$/,'').trim();
+                // Strip any accidental markdown code fences more robustly
+                const clean = accumulated.trim()
+                  .replace(/^```[a-zA-Z]*\s*\n?/, '')
+                  .replace(/\n?```$/, '')
+                  .trim();
                 parsed = JSON.parse(clean);
               } catch { /* not JSON — display as plain text */ }
 

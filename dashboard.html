@@ -1784,11 +1784,32 @@
                 parsed = JSON.parse(clean);
               } catch { /* not JSON — display as plain text */ }
 
+              let isSendEmail = false;
+              let pName = '';
+              let pSubject = '';
+              let pBody = '';
+
               if (parsed && parsed.action_type === 'send_email') {
+                 isSendEmail = true;
+                 pName = parsed.patient_name || '';
+                 pSubject = parsed.subject || '';
+                 pBody = parsed.body || '';
+              } else if (parsed && parsed.patient && parsed.message) {
+                 isSendEmail = true;
+                 pName = parsed.patient.name || '';
+                 pSubject = parsed.message.subject || '';
+                 pBody = parsed.message.body || '';
+                 // Normalize parsed object so downstream logic (send button) can find the keys
+                 parsed.patient_name = pName;
+                 parsed.subject = pSubject;
+                 parsed.body = pBody;
+              }
+
+              if (isSendEmail) {
                 // Hide the raw JSON bubble, replace with a human-friendly preview
                 streamBubble.style.display = 'none';
 
-                const bodyPreview = (parsed.body || '').replace(/\n/g, ' ');
+                const bodyPreview = (pBody || '').replace(/\\n/g, ' ');
 
                 const card = document.createElement('div');
                 card.className = 'email-action-card';
@@ -1800,11 +1821,11 @@
                   </div>
                   <div class="eac-field">
                     <span class="eac-label">To</span>
-                    <span class="eac-value">${parsed.patient_name || '—'}</span>
+                    <span class="eac-value">${pName || '—'}</span>
                   </div>
                   <div class="eac-field">
                     <span class="eac-label">Subject</span>
-                    <span class="eac-value">${parsed.subject || '—'}</span>
+                    <span class="eac-value">${pSubject || '—'}</span>
                   </div>
                   <div class="eac-field">
                     <span class="eac-label">Message</span>

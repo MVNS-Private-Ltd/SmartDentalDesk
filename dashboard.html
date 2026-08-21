@@ -991,12 +991,13 @@
             <tr>
               <th>Name</th>
               <th>Phone</th>
+              <th>Email</th>
               <th>Last Visit</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody id="patientsTableBody">
-            <tr><td colspan="4" style="text-align:center;">Loading patients...</td></tr>
+            <tr><td colspan="5" style="text-align:center;">Loading patients...</td></tr>
           </tbody>
         </table>
       </div>
@@ -1345,22 +1346,23 @@
 
     async function loadPatients(type) {
       const tbody = document.getElementById('patientsTableBody');
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading...</td></tr>';
       try {
         const res = await window.api.getPatients(type);
         if (res.patients.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No patients found.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No patients found.</td></tr>';
           return;
         }
         tbody.innerHTML = res.patients.map(p => `
           <tr>
             <td><strong>${p.name}</strong></td>
             <td>${p.phone}</td>
+            <td>${p.email || '-'}</td>
             <td>${p.created_at.slice(0, 10)}</td>
             <td><span style="color:var(--success)">Active</span></td>
           </tr>
         `).join('');
-      } catch (err) { tbody.innerHTML = `<tr><td colspan="4" style="color:red;text-align:center;">Error loading patients.</td></tr>`; }
+      } catch (err) { tbody.innerHTML = `<tr><td colspan="5" style="color:red;text-align:center;">Error loading patients.</td></tr>`; }
     }
 
     // ── Appointments ──────────────────────────────────────────────────────────

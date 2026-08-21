@@ -61,6 +61,45 @@ router.post('/verify-otp', async (req, res, next) => {
   }
 });
 
+// ── GET /api/public/availability ─────────────────────────────────────────────
+// Returns booked time slots and remaining capacity for a clinic on a given date.
+// Query params: clinic_id, date
+router.get('/availability', async (req, res, next) => {
+  try {
+    const { clinic_id, date } = req.query;
+    if (!clinic_id || !date) {
+      return res.status(400).json({ error: 'clinic_id and date are required' });
+    }
+
+    // Fetch clinic settings for max_bookings_per_day
+    const { data: clinic } = await supabase
+      .from('clinics')
+      .select('appointment_settings')
+      .eq('id', clinic_id)
+      .single();
+
+    const maxPerDay = clinic?.appointment_settings?.max_bookings_per_day || 20;
+
+    // Fetch all active appointments for that date
+    const { data: appts, error } = await supabase
+      .from('appointments')
+      .select('time')
+      .eq('clinic_id', clinic_id)
+      .eq('date', date)
+      .neq('status', 'cancelled');
+
+    if (error) throw error;
+
+    const bookedTimes = appts.map(a => a.time);
+    const totalBooked = appts.length;
+    const isDayFull = totalBooked >= maxPerDay;
+
+    res.json({ booked_times: bookedTimes, total_booked: totalBooked, max_per_day: maxPerDay, is_day_full: isDayFull });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── POST /api/public/book ─────────────────────────────────────────────────────
 router.post('/book', async (req, res, next) => {
   try {
@@ -68,6 +107,39 @@ router.post('/book', async (req, res, next) => {
 
     if (!clinic_id || !patient_name || !patient_phone || !date || !time || !service) {
       return res.status(400).json({ error: 'Missing required booking fields' });
+    }
+
+    // ── Guard 1: Check max bookings per day ──────────────────────────────────
+    const { data: clinic } = await supabase
+      .from('clinics')
+      .select('appointment_settings, name')
+      .eq('id', clinic_id)
+      .single();
+
+    const maxPerDay = clinic?.appointment_settings?.max_bookings_per_day || 20;
+
+    const { count: dayCount } = await supabase
+      .from('appointments')
+      .select('id', { count: 'exact', head: true })
+      .eq('clinic_id', clinic_id)
+      .eq('date', date)
+      .neq('status', 'cancelled');
+
+    if (dayCount >= maxPerDay) {
+      return res.status(409).json({ error: `Sorry, this day is fully booked (max ${maxPerDay} appointments). Please choose another date.` });
+    }
+
+    // ── Guard 2: Check if time slot is already taken ─────────────────────────
+    const { count: slotCount } = await supabase
+      .from('appointments')
+      .select('id', { count: 'exact', head: true })
+      .eq('clinic_id', clinic_id)
+      .eq('date', date)
+      .eq('time', time)
+      .neq('status', 'cancelled');
+
+    if (slotCount > 0) {
+      return res.status(409).json({ error: 'This time slot has already been booked. Please choose another time.' });
     }
 
     // 1. Find or create patient (phone is unique per clinic)
@@ -122,13 +194,7 @@ router.post('/book', async (req, res, next) => {
 
     // 3. Send confirmation email if email is provided
     if (patient_email) {
-      const { data: clinicData } = await supabase
-        .from('clinics')
-        .select('name')
-        .eq('id', clinic_id)
-        .single();
-        
-      const clinicName = clinicData ? clinicData.name : 'Smart Dental Desk';
+      const clinicName = clinic?.name || 'Smart Dental Desk';
 
       // Convert time to 12-hour format for the email
       const [hourStr, minStr] = time.split(':');

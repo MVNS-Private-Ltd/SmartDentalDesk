@@ -163,6 +163,24 @@
     }
     .time-btn:hover { background: var(--success); color: #fff; }
     .time-btn.selected { background: var(--success); color: #fff; box-shadow: 0 4px 10px rgba(22,163,74,0.3); }
+    .time-btn.booked {
+      border-color: #cbd5e1;
+      background: #f1f5f9;
+      color: #94a3b8;
+      cursor: not-allowed;
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+    .time-btn.booked:hover { background: #f1f5f9; color: #94a3b8; }
+    .day-full-msg {
+      text-align: center;
+      color: #dc2626;
+      font-weight: 600;
+      padding: 1rem;
+      background: #fef2f2;
+      border-radius: 8px;
+      border: 1px solid #fecaca;
+    }
 
     .error-msg { color: #dc2626; font-size: 0.85rem; margin-top: 0.5rem; display: none; }
     
@@ -443,28 +461,54 @@ function formatTime12h(time24) {
 // ── STEP 3: Date & Time ──
 document.getElementById('pDate').addEventListener('change', generateTimeGrid);
 
-function generateTimeGrid() {
+async function generateTimeGrid() {
   const grid = document.getElementById('timeGrid');
-  grid.innerHTML = '';
+  grid.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem;">Loading available slots...</p>';
   selectedTime = null;
-  
-  // Mock time slots fallback
+
   let slots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'];
-  
   if (clinicData && clinicData.appointment_settings && clinicData.appointment_settings.time_slots) {
     slots = clinicData.appointment_settings.time_slots;
   }
-  
+
+  const selectedDate = document.getElementById('pDate').value;
+  let bookedTimes = [];
+  let isDayFull = false;
+
+  // Fetch availability for selected date
+  if (clinicId && selectedDate) {
+    try {
+      const avRes = await fetch(`${API_URL}/availability?clinic_id=${clinicId}&date=${selectedDate}`);
+      if (avRes.ok) {
+        const avData = await avRes.json();
+        bookedTimes = avData.booked_times || [];
+        isDayFull = avData.is_day_full || false;
+      }
+    } catch (e) {
+      console.warn('Could not fetch availability:', e);
+    }
+  }
+
+  grid.innerHTML = '';
+
+  if (isDayFull) {
+    grid.innerHTML = '<p class="day-full-msg">This day is fully booked. Please choose another date.</p>';
+    return;
+  }
+
   slots.forEach(time => {
+    const isBooked = bookedTimes.some(b => b.startsWith(time));
     const btn = document.createElement('div');
-    btn.className = 'time-btn';
+    btn.className = 'time-btn' + (isBooked ? ' booked' : '');
     btn.textContent = formatTime12h(time);
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      selectedTime = time;
-      showError(3, '');
-    });
+    if (!isBooked) {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedTime = time;
+        showError(3, '');
+      });
+    }
     grid.appendChild(btn);
   });
 }

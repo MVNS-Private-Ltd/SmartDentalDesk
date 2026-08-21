@@ -19,9 +19,10 @@ async function sendMail({ to, subject, text, html }) {
 
   const fromName  = process.env.SMTP_FROM_NAME || 'Smart Dental Desk';
   
-  // Resend requires a verified domain. If you haven't verified a domain yet, 
-  // you must use onboarding@resend.dev AND you can only send emails to the address you signed up with.
-  const fromEmail = process.env.SMTP_USER || 'onboarding@resend.dev'; 
+  // Resend requires a verified domain to send FROM a custom address.
+  // Until a domain is verified, use Resend's built-in test address.
+  // Set RESEND_FROM_EMAIL in Render env vars once you have a verified domain.
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
   const payload = {
     from: `"${fromName}" <${fromEmail}>`,

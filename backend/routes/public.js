@@ -1,5 +1,6 @@
 const express  = require('express');
 const supabase = require('../lib/supabase');
+const { sendMail } = require('../lib/mailer');
 
 const router = express.Router();
 
@@ -73,13 +74,19 @@ router.post('/book', async (req, res, next) => {
     let patientId;
     const { data: existingPatient } = await supabase
       .from('patients')
-      .select('id')
+      .select('id, email')
       .eq('clinic_id', clinic_id)
       .eq('phone', patient_phone)
       .single();
 
     if (existingPatient) {
       patientId = existingPatient.id;
+      if (patient_email && existingPatient.email !== patient_email) {
+        await supabase
+          .from('patients')
+          .update({ email: patient_email })
+          .eq('id', patientId);
+      }
     } else {
       const { data: newPatient, error: patientErr } = await supabase
         .from('patients')
@@ -112,6 +119,52 @@ router.post('/book', async (req, res, next) => {
       .single();
 
     if (apptErr) throw apptErr;
+
+    // 3. Send confirmation email if email is provided
+    if (patient_email) {
+      const { data: clinicData } = await supabase
+        .from('clinics')
+        .select('name')
+        .eq('id', clinic_id)
+        .single();
+        
+      const clinicName = clinicData ? clinicData.name : 'Smart Dental Desk';
+
+      // Convert time to 12-hour format for the email
+      const [hourStr, minStr] = time.split(':');
+      let hour = parseInt(hourStr, 10);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      hour = hour % 12 || 12;
+      const formattedTime = `${hour}:${minStr} ${ampm}`;
+
+      const emailSubject = `Appointment Confirmed - ${clinicName}`;
+      const emailText = `Hello ${patient_name},\n\nYour appointment for ${service} is confirmed for ${date} at ${formattedTime}.\n\nThank you,\n${clinicName}`;
+      
+      const htmlBody = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+          <h2 style="color: #2563eb;">Appointment Confirmed</h2>
+          <p>Hello ${patient_name},</p>
+          <p>Your appointment for <strong>${service}</strong> has been successfully scheduled.</p>
+          <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${date}</p>
+            <p style="margin: 0;"><strong>Time:</strong> ${formattedTime}</p>
+          </div>
+          <p>We look forward to seeing you!</p>
+          <p>Best regards,<br><strong>${clinicName}</strong></p>
+        </div>
+      `;
+
+      try {
+        await sendMail({
+          to: patient_email,
+          subject: emailSubject,
+          text: emailText,
+          html: htmlBody
+        });
+      } catch (mailErr) {
+        console.error('Failed to send confirmation email:', mailErr);
+      }
+    }
 
     res.status(201).json({ message: 'Appointment booked successfully!', appointment });
   } catch (err) {

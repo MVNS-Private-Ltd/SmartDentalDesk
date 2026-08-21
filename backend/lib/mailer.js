@@ -1,36 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  Mailer — Nodemailer SMTP transport
-//  Uses Gmail App Password configured in .env
-//  SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM_NAME
+//  Mailer — Resend API (HTTP-based, bypasses Render SMTP port blocks)
+//  Uses RESEND_API_KEY configured in .env
 // ─────────────────────────────────────────────────────────────────────────────
-const nodemailer = require('nodemailer');
-
-let _transporter = null;
-
-function getTransporter() {
-  if (_transporter) return _transporter;
-
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
-
-  if (!SMTP_USER || !SMTP_PASS) {
-    throw new Error('SMTP credentials not configured. Set SMTP_USER and SMTP_PASS in .env');
-  }
-
-  _transporter = nodemailer.createTransport({
-    host:   SMTP_HOST || 'smtp.gmail.com',
-    port:   parseInt(SMTP_PORT || '587', 10),
-    secure: parseInt(SMTP_PORT || '587', 10) === 465, // true for 465, false for 587
-    connectionTimeout: 10000,
-    greetingTimeout: 5000,
-    socketTimeout: 15000,
-    auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS,
-    },
-  });
-
-  return _transporter;
-}
 
 /**
  * Send an email.
@@ -41,20 +12,46 @@ function getTransporter() {
  * @param {string} [opts.html]  - Optional HTML body
  */
 async function sendMail({ to, subject, text, html }) {
-  const transporter = getTransporter();
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('Resend API key not configured. Set RESEND_API_KEY in your Render environment variables.');
+  }
 
   const fromName  = process.env.SMTP_FROM_NAME || 'Smart Dental Desk';
-  const fromEmail = process.env.SMTP_USER;
+  
+  // Resend requires a verified domain. If you haven't verified a domain yet, 
+  // you must use onboarding@resend.dev AND you can only send emails to the address you signed up with.
+  const fromEmail = process.env.SMTP_USER || 'onboarding@resend.dev'; 
 
-  const info = await transporter.sendMail({
-    from:    `"${fromName}" <${fromEmail}>`,
-    to,
-    subject,
-    text,
-    ...(html ? { html } : {}),
+  const payload = {
+    from: `"${fromName}" <${fromEmail}>`,
+    to: [to],
+    subject: subject,
+    text: text
+  };
+
+  if (html) {
+    payload.html = html;
+  }
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
   });
 
-  return info;
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(`Resend Error: ${data.message || JSON.stringify(data)}`);
+  }
+
+  return {
+    messageId: data.id
+  };
 }
 
 module.exports = { sendMail };

@@ -1377,7 +1377,7 @@
         }
         tbody.innerHTML = res.appointments.map(a => `
           <tr>
-            <td><strong>${a.date}</strong> <br> <span class="text-muted">${a.time}</span></td>
+            <td><strong>${a.date}</strong> <br> <span class="text-muted">${formatTime12h(a.time)}</span></td>
             <td>${a.patients?.name || 'Unknown'}</td>
             <td>${a.service}</td>
             <td style="text-transform:capitalize;">${a.status}</td>
@@ -1419,6 +1419,14 @@
       setTimeout(() => btn.textContent = 'Copy', 2000);
     });
 
+    // ── 12-hour time helper ──────────────────────────────────────────────────
+    function formatTime12h(t) {
+      const [h, m] = t.split(':');
+      const hour = parseInt(h, 10);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      return `${hour % 12 || 12}:${m} ${ampm}`;
+    }
+
     // ── Admin Slot Grid Logic ─────────────────────────────────────────────────
     const ALL_POSSIBLE_SLOTS = [
       '07:00','07:30','08:00','08:30',
@@ -1438,7 +1446,7 @@
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'admin-slot-btn' + (selectedSlots.includes(time) ? ' selected' : '');
-        btn.textContent = time;
+        btn.textContent = formatTime12h(time);
         btn.dataset.time = time;
         btn.addEventListener('click', () => btn.classList.toggle('selected'));
         grid.appendChild(btn);

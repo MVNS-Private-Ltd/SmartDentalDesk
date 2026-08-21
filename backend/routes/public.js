@@ -160,19 +160,47 @@ router.post('/book', async (req, res, next) => {
           .eq('id', patientId);
       }
     } else {
-      const { data: newPatient, error: patientErr } = await supabase
-        .from('patients')
-        .insert({
-          clinic_id,
-          name: patient_name,
-          phone: patient_phone,
-          email: patient_email
-        })
-        .select('id')
-        .single();
-        
-      if (patientErr) throw patientErr;
-      patientId = newPatient.id;
+      // Also check if a patient with this email already exists in this clinic
+      if (patient_email) {
+        const { data: emailPatient } = await supabase
+          .from('patients')
+          .select('id, email')
+          .eq('clinic_id', clinic_id)
+          .eq('email', patient_email)
+          .single();
+        if (emailPatient) {
+          patientId = emailPatient.id;
+        }
+      }
+
+      if (!patientId) {
+        const { data: newPatient, error: patientErr } = await supabase
+          .from('patients')
+          .insert({
+            clinic_id,
+            name: patient_name,
+            phone: patient_phone,
+            email: patient_email
+          })
+          .select('id')
+          .single();
+          
+        if (patientErr) throw patientErr;
+        patientId = newPatient.id;
+      }
+    }
+
+    // ── Guard 3: One appointment per patient per day ──────────────────────────
+    const { count: patientDayCount } = await supabase
+      .from('appointments')
+      .select('id', { count: 'exact', head: true })
+      .eq('clinic_id', clinic_id)
+      .eq('patient_id', patientId)
+      .eq('date', date)
+      .neq('status', 'cancelled');
+
+    if (patientDayCount > 0) {
+      return res.status(409).json({ error: 'You already have an appointment booked on this date. Only one appointment per day is allowed.' });
     }
 
     // 2. Create the appointment

@@ -20,6 +20,9 @@ function getTransporter() {
     host:   SMTP_HOST || 'smtp.gmail.com',
     port:   parseInt(SMTP_PORT || '587', 10),
     secure: parseInt(SMTP_PORT || '587', 10) === 465, // true for 465, false for 587
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 15000,
     auth: {
       user: SMTP_USER,
       pass: SMTP_PASS,

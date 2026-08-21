@@ -24,6 +24,7 @@ router.get('/clinic/:slug', async (req, res, next) => {
     next(err);
   }
 });
+
 // ── POST /api/public/send-otp ─────────────────────────────────────────────────
 router.post('/send-otp', async (req, res, next) => {
   try {
@@ -71,7 +72,6 @@ router.get('/availability', async (req, res, next) => {
       return res.status(400).json({ error: 'clinic_id and date are required' });
     }
 
-    // Fetch clinic settings for max_bookings_per_day
     const { data: clinic } = await supabase
       .from('clinics')
       .select('appointment_settings')
@@ -80,7 +80,6 @@ router.get('/availability', async (req, res, next) => {
 
     const maxPerDay = clinic?.appointment_settings?.max_bookings_per_day || 20;
 
-    // Fetch all active appointments for that date
     const { data: appts, error } = await supabase
       .from('appointments')
       .select('time')
@@ -90,8 +89,9 @@ router.get('/availability', async (req, res, next) => {
 
     if (error) throw error;
 
-    const bookedTimes = appts.map(a => a.time);
-    const totalBooked = appts.length;
+    // Normalise times to HH:MM (strip seconds if present)
+    const bookedTimes = (appts || []).map(a => String(a.time).slice(0, 5));
+    const totalBooked = bookedTimes.length;
     const isDayFull = totalBooked >= maxPerDay;
 
     res.json({ booked_times: bookedTimes, total_booked: totalBooked, max_per_day: maxPerDay, is_day_full: isDayFull });
@@ -105,11 +105,42 @@ router.post('/book', async (req, res, next) => {
   try {
     const { clinic_id, patient_name, patient_phone, patient_email, date, time, service, reason } = req.body;
 
+    console.log(`[BOOK] clinic=${clinic_id} email=${patient_email} phone=${patient_phone} date=${date} time=${time}`);
+
     if (!clinic_id || !patient_name || !patient_phone || !date || !time || !service) {
       return res.status(400).json({ error: 'Missing required booking fields' });
     }
 
-    // ── Guard 1: Check max bookings per day ──────────────────────────────────
+    // ── Guard 1: One booking per email per day ────────────────────────────────
+    // Done FIRST, before any patient creation, using case-insensitive email match
+    if (patient_email) {
+      const { data: emailPatients } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('clinic_id', clinic_id)
+        .ilike('email', patient_email.trim());
+
+      if (emailPatients && emailPatients.length > 0) {
+        const pIds = emailPatients.map(p => p.id);
+        const { data: emailDayAppts } = await supabase
+          .from('appointments')
+          .select('id')
+          .eq('clinic_id', clinic_id)
+          .eq('date', date)
+          .in('patient_id', pIds)
+          .neq('status', 'cancelled');
+
+        console.log(`[BOOK] Guard1 — patients with email: ${pIds.length}, appts today: ${(emailDayAppts||[]).length}`);
+
+        if ((emailDayAppts || []).length > 0) {
+          return res.status(409).json({ error: 'You already have an appointment booked on this date. Only one appointment per day is allowed.' });
+        }
+      } else {
+        console.log(`[BOOK] Guard1 — no existing patient found with email: ${patient_email}`);
+      }
+    }
+
+    // ── Guard 2: Clinic daily cap ─────────────────────────────────────────────
     const { data: clinic } = await supabase
       .from('clinics')
       .select('appointment_settings, name')
@@ -125,115 +156,72 @@ router.post('/book', async (req, res, next) => {
       .eq('date', date)
       .neq('status', 'cancelled');
 
+    console.log(`[BOOK] Guard2 — day total: ${(dayAppts||[]).length}/${maxPerDay}`);
+
     if ((dayAppts || []).length >= maxPerDay) {
       return res.status(409).json({ error: `Sorry, this day is fully booked (max ${maxPerDay} appointments). Please choose another date.` });
     }
 
-    // ── Guard 2: Check if time slot is already taken ─────────────────────────
-    const { data: slotAppts } = await supabase
+    // ── Guard 3: Time slot collision ──────────────────────────────────────────
+    // Fetch all times for this date and use startsWith to handle HH:MM vs HH:MM:SS
+    const { data: allTodayAppts } = await supabase
       .from('appointments')
-      .select('id')
+      .select('time')
       .eq('clinic_id', clinic_id)
       .eq('date', date)
-      .eq('time', time)
       .neq('status', 'cancelled');
 
-    if ((slotAppts || []).length > 0) {
+    const slotTaken = (allTodayAppts || []).some(a => String(a.time).startsWith(time));
+    console.log(`[BOOK] Guard3 — slot ${time} taken: ${slotTaken}, stored times: ${JSON.stringify((allTodayAppts||[]).map(a=>a.time))}`);
+
+    if (slotTaken) {
       return res.status(409).json({ error: 'This time slot has already been booked. Please choose another time.' });
     }
 
-    // 1. Find or create patient (phone is unique per clinic)
+    // ── Find or create patient ────────────────────────────────────────────────
     let patientId;
     const { data: existingPatient } = await supabase
       .from('patients')
       .select('id, email')
       .eq('clinic_id', clinic_id)
       .eq('phone', patient_phone)
-      .single();
+      .maybeSingle();
 
     if (existingPatient) {
       patientId = existingPatient.id;
-      if (patient_email && existingPatient.email !== patient_email) {
-        await supabase
-          .from('patients')
-          .update({ email: patient_email })
-          .eq('id', patientId);
+      if (patient_email && existingPatient.email?.toLowerCase() !== patient_email.toLowerCase()) {
+        await supabase.from('patients').update({ email: patient_email }).eq('id', patientId);
       }
     } else {
-      // Also check if a patient with this email already exists in this clinic
-      if (patient_email) {
-        const { data: emailPatient } = await supabase
-          .from('patients')
-          .select('id, email')
-          .eq('clinic_id', clinic_id)
-          .eq('email', patient_email)
-          .single();
-        if (emailPatient) {
-          patientId = emailPatient.id;
-        }
-      }
-
-      if (!patientId) {
-        const { data: newPatient, error: patientErr } = await supabase
-          .from('patients')
-          .insert({
-            clinic_id,
-            name: patient_name,
-            phone: patient_phone,
-            email: patient_email
-          })
-          .select('id')
-          .single();
-          
-        if (patientErr) throw patientErr;
-        patientId = newPatient.id;
-      }
+      const { data: newPatient, error: patientErr } = await supabase
+        .from('patients')
+        .insert({ clinic_id, name: patient_name, phone: patient_phone, email: patient_email })
+        .select('id')
+        .single();
+      if (patientErr) throw patientErr;
+      patientId = newPatient.id;
     }
 
-    // ── Guard 3: One appointment per patient per day ──────────────────────────
-    const { data: patientDayAppts } = await supabase
-      .from('appointments')
-      .select('id')
-      .eq('clinic_id', clinic_id)
-      .eq('patient_id', patientId)
-      .eq('date', date)
-      .neq('status', 'cancelled');
+    console.log(`[BOOK] All guards passed — creating appointment for patientId=${patientId}`);
 
-    if ((patientDayAppts || []).length > 0) {
-      return res.status(409).json({ error: 'You already have an appointment booked on this date. Only one appointment per day is allowed.' });
-    }
-
-    // 2. Create the appointment
+    // ── Create appointment ────────────────────────────────────────────────────
     const { data: appointment, error: apptErr } = await supabase
       .from('appointments')
-      .insert({
-        clinic_id,
-        patient_id: patientId,
-        date,
-        time,
-        service,
-        reason,
-        status: 'scheduled'
-      })
+      .insert({ clinic_id, patient_id: patientId, date, time, service, reason, status: 'scheduled' })
       .select()
       .single();
 
     if (apptErr) throw apptErr;
 
-    // 3. Send confirmation email if email is provided
+    // ── Send confirmation email ───────────────────────────────────────────────
     if (patient_email) {
       const clinicName = clinic?.name || 'Smart Dental Desk';
-
-      // Convert time to 12-hour format for the email
       const [hourStr, minStr] = time.split(':');
       let hour = parseInt(hourStr, 10);
       const ampm = hour >= 12 ? 'PM' : 'AM';
       hour = hour % 12 || 12;
       const formattedTime = `${hour}:${minStr} ${ampm}`;
 
-      const emailSubject = `Appointment Confirmed - ${clinicName}`;
-      const emailText = `Hello ${patient_name},\n\nYour appointment for ${service} is confirmed for ${date} at ${formattedTime}.\n\nThank you,\n${clinicName}`;
-      
       const htmlBody = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
           <h2 style="color: #2563eb;">Appointment Confirmed</h2>
@@ -247,16 +235,15 @@ router.post('/book', async (req, res, next) => {
           <p>Best regards,<br><strong>${clinicName}</strong></p>
         </div>
       `;
-
       try {
         await sendMail({
           to: patient_email,
-          subject: emailSubject,
-          text: emailText,
+          subject: `Appointment Confirmed - ${clinicName}`,
+          text: `Hello ${patient_name},\n\nYour ${service} appointment is confirmed for ${date} at ${formattedTime}.\n\nThank you,\n${clinicName}`,
           html: htmlBody
         });
       } catch (mailErr) {
-        console.error('Failed to send confirmation email:', mailErr);
+        console.error('[BOOK] Failed to send confirmation email:', mailErr);
       }
     }
 

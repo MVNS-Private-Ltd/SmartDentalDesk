@@ -118,27 +118,27 @@ router.post('/book', async (req, res, next) => {
 
     const maxPerDay = clinic?.appointment_settings?.max_bookings_per_day || 20;
 
-    const { count: dayCount } = await supabase
+    const { data: dayAppts } = await supabase
       .from('appointments')
-      .select('id', { count: 'exact', head: true })
+      .select('id')
       .eq('clinic_id', clinic_id)
       .eq('date', date)
       .neq('status', 'cancelled');
 
-    if (dayCount >= maxPerDay) {
+    if ((dayAppts || []).length >= maxPerDay) {
       return res.status(409).json({ error: `Sorry, this day is fully booked (max ${maxPerDay} appointments). Please choose another date.` });
     }
 
     // ── Guard 2: Check if time slot is already taken ─────────────────────────
-    const { count: slotCount } = await supabase
+    const { data: slotAppts } = await supabase
       .from('appointments')
-      .select('id', { count: 'exact', head: true })
+      .select('id')
       .eq('clinic_id', clinic_id)
       .eq('date', date)
       .eq('time', time)
       .neq('status', 'cancelled');
 
-    if (slotCount > 0) {
+    if ((slotAppts || []).length > 0) {
       return res.status(409).json({ error: 'This time slot has already been booked. Please choose another time.' });
     }
 
@@ -191,15 +191,15 @@ router.post('/book', async (req, res, next) => {
     }
 
     // ── Guard 3: One appointment per patient per day ──────────────────────────
-    const { count: patientDayCount } = await supabase
+    const { data: patientDayAppts } = await supabase
       .from('appointments')
-      .select('id', { count: 'exact', head: true })
+      .select('id')
       .eq('clinic_id', clinic_id)
       .eq('patient_id', patientId)
       .eq('date', date)
       .neq('status', 'cancelled');
 
-    if (patientDayCount > 0) {
+    if ((patientDayAppts || []).length > 0) {
       return res.status(409).json({ error: 'You already have an appointment booked on this date. Only one appointment per day is allowed.' });
     }
 

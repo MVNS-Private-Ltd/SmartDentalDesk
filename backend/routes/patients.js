@@ -31,19 +31,32 @@ function validate(req, res) {
 // ── GET /api/patients ─────────────────────────────────────────────────────────
 router.get('/', async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, search } = req.query;
+    const { page = 1, limit = 50, search, type = 'all' } = req.query;
     const offset = (page - 1) * limit;
 
     let q = supabase
       .from('patients')
-      .select('id, name, phone, email, dob, gender, address, notes, created_at', { count: 'exact' })
+      .select('id, name, phone, email, dob, gender, address, notes, is_starred, created_at', { count: 'exact' })
       .eq('clinic_id', req.clinicId)
       .eq('is_deleted', false)
+      .order('is_starred', { ascending: false })
       .order('created_at', { ascending: false })
       .range(offset, offset + Number(limit) - 1);
 
     if (search) {
       q = q.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
+    }
+
+    if (type === 'starred') {
+      q = q.eq('is_starred', true);
+    } else if (type === 'regular') {
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      q = q.gte('created_at', sixMonthsAgo.toISOString());
+    } else if (type === 'past') {
+      const twelveMonthsAgo = new Date();
+      twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+      q = q.lt('created_at', twelveMonthsAgo.toISOString());
     }
 
     const { data, error, count } = await q;
@@ -250,17 +263,32 @@ router.put('/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── DELETE /api/patients/:id ──────────────────────────────────────────────────
-router.delete('/:id', async (req, res, next) => {
+// ── PATCH /api/patients/:id/star ─────────────────────────────────────────────
+router.patch('/:id/star', async (req, res, next) => {
   try {
-    const { error } = await supabase
-      .from('patients')
-      .update({ is_deleted: true, updated_at: new Date().toISOString() })
-      .eq('id', req.params.id)
-      .eq('clinic_id', req.clinicId);
+    const { is_starred } = req.body;
 
-    if (error) throw error;
-    res.json({ message: 'Patient removed.' });
+    let targetStar = is_starred;
+    if (targetStar === undefined) {
+      const { data: current } = await supabase
+        .from('patients')
+        .select('is_starred')
+        .eq('id', req.params.id)
+        .eq('clinic_id', req.clinicId)
+        .single();
+      targetStar = !current?.is_starred;
+    }
+
+    const { data, error } = await supabase
+      .from('patients')
+      .update({ is_starred: targetStar, updated_at: new Date().toISOString() })
+      .eq('id', req.params.id)
+      .eq('clinic_id', req.clinicId)
+      .select()
+      .single();
+
+    if (error || !data) return res.status(404).json({ error: 'Patient not found.' });
+    res.json({ message: targetStar ? 'Patient starred as VIP.' : 'Patient unstarred.', patient: data });
   } catch (err) { next(err); }
 });
 

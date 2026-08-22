@@ -120,34 +120,51 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
     const parsed = Papa.parse(fileContent, {
       header: true,
       skipEmptyLines: true,
-      transformHeader: h => h.trim().toLowerCase()
+      transformHeader: h => h.trim().toLowerCase().replace(/\s+/g, '_')
     });
-    
-    if (parsed.errors && parsed.errors.length > 0) {
-      return res.status(400).json({ error: 'Failed to parse CSV', details: parsed.errors });
-    }
     
     const rows = parsed.data;
     let imported = 0;
     let skipped = 0;
     let errors = [];
+
+    // Helper: pick the first matching key from a row
+    function pick(row, ...keys) {
+      for (const k of keys) {
+        if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== '') {
+          return String(row[k]).trim();
+        }
+      }
+      return null;
+    }
     
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const name = row.patient_name?.trim();
-      const phone = row.phone?.trim();
+
+      // Accept common column name variants
+      const name  = pick(row, 'patient_name', 'name', 'full_name', 'patient', 'patientname', 'fullname', 'patient_full_name');
+      const phone = pick(row, 'phone', 'phone_number', 'mobile', 'mobile_number', 'contact', 'contact_number', 'cell', 'telephone', 'ph_no', 'phno');
+      const email = pick(row, 'email', 'email_address', 'e_mail', 'emailaddress', 'email_id');
+      const dob   = pick(row, 'date_of_birth', 'dob', 'birth_date', 'birthdate', 'birthday', 'date_of_birth_(yyyy-mm-dd)', 'date_of_birth_(dd/mm/yyyy)');
+      const gender= pick(row, 'gender', 'sex');
+      const address = pick(row, 'address', 'addr', 'location', 'city', 'residence');
+      const notes = pick(row, 'notes', 'note', 'remarks', 'comments', 'medical_notes', 'allergies', 'medical_history');
       
       if (!name || !phone) {
         skipped++;
-        errors.push({ row: i + 2, message: 'Missing required fields (patient_name, phone)', data: row });
+        const foundKeys = Object.keys(row).join(', ');
+        errors.push({ row: i + 2, message: `Missing name or phone. Found columns: [${foundKeys}]`, data: row });
         continue;
       }
+
+      // Normalize phone — strip spaces/dashes/parentheses/+
+      const normalizedPhone = phone.replace(/[\s\-().+]/g, '');
       
       const { data: existing } = await supabase
         .from('patients')
         .select('id')
         .eq('clinic_id', req.clinicId)
-        .eq('phone', phone)
+        .eq('phone', normalizedPhone)
         .maybeSingle();
         
       if (existing) {
@@ -155,18 +172,34 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
         errors.push({ row: i + 2, message: 'Duplicate phone number', data: row });
         continue;
       }
+
+      // Normalize gender
+      let normalizedGender = null;
+      if (gender) {
+        const g = gender.toLowerCase();
+        if (g.startsWith('m')) normalizedGender = 'male';
+        else if (g.startsWith('f')) normalizedGender = 'female';
+        else normalizedGender = 'other';
+      }
+
+      // Validate dob format
+      let normalizedDob = null;
+      if (dob) {
+        const d = new Date(dob);
+        if (!isNaN(d.getTime())) normalizedDob = d.toISOString().split('T')[0];
+      }
       
       const { error: insertErr } = await supabase
         .from('patients')
         .insert({
           clinic_id: req.clinicId,
-          name: name,
-          phone: phone,
-          email: row.email?.trim() || null,
-          dob: row.date_of_birth?.trim() || null,
-          gender: row.gender?.trim().toLowerCase() || null,
-          address: row.address?.trim() || null,
-          notes: row.notes?.trim() || null
+          name,
+          phone: normalizedPhone,
+          email: email || null,
+          dob: normalizedDob,
+          gender: normalizedGender,
+          address: address || null,
+          notes: notes || null
         });
         
       if (insertErr) {

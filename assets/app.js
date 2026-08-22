@@ -125,6 +125,7 @@ window.api = (function() {
   }
 
   return {
+    BASE_URL,
     login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
     register: (payload) => request('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
     forgotPassword: (email) => request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
@@ -213,6 +214,34 @@ window.api = (function() {
     deleteChatSession: (session_id) => request(`/ai/sessions/${session_id}`, { method: 'DELETE' }),
     renameChatSession: (session_id, name) => request(`/ai/sessions/${session_id}/rename`, { method: 'PUT', body: JSON.stringify({ name }) }),
     sendPatientEmail: (patient_name, subject, body) => request('/email/send-patient', { method: 'POST', body: JSON.stringify({ patient_name, subject, body }) }),
+    importPatients: async (file) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const token = getToken();
+      const res = await fetch(`${BASE_URL}/patients/import`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Import failed');
+      return data;
+    },
+    downloadImportTemplate: () => {
+      const token = getToken();
+      const a = document.createElement('a');
+      a.href = `${BASE_URL}/patients/import/template`;
+      // Trigger a fetch with auth header and download the blob
+      fetch(`${BASE_URL}/patients/import/template`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} })
+        .then(r => r.blob())
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
+          a.href = url;
+          a.download = 'smartdentaldesk_patients_template.csv';
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+    },
 
     logout: () => {
       localStorage.removeItem('sdd_token');

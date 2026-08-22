@@ -2903,20 +2903,7 @@
   async function downloadTemplate(e) {
     e.preventDefault();
     try {
-      const res = await fetch(window.api.BASE_URL + '/patients/import/template', {
-        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-      });
-      if (!res.ok) throw new Error('Failed to download template');
-      
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'smartdentaldesk_patients_template.csv';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      window.api.downloadImportTemplate();
     } catch (err) {
       alert(err.message);
     }
@@ -3007,23 +2994,20 @@
     btn.textContent = 'Importing...';
     btn.disabled = true;
     
-    const formData = new FormData();
-    formData.append('file', window.selectedImportFile);
-    
     try {
-      const res = await fetch(window.api.BASE_URL + '/patients/import', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
-        body: formData
-      });
+      const data = await window.api.importPatients(window.selectedImportFile);
       
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Import failed');
-      
-      alert(`Import Complete!\n\nImported: ${data.imported}\nSkipped: ${data.skipped}`);
+      let msg = `✅ Import Complete!\n\nImported: ${data.imported}\nSkipped: ${data.skipped}`;
+      if (data.errors && data.errors.length > 0) {
+        msg += `\n\nSkip reasons:`;
+        data.errors.slice(0, 5).forEach(e => { msg += `\n• Row ${e.row}: ${e.message}`; });
+        if (data.errors.length > 5) msg += `\n... and ${data.errors.length - 5} more`;
+      }
+      alert(msg);
       closeImportModal();
       // Reload patients table
-      document.querySelector('.tab-btn[data-tab="all"]').click();
+      const allTab = document.querySelector('.tab-btn[data-tab="all"]');
+      if (allTab) allTab.click();
       
     } catch (err) {
       alert('Error: ' + err.message);

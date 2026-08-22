@@ -1165,29 +1165,55 @@
 
     <!-- SECTION: PATIENTS -->
     <section id="section-patients" class="dashboard-section">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
-        <h2 style="margin: 0;">Patients Directory</h2>
-        <button class="btn btn-primary" onclick="openImportModal()">Import CSV</button>
+      <!-- Header -->
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--space-4); flex-wrap:wrap; gap:12px;">
+        <div>
+          <h2 style="margin:0;">Patients Directory</h2>
+          <p class="text-muted" style="margin:4px 0 0; font-size:var(--text-sm);">Manage patient profiles, medical history, and records.</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <button class="btn btn-secondary" id="bulkDeleteBtn" onclick="handleBulkDelete()" style="display:none; gap:6px; align-items:center; color:#dc2626; border-color:#dc2626;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+            Delete Selected (<span id="selectedCount">0</span>)
+          </button>
+          <button class="btn btn-primary" onclick="openImportModal()" style="display:flex; align-items:center; gap:8px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Import CSV
+          </button>
+        </div>
       </div>
-      <div class="tabs-nav" id="patientTabs">
-        <button class="tab-btn active" data-tab="all">All Patients</button>
-        <button class="tab-btn" data-tab="starred">⭐ Starred (VIP)</button>
-        <button class="tab-btn" data-tab="regular">Regulars (Last 6 Months)</button>
-        <button class="tab-btn" data-tab="past">Past (Inactive > 12 Months)</button>
+
+      <!-- Search + Tabs Row -->
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:var(--space-3);">
+        <div class="tabs-nav" id="patientTabs" style="margin-bottom:0;">
+          <button class="tab-btn active" data-tab="all">All Patients</button>
+          <button class="tab-btn" data-tab="starred">⭐ Starred (VIP)</button>
+          <button class="tab-btn" data-tab="regular">Regulars</button>
+          <button class="tab-btn" data-tab="past">Past Patients</button>
+        </div>
+        <div style="position:relative;">
+          <svg style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--color-text-muted);" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="patientSearchInput" type="text" placeholder="Search patients..." oninput="handlePatientSearch(this.value)" style="padding:7px 12px 7px 32px; border-radius:var(--radius-md); border:1px solid var(--color-divider); background:var(--color-surface); color:var(--color-text); font-size:var(--text-sm); width:220px; outline:none;">
+        </div>
       </div>
-      <div class="card table-responsive">
+
+      <div class="card table-responsive" style="overflow:visible;">
         <table class="data-table">
           <thead>
             <tr>
+              <th style="width:36px; padding-right:0;">
+                <input type="checkbox" id="selectAllPatients" onchange="handleSelectAll(this.checked)" style="cursor:pointer; accent-color:var(--color-primary);">
+              </th>
               <th>Name</th>
               <th>Phone</th>
               <th>Email</th>
               <th>Last Visit</th>
               <th>Status</th>
+              <th style="text-align:right;">Actions</th>
             </tr>
           </thead>
           <tbody id="patientsTableBody">
-            <tr><td colspan="5" style="text-align:center;">Loading patients...</td></tr>
+            <tr><td colspan="7" style="text-align:center;">Loading patients...</td></tr>
           </tbody>
         </table>
       </div>
@@ -1936,36 +1962,135 @@
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
+    let patientSearchTimeout = null;
+    window._allLoadedPatients = [];
+    window._selectedPatientIds = new Set();
+
+    function handlePatientSearch(val) {
+      clearTimeout(patientSearchTimeout);
+      patientSearchTimeout = setTimeout(() => {
+        renderPatientsTable(window._allLoadedPatients.filter(p =>
+          p.name.toLowerCase().includes(val.toLowerCase()) ||
+          (p.phone && p.phone.includes(val)) ||
+          (p.email && p.email.toLowerCase().includes(val.toLowerCase()))
+        ));
+      }, 220);
+    }
+
+    function handleSelectAll(checked) {
+      window._selectedPatientIds = checked
+        ? new Set(window._allLoadedPatients.map(p => p.id))
+        : new Set();
+      document.querySelectorAll('.patient-row-cb').forEach(cb => { cb.checked = checked; });
+      updateBulkDeleteBtn();
+    }
+
+    function handleRowSelect(id, checked) {
+      if (checked) window._selectedPatientIds.add(id);
+      else window._selectedPatientIds.delete(id);
+      updateBulkDeleteBtn();
+      const allCb = document.getElementById('selectAllPatients');
+      if (allCb) allCb.checked = window._selectedPatientIds.size === window._allLoadedPatients.length;
+    }
+
+    function updateBulkDeleteBtn() {
+      const btn = document.getElementById('bulkDeleteBtn');
+      const cnt = document.getElementById('selectedCount');
+      if (!btn) return;
+      const n = window._selectedPatientIds.size;
+      btn.style.display = n > 0 ? 'inline-flex' : 'none';
+      if (cnt) cnt.textContent = n;
+    }
+
+    async function handleBulkDelete() {
+      const ids = [...window._selectedPatientIds];
+      if (!ids.length) return;
+      if (!confirm(`Delete ${ids.length} patient(s)? This cannot be undone.`)) return;
+      try {
+        await window.api.bulkDeletePatients(ids);
+        window._selectedPatientIds.clear();
+        updateBulkDeleteBtn();
+        showToast(`${ids.length} patient(s) deleted.`, 'success');
+        await loadPatients(currentPatientTab);
+      } catch (err) { showToast('Delete failed: ' + err.message, 'error'); }
+    }
+
+    window.handleDeletePatient = async function(e, id, name) {
+      if (e) e.stopPropagation();
+      if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+      try {
+        await window.api.deletePatient(id);
+        showToast(`"${name}" deleted.`, 'success');
+        window._selectedPatientIds.delete(id);
+        updateBulkDeleteBtn();
+        await loadPatients(currentPatientTab);
+      } catch (err) { showToast('Delete failed: ' + err.message, 'error'); }
+    };
+
+    function renderPatientsTable(patients) {
+      const tbody = document.getElementById('patientsTableBody');
+      if (!patients || patients.length === 0) {
+        let emptyText = 'No patients found.';
+        if (currentPatientTab === 'starred') emptyText = 'No VIP patients yet. Click ☆ next to any patient to star them.';
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:3rem; color:var(--color-text-muted);">${emptyText}</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = patients.map(p => {
+        const isSelected = window._selectedPatientIds.has(p.id);
+        const phone = p.phone ? escapeHtml(p.phone) : '<span class="text-muted">—</span>';
+        const email = p.email ? `<a href="mailto:${escapeHtml(p.email)}" style="color:var(--color-primary); text-decoration:none;">${escapeHtml(p.email)}</a>` : '<span class="text-muted">—</span>';
+        const lastVisit = p.created_at ? p.created_at.slice(0, 10) : '—';
+        return `
+        <tr style="transition:background 0.15s; ${isSelected ? 'background:var(--color-primary-light,rgba(99,102,241,0.07));' : ''}">
+          <td style="padding-right:0;">
+            <input type="checkbox" class="patient-row-cb" data-id="${p.id}" ${isSelected ? 'checked' : ''}
+              onchange="handleRowSelect('${p.id}', this.checked)"
+              style="cursor:pointer; accent-color:var(--color-primary);">
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button type="button" class="star-btn ${p.is_starred ? 'starred' : ''}" onclick="handleToggleStar(event, '${p.id}', ${!p.is_starred})" title="${p.is_starred ? 'Unstar VIP' : 'Star as VIP'}">${p.is_starred ? '★' : '☆'}</button>
+              <div>
+                <div style="font-weight:600; color:var(--color-text);">${escapeHtml(p.name)}</div>
+                ${p.is_starred ? '<span style="background:#fef3c7; color:#92400e; font-size:0.65rem; font-weight:700; padding:1px 6px; border-radius:8px; border:1px solid #fde68a;">⭐ VIP</span>' : ''}
+                ${p.notes ? `<div style="font-size:0.7rem; color:var(--color-text-muted); max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(p.notes)}">${escapeHtml(p.notes)}</div>` : ''}
+              </div>
+            </div>
+          </td>
+          <td>${phone}</td>
+          <td>${email}</td>
+          <td style="font-size:0.82rem; color:var(--color-text-muted);">${lastVisit}</td>
+          <td><span style="display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; background:#ecfdf5; color:#059669; font-size:0.72rem; font-weight:700;">● Active</span></td>
+          <td style="text-align:right;">
+            <button type="button" onclick="handleDeletePatient(event, '${p.id}', '${escapeHtml(p.name).replace(/'/g, "\\'")}')" title="Delete patient"
+              style="background:none; border:none; cursor:pointer; padding:5px 8px; border-radius:var(--radius-sm); color:var(--color-text-muted); transition:color 0.15s, background 0.15s;"
+              onmouseenter="this.style.color='#dc2626'; this.style.background='#fef2f2';"
+              onmouseleave="this.style.color='var(--color-text-muted)'; this.style.background='none';">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+            </button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
     async function loadPatients(type = currentPatientTab) {
       const tbody = document.getElementById('patientsTableBody');
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem;">Loading patients...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:2.5rem; color:var(--color-text-muted);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite; display:inline-block;"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> Loading patients...</td></tr>';
       try {
         const res = await window.api.getPatients(type);
-        const patients = res.patients || [];
-        if (patients.length === 0) {
-          let emptyText = 'No patients found.';
-          if (type === 'starred') emptyText = 'No starred VIP patients yet. Click the ☆ icon next to any patient to star them!';
-          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2.5rem; color:var(--color-text-muted);">${emptyText}</td></tr>`;
-          return;
-        }
-        tbody.innerHTML = patients.map(p => `
-          <tr>
-            <td>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <button type="button" class="star-btn ${p.is_starred ? 'starred' : ''}" onclick="handleToggleStar(event, '${p.id}', ${!p.is_starred})" title="${p.is_starred ? 'VIP Patient (Click to unstar)' : 'Star as VIP Patient'}">${p.is_starred ? '★' : '☆'}</button>
-                <div>
-                  <strong style="color:var(--color-text);">${escapeHtml(p.name)}</strong>
-                  ${p.is_starred ? '<span style="background:#fef3c7; color:#92400e; font-size:0.68rem; font-weight:700; padding:1px 6px; border-radius:8px; margin-left:4px; border:1px solid #fde68a;">VIP</span>' : ''}
-                </div>
-              </div>
-            </td>
-            <td>${escapeHtml(p.phone)}</td>
-            <td>${p.email ? escapeHtml(p.email) : '<span class="text-muted">—</span>'}</td>
-            <td>${p.created_at ? p.created_at.slice(0, 10) : '—'}</td>
-            <td><span style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:12px; background:#ecfdf5; color:#059669; font-size:0.75rem; font-weight:600;">● Active</span></td>
-          </tr>
-        `).join('');
-      } catch (err) { tbody.innerHTML = `<tr><td colspan="5" style="color:red;text-align:center; padding:2rem;">Error loading patients: ${err.message}</td></tr>`; }
+        window._allLoadedPatients = res.patients || [];
+        const searchVal = document.getElementById('patientSearchInput')?.value || '';
+        const filtered = searchVal
+          ? window._allLoadedPatients.filter(p =>
+              p.name.toLowerCase().includes(searchVal.toLowerCase()) ||
+              (p.phone && p.phone.includes(searchVal)) ||
+              (p.email && p.email.toLowerCase().includes(searchVal.toLowerCase())))
+          : window._allLoadedPatients;
+        // Reset select all checkbox
+        const allCb = document.getElementById('selectAllPatients');
+        if (allCb) allCb.checked = false;
+        renderPatientsTable(filtered);
+      } catch (err) { tbody.innerHTML = `<tr><td colspan="7" style="color:#dc2626;text-align:center; padding:2rem;">Error: ${err.message}</td></tr>`; }
     }
 
     // Star Toggle Handler
@@ -1974,11 +2099,30 @@
       try {
         await window.api.togglePatientStar(id, newStarred);
         await loadPatients(currentPatientTab);
-        await loadAppointments(currentAppointmentStatus);
       } catch (err) {
-        alert('Failed to update VIP star status: ' + err.message);
+        showToast('Failed to update VIP status: ' + err.message, 'error');
       }
     };
+
+    // ── Toast notification system ─────────────────────────────────────────────
+    function showToast(message, type = 'success') {
+      let container = document.getElementById('toastContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.style.cssText = 'position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none;';
+        document.body.appendChild(container);
+      }
+      const toast = document.createElement('div');
+      const colors = { success: { bg:'#ecfdf5', border:'#6ee7b7', text:'#065f46', icon:'✓' }, error: { bg:'#fef2f2', border:'#fca5a5', text:'#7f1d1d', icon:'✕' }, info: { bg:'#eff6ff', border:'#93c5fd', text:'#1e3a5f', icon:'ℹ' } };
+      const c = colors[type] || colors.info;
+      toast.style.cssText = `background:${c.bg}; border:1px solid ${c.border}; color:${c.text}; padding:10px 16px; border-radius:10px; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:8px; box-shadow:0 4px 16px rgba(0,0,0,0.12); pointer-events:all; max-width:340px; opacity:0; transform:translateY(12px); transition:all 0.25s ease;`;
+      toast.innerHTML = `<span style="font-size:1rem;">${c.icon}</span> ${message}`;
+      container.appendChild(toast);
+      requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; });
+      setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(8px)'; setTimeout(() => toast.remove(), 300); }, 3500);
+    }
+    window.showToast = showToast;
 
     // ── Appointments Management & Approval Flow ──────────────────────────────
     let currentAppointmentStatus = 'active';
@@ -2893,20 +3037,24 @@
   }
 
   function resetImportModal() {
-    document.getElementById('fileInput').value = '';
-    document.getElementById('previewArea').style.display = 'none';
-    document.getElementById('startImportBtn').disabled = true;
-    document.getElementById('dropZone').style.borderColor = 'var(--color-divider)';
+    const fi = document.getElementById('fileInput');
+    if (fi) fi.value = '';
+    const previewArea = document.getElementById('previewArea');
+    if (previewArea) previewArea.style.display = 'none';
+    const startBtn = document.getElementById('startImportBtn');
+    if (startBtn) { startBtn.disabled = true; startBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Start Import'; }
+    const dz = document.getElementById('dropZone');
+    if (dz) { dz.className = 'imp-dropzone'; }
+    const chip = document.getElementById('fileChip');
+    if (chip) chip.style.display = 'none';
+    const result = document.getElementById('importResult');
+    if (result) { result.style.display = 'none'; result.className = 'imp-result'; result.innerHTML = ''; }
     window.selectedImportFile = null;
   }
 
   async function downloadTemplate(e) {
     e.preventDefault();
-    try {
-      window.api.downloadImportTemplate();
-    } catch (err) {
-      alert(err.message);
-    }
+    try { window.api.downloadImportTemplate(); } catch (err) { alert(err.message); }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -2914,42 +3062,60 @@
     const fileInput = document.getElementById('fileInput');
 
     if (dropZone && fileInput) {
-      dropZone.addEventListener('click', () => fileInput.click());
+      dropZone.addEventListener('click', (e) => {
+        // Don't trigger if they clicked the chip itself
+        if (!e.target.closest('#fileChip')) fileInput.click();
+      });
 
       dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
-        dropZone.style.borderColor = 'var(--color-primary)';
+        dropZone.classList.add('drag-over');
       });
 
       dropZone.addEventListener('dragleave', (e) => {
         e.preventDefault();
-        dropZone.style.borderColor = 'var(--color-divider)';
+        dropZone.classList.remove('drag-over');
       });
 
       dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
-        dropZone.style.borderColor = 'var(--color-divider)';
-        if (e.dataTransfer.files.length) {
-          handleFileSelect(e.dataTransfer.files[0]);
-        }
+        dropZone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length) handleFileSelect(e.dataTransfer.files[0]);
       });
 
       fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length) {
-          handleFileSelect(e.target.files[0]);
-        }
+        if (e.target.files.length) handleFileSelect(e.target.files[0]);
       });
     }
   });
 
   function handleFileSelect(file) {
     if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-      alert('Please select a valid CSV file.');
+      if (window.showToast) showToast('Please select a valid CSV file.', 'error');
+      else alert('Please select a valid CSV file.');
       return;
     }
     window.selectedImportFile = file;
     document.getElementById('startImportBtn').disabled = false;
-    
+
+    // Show file chip
+    const dz = document.getElementById('dropZone');
+    if (dz) dz.classList.add('has-file');
+    const chip = document.getElementById('fileChip');
+    const chipName = document.getElementById('fileChipName');
+    const chipSize = document.getElementById('fileChipSize');
+    if (chip && chipName && chipSize) {
+      chipName.textContent = file.name;
+      chipSize.textContent = file.size > 1024*1024
+        ? (file.size / (1024*1024)).toFixed(1) + ' MB'
+        : Math.round(file.size / 1024) + ' KB';
+      chip.style.display = 'inline-flex';
+    }
+
+    // Hide old result
+    const result = document.getElementById('importResult');
+    if (result) { result.style.display = 'none'; }
+
     // Preview with PapaParse
     Papa.parse(file, {
       header: true,
@@ -2959,90 +3125,244 @@
         const previewArea = document.getElementById('previewArea');
         const thead = document.querySelector('#previewTable thead tr');
         const tbody = document.querySelector('#previewTable tbody');
-        
         thead.innerHTML = '';
         tbody.innerHTML = '';
-        
         if (results.meta.fields) {
-          results.meta.fields.forEach(f => {
+          results.meta.fields.slice(0, 8).forEach(f => {
             const th = document.createElement('th');
             th.textContent = f;
             thead.appendChild(th);
           });
         }
-        
         results.data.forEach(row => {
           const tr = document.createElement('tr');
-          results.meta.fields.forEach(f => {
+          results.meta.fields.slice(0, 8).forEach(f => {
             const td = document.createElement('td');
             td.textContent = row[f] || '';
             tr.appendChild(td);
           });
           tbody.appendChild(tr);
         });
-        
         previewArea.style.display = 'block';
-        document.getElementById('previewStats').textContent = `Showing first ${results.data.length} rows preview.`;
+        document.getElementById('previewStats').textContent =
+          `Showing ${results.data.length} of ${results.meta.fields ? results.meta.fields.length : 0} columns detected.`;
       }
     });
   }
 
   async function submitImport() {
     if (!window.selectedImportFile) return;
-    
     const btn = document.getElementById('startImportBtn');
-    btn.textContent = 'Importing...';
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 0.8s linear infinite"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> Importing...';
     btn.disabled = true;
-    
+    const result = document.getElementById('importResult');
+    if (result) { result.style.display = 'none'; }
+
     try {
       const data = await window.api.importPatients(window.selectedImportFile);
-      
-      let msg = `✅ Import Complete!\n\nImported: ${data.imported}\nSkipped: ${data.skipped}`;
-      if (data.errors && data.errors.length > 0) {
-        msg += `\n\nSkip reasons:`;
-        data.errors.slice(0, 5).forEach(e => { msg += `\n• Row ${e.row}: ${e.message}`; });
-        if (data.errors.length > 5) msg += `\n... and ${data.errors.length - 5} more`;
+
+      if (result) {
+        result.className = 'imp-result success';
+        let errHtml = '';
+        if (data.errors && data.errors.length > 0) {
+          const shown = data.errors.slice(0, 4);
+          errHtml = `<div style="margin-top:10px; font-size:0.78rem; color:#065f46; opacity:0.85;">
+            ${shown.map(e => `<div>• Row ${e.row}: ${e.message}</div>`).join('')}
+            ${data.errors.length > 4 ? `<div style="opacity:0.7;">…and ${data.errors.length - 4} more skipped</div>` : ''}
+          </div>`;
+        }
+        result.innerHTML = `
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:32px; height:32px; border-radius:50%; background:#d1fae5; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div>
+              <div style="font-weight:700; color:#065f46; font-size:0.9rem;">Import Complete!</div>
+              <div style="font-size:0.8rem; color:#047857; margin-top:2px;">
+                <strong>${data.imported}</strong> imported &nbsp;·&nbsp; <strong>${data.skipped}</strong> skipped
+              </div>
+            </div>
+          </div>${errHtml}`;
+        result.style.display = 'block';
       }
-      alert(msg);
-      closeImportModal();
-      // Reload patients table
-      const allTab = document.querySelector('.tab-btn[data-tab="all"]');
+
+      if (window.showToast) showToast(`${data.imported} patient(s) imported successfully!`, 'success');
+
+      // Reload patients
+      const allTab = document.querySelector('#patientTabs .tab-btn[data-tab="all"]');
       if (allTab) allTab.click();
-      
+
+      // Reset button but keep modal open to show result
+      btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import Another';
+      btn.disabled = false;
+      btn.onclick = () => { resetImportModal(); };
+
     } catch (err) {
-      alert('Error: ' + err.message);
-      btn.textContent = 'Start Import';
+      if (result) {
+        result.className = 'imp-result error';
+        result.innerHTML = `<div style="display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><span style="font-weight:600;color:#7f1d1d;">Error: ${err.message}</span></div>`;
+        result.style.display = 'block';
+      }
+      btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Retry';
       btn.disabled = false;
     }
   }
 </script>
 
-<!-- Import Patients Modal -->
-<div id="importModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 100;">
-  <div class="modal-content" style="background: var(--color-surface); padding: var(--space-6); border-radius: var(--radius-lg); width: 100%; max-width: 600px; position: relative;">
-    <button onclick="closeImportModal()" style="position: absolute; right: var(--space-4); top: var(--space-4); background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--color-text);">&times;</button>
-    <h2 style="margin-top: 0;">Import Patients</h2>
-    <p class="text-muted" style="margin-bottom: var(--space-4);">Upload a CSV file to import patients. <a href="#" onclick="downloadTemplate(event)" style="color: var(--color-primary);">Download Template</a></p>
-    
-    <div id="dropZone" style="border: 2px dashed var(--color-divider); border-radius: var(--radius-md); padding: var(--space-8); text-align: center; cursor: pointer; margin-bottom: var(--space-4);">
-      <p style="margin: 0;">Drag & drop your .csv file here or <strong>click to browse</strong></p>
-      <input type="file" id="fileInput" accept=".csv" style="display: none;">
-    </div>
-
-    <div id="previewArea" style="display: none; margin-bottom: var(--space-4);">
-      <h3 style="font-size: var(--text-sm); margin-bottom: var(--space-2);">Preview (First 5 rows)</h3>
-      <div class="table-responsive" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--color-divider); border-radius: var(--radius-sm);">
-        <table class="data-table" id="previewTable" style="margin: 0; width: 100%;">
-          <thead><tr></tr></thead>
-          <tbody></tbody>
-        </table>
+<!-- Import Patients Modal (Redesigned) -->
+<style>
+  #importModal .imp-modal {
+    background: var(--color-surface);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 580px;
+    position: relative;
+    padding: 32px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.22);
+    border: 1px solid var(--color-divider);
+  }
+  #importModal .imp-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; }
+  #importModal .imp-title-icon {
+    width:42px; height:42px; border-radius:12px;
+    background: linear-gradient(135deg, var(--color-primary), #8b5cf6);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; margin-right:12px;
+  }
+  #importModal .imp-close {
+    background:none; border:none; cursor:pointer; padding:4px;
+    color:var(--color-text-muted); line-height:1; border-radius:8px;
+    transition:background 0.15s;
+  }
+  #importModal .imp-close:hover { background:var(--color-divider); }
+  #importModal .imp-dropzone {
+    border: 2px dashed var(--color-divider);
+    border-radius: 16px;
+    padding: 36px 24px;
+    text-align: center;
+    cursor: pointer;
+    margin: 20px 0;
+    transition: border-color 0.2s, background 0.2s;
+    background: var(--color-bg);
+    position: relative;
+  }
+  #importModal .imp-dropzone:hover, #importModal .imp-dropzone.drag-over {
+    border-color: var(--color-primary);
+    background: rgba(99,102,241,0.04);
+  }
+  #importModal .imp-dropzone.has-file {
+    border-color: #10b981;
+    background: rgba(16,185,129,0.04);
+  }
+  #importModal .imp-file-chip {
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--color-surface); border:1px solid var(--color-divider);
+    border-radius:10px; padding:8px 14px; font-size:0.82rem; margin-top:12px;
+    font-weight:600; color:var(--color-text);
+  }
+  #importModal .imp-hint-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:16px 0;
+  }
+  #importModal .imp-hint-chip {
+    display:flex; align-items:center; gap:6px;
+    background:var(--color-bg); border:1px solid var(--color-divider);
+    border-radius:8px; padding:6px 10px; font-size:0.75rem; color:var(--color-text-muted);
+  }
+  #importModal .imp-hint-chip .req { color:#dc2626; font-weight:700; }
+  #importModal .imp-hint-chip .opt { color:#10b981; font-weight:700; }
+  #importModal .imp-preview-wrap {
+    border-radius:12px; overflow:hidden;
+    border:1px solid var(--color-divider); margin:16px 0;
+  }
+  #importModal .imp-preview-wrap .data-table th,
+  #importModal .imp-preview-wrap .data-table td {
+    font-size:0.75rem; padding:7px 10px;
+  }
+  #importModal .imp-footer {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-top:20px; flex-wrap:wrap; gap:10px;
+  }
+  #importModal .imp-result {
+    display:none; margin-top:16px;
+    border-radius:12px; padding:14px 16px;
+  }
+  #importModal .imp-result.success { background:#ecfdf5; border:1px solid #a7f3d0; }
+  #importModal .imp-result.error   { background:#fef2f2; border:1px solid #fca5a5; }
+</style>
+<div id="importModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px); align-items:center; justify-content:center; z-index:1000; padding:20px;">
+  <div class="imp-modal">
+    <!-- Header -->
+    <div class="imp-header">
+      <div style="display:flex; align-items:center;">
+        <div class="imp-title-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <div>
+          <h3 style="margin:0; font-size:1.1rem;">Import Patients</h3>
+          <p style="margin:2px 0 0; font-size:0.78rem; color:var(--color-text-muted);">Upload a CSV to bulk-import patient records</p>
+        </div>
       </div>
-      <p id="previewStats" class="text-muted" style="font-size: 0.75rem; margin-top: var(--space-2); margin-bottom: 0;"></p>
+      <button class="imp-close" onclick="closeImportModal()" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
 
-    <div style="display: flex; justify-content: flex-end; gap: var(--space-3);">
-      <button class="btn btn-secondary" onclick="closeImportModal()">Cancel</button>
-      <button class="btn btn-primary" id="startImportBtn" onclick="submitImport()" disabled>Start Import</button>
+    <!-- Drop Zone -->
+    <div id="dropZone" class="imp-dropzone">
+      <div id="dropZoneContent">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="1.5" style="margin-bottom:10px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div style="font-weight:600; color:var(--color-text); font-size:0.9rem;">Drag & drop your CSV file here</div>
+        <div style="color:var(--color-text-muted); font-size:0.8rem; margin-top:4px;">or <span style="color:var(--color-primary); font-weight:700;">click to browse</span></div>
+        <div id="fileChip" style="display:none;" class="imp-file-chip">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span id="fileChipName">file.csv</span>
+          <span id="fileChipSize" style="color:var(--color-text-muted); font-weight:400;"></span>
+        </div>
+      </div>
+      <input type="file" id="fileInput" accept=".csv" style="display:none;">
+    </div>
+
+    <!-- Accepted Columns Hint -->
+    <div style="font-size:0.75rem; color:var(--color-text-muted); margin-bottom:6px; font-weight:600;">ACCEPTED COLUMN NAMES</div>
+    <div class="imp-hint-grid">
+      <div class="imp-hint-chip"><span class="req">REQ</span> name / firstname + lastname</div>
+      <div class="imp-hint-chip"><span class="opt">OPT</span> phone / mobile / contact</div>
+      <div class="imp-hint-chip"><span class="opt">OPT</span> email / email_address</div>
+      <div class="imp-hint-chip"><span class="opt">OPT</span> dob / date_of_birth / age</div>
+      <div class="imp-hint-chip"><span class="opt">OPT</span> gender / sex</div>
+      <div class="imp-hint-chip"><span class="opt">OPT</span> city + state / address</div>
+    </div>
+    <div style="margin-bottom:4px;">
+      <a href="#" onclick="downloadTemplate(event)" style="font-size:0.78rem; color:var(--color-primary); font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download sample template
+      </a>
+    </div>
+
+    <!-- Preview -->
+    <div id="previewArea" style="display:none;">
+      <div style="font-size:0.75rem; color:var(--color-text-muted); font-weight:600; margin-bottom:8px;">PREVIEW — FIRST 5 ROWS</div>
+      <div class="imp-preview-wrap">
+        <div style="max-height:160px; overflow-y:auto;">
+          <table class="data-table" id="previewTable" style="margin:0; width:100%;">
+            <thead><tr></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <p id="previewStats" style="font-size:0.75rem; color:var(--color-text-muted); margin:6px 0 0;"></p>
+    </div>
+
+    <!-- Result Area -->
+    <div id="importResult" class="imp-result"></div>
+
+    <!-- Footer -->
+    <div class="imp-footer">
+      <button class="btn btn-secondary" onclick="closeImportModal()" type="button">Cancel</button>
+      <button class="btn btn-primary" id="startImportBtn" onclick="submitImport()" type="button" disabled
+        style="display:flex; align-items:center; gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Start Import
+      </button>
     </div>
   </div>
 </div>

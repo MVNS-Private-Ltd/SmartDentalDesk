@@ -138,6 +138,8 @@ window.api = (function() {
     // Endpoints
     getPatients: (type = 'all') => request(`/patients?type=${type}`),
     togglePatientStar: (id, is_starred) => request(`/patients/${id}/star`, { method: 'PATCH', body: JSON.stringify({ is_starred }) }),
+    deletePatient: (id) => request(`/patients/${id}`, { method: 'DELETE' }),
+    bulkDeletePatients: (ids) => request(`/patients`, { method: 'DELETE', body: JSON.stringify({ ids }) }),
     getAppointments: (status = 'all') => request(status && status !== 'all' ? `/appointments?status=${encodeURIComponent(status)}` : '/appointments'),
     approveAppointment: (id) => request(`/appointments/${id}/approve`, { method: 'POST' }),
     rejectAppointment: (id, reason = '') => request(`/appointments/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),

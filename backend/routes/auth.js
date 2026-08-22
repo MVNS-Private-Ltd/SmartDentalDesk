@@ -135,19 +135,21 @@ router.post('/login', loginRules, async (req, res, next) => {
       .maybeSingle();
 
     // If not admin, check if they are staff
+    let staff = null;
     if (!clinic) {
-      const { data: staff } = await supabase
+      const { data: staffData } = await supabase
         .from('staff')
         .select('*, clinics(id, name, owner_name, subscription_plan)')
         .eq('auth_id', data.user.id)
         .eq('is_active', true)
         .maybeSingle();
       
-      if (!staff || !staff.clinics) {
+      if (!staffData || !staffData.clinics) {
         return res.status(403).json({ error: 'No active clinic or staff profile associated with this account.' });
       }
-      clinic = staff.clinics;
-      userRole = staff.role; // e.g. 'receptionist'
+      clinic = staffData.clinics;
+      userRole = staffData.role;
+      staff = staffData;
     }
 
     res.json({
@@ -158,7 +160,7 @@ router.post('/login', loginRules, async (req, res, next) => {
       user: {
         id   : data.user.id,
         email: data.user.email,
-        name : clinic?.owner_name || data.user.email
+        name : userRole === 'admin' ? (clinic?.owner_name || data.user.email) : (staff?.name || data.user.email)
       },
       clinic: clinic || null
     });
@@ -178,51 +180,63 @@ router.post('/oauth-session', async (req, res, next) => {
       return res.status(400).json({ error: 'access_token is required.' });
     }
 
-    // Verify the token with Supabase and get the user
-    const { data: { user }, error: userError } = await supabase.auth.getUser(access_token);
-    if (userError || !user) {
-      return res.status(401).json({ error: 'Invalid or expired Google token.' });
+    // 1. Verify token with Supabase
+    const { data: { user }, error: userErr } = await supabase.auth.getUser(access_token);
+    if (userErr || !user) {
+      return res.status(401).json({ error: 'Invalid or expired Google session.' });
     }
 
-    // Try to fetch an existing clinic for this user
+    // 2. Fetch existing clinic for this user
     let { data: clinic } = await supabase
       .from('clinics')
       .select('id, name, owner_name, subscription_plan')
       .eq('owner_id', user.id)
-      .single();
+      .maybeSingle();
 
-    // First-time Google sign-in: auto-create a clinic record
+    // 3. If first-time Google login, auto-provision clinic record
     if (!clinic) {
-      const crypto = require('crypto');
-      const bookingSlug = crypto.randomBytes(3).toString('hex') + Math.random().toString(36).substring(2, 5);
-      const displayName = user.user_metadata?.full_name || user.email.split('@')[0];
+      const googleName  = user.user_metadata?.full_name || user.user_metadata?.name || user.email.split('@')[0];
+      const clinicName  = `${googleName}'s Dental Clinic`;
 
-      const { data: newClinic, error: clinicError } = await supabase
+      const { data: newClinic, error: insertErr } = await supabase
         .from('clinics')
         .insert({
           owner_id         : user.id,
-          owner_name       : displayName,
-          name             : `${displayName}'s Clinic`,
+          name             : clinicName,
+          owner_name       : googleName,
           email            : user.email,
-          phone            : null,
           subscription_plan: 'free',
-          booking_slug     : bookingSlug
+          settings         : {
+            slot_duration_minutes: 30,
+            auto_approve         : false,
+            time_slots           : [
+              '09:00 AM','09:30 AM','10:00 AM','10:30 AM',
+              '11:00 AM','11:30 AM','02:00 PM','02:30 PM',
+              '03:00 PM','03:30 PM','04:00 PM','04:30 PM'
+            ],
+            max_bookings_per_day : 20
+          }
         })
         .select('id, name, owner_name, subscription_plan')
         .single();
 
-      if (clinicError) throw clinicError;
+      if (insertErr) {
+        console.error('[OAuth Session] Failed to auto-provision clinic:', insertErr);
+        return res.status(500).json({ error: 'Could not set up clinic account. Please try again.' });
+      }
       clinic = newClinic;
     }
 
+    // 4. Return session payload
     res.json({
-      message      : 'Signed in with Google successfully!',
+      message      : 'Signed in with Google!',
       access_token,
-      refresh_token : refresh_token || null,
+      refresh_token: refresh_token || null,
+      role         : 'admin',
       user: {
         id   : user.id,
         email: user.email,
-        name : clinic.owner_name
+        name : clinic.owner_name || user.email
       },
       clinic
     });
@@ -250,9 +264,10 @@ router.get('/me', requireAuth, async (req, res) => {
     user: {
       id   : req.user.id,
       email: req.user.email,
-      name : req.clinic.owner_name
+      name : req.userRole === 'admin' ? (req.clinic?.owner_name || req.user.email) : (req.staff?.name || req.user.email)
     },
-    clinic: req.clinic
+    clinic: req.clinic,
+    staff : req.staff || null
   });
 });
 

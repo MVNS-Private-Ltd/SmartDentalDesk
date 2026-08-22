@@ -50,6 +50,7 @@ module.exports = async function requireAuth(req, res, next) {
     req.userRole = userRole;
     req.clinicId = clinic.id;
     req.clinic   = clinic;
+    req.staff    = (userRole !== 'admin' && staff) ? staff : null;
 
     next();
   } catch (err) {

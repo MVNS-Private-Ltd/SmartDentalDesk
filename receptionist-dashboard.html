@@ -1405,7 +1405,7 @@
 
     // ── AI Back Button ────────────────────────────────────────────────────────
     document.getElementById('aiBackBtn').addEventListener('click', () => {
-      showSection('home');
+      showSection('front-desk');
     });
 
     // ── Suggestion button click → fill input ─────────────────────────────────
@@ -1759,92 +1759,6 @@
       // Disabled for Receptionist Dashboard
     }
     loadHomeStats();
-
-    // ── Staff Management Logic ────────────────────────────────────────────────
-    async function loadStaff() {
-      try {
-        const res = await fetch(`${window.api.baseUrl}/staff`, {
-          headers: { 'Authorization': `Bearer ${window.api.getToken()}` }
-        });
-        if (!res.ok) throw new Error('Failed to load staff');
-        const data = await res.json();
-        renderStaffTable(data.staff || []);
-      } catch (err) {
-        console.error(err);
-        document.getElementById('staffTableBody').innerHTML = `<tr><td colspan="4" class="text-center text-danger">Error loading staff</td></tr>`;
-      }
-    }
-
-    function renderStaffTable(staffList) {
-      const tbody = document.getElementById('staffTableBody');
-      if (!staffList.length) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted" style="padding:var(--space-4);">No staff members found.</td></tr>`;
-        return;
-      }
-      tbody.innerHTML = staffList.map(s => `
-        <tr>
-          <td>
-            <div style="font-weight:600; color:var(--color-text);">${escapeHtml(s.name)}</div>
-          </td>
-          <td><span class="badge status-pending" style="text-transform:capitalize;">${escapeHtml(s.role)}</span></td>
-          <td>${s.email ? escapeHtml(s.email) : '-'}</td>
-          <td>
-            <button class="btn btn-secondary btn-sm" onclick="deleteStaff('${s.id}')">Delete</button>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    window.deleteStaff = async function(id) {
-      if (!confirm('Remove this staff member?')) return;
-      try {
-        const res = await fetch(`${window.api.baseUrl}/staff/${id}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${window.api.getToken()}` }
-        });
-        if (!res.ok) throw new Error('Failed to delete');
-        showToast('Staff member removed');
-        loadStaff();
-      } catch (err) {
-        alert(err.message);
-      }
-    };
-
-    document.getElementById('addStaffForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('saveStaffBtn');
-      btn.textContent = 'Saving...';
-      btn.disabled = true;
-
-      const payload = {
-        name: document.getElementById('staffName').value,
-        role: document.getElementById('staffRole').value,
-        email: document.getElementById('staffEmail').value || undefined,
-        password: document.getElementById('staffPassword').value || undefined
-      };
-
-      try {
-        const res = await fetch(`${window.api.baseUrl}/staff`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${window.api.getToken()}`
-          },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to add staff');
-        
-        closeAddStaffModal();
-        showToast('Staff member added successfully');
-        loadStaff();
-      } catch (err) {
-        alert(err.message);
-      } finally {
-        btn.textContent = 'Save Staff';
-        btn.disabled = false;
-      }
-    });
 
     // ── Helper to switch to appointments tab directly with specific filter ───
     window.showAppointmentsWithTab = function(tabName) {

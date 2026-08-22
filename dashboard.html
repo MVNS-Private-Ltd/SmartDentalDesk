@@ -1390,25 +1390,89 @@
     <!-- SECTION: SETTINGS -->
     <!-- ==================== TEAM / STAFF TAB ==================== -->
     <section id="section-team" class="dashboard-section">
-      <div class="patients-header">
-        <h2>Team Management</h2>
-        <button class="btn btn-primary" onclick="openAddStaffModal()">Add Staff Member</button>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--space-6); flex-wrap:wrap; gap:16px;">
+        <div>
+          <h2 style="margin:0; font-size:1.6rem; font-weight:800; color:var(--color-text);">Team &amp; Staff Management</h2>
+          <p class="text-muted" style="margin:4px 0 0; font-size:0.9rem;">Manage staff members, roles, and configure dedicated receptionist dashboard logins.</p>
+        </div>
+        <button class="btn btn-primary" onclick="openAddStaffModal()" style="display:flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(37,99,235,0.25); font-weight:600;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>Add Staff Member</span>
+        </button>
       </div>
 
-      <div class="glass-card">
+      <!-- Staff Stat Cards -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:24px;">
+        <div class="glass-card" style="padding:18px 20px; display:flex; align-items:center; gap:16px; border-radius:14px;">
+          <div style="width:46px; height:46px; border-radius:12px; background:rgba(37,99,235,0.12); color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:22px;">👥</div>
+          <div>
+            <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--color-text-muted); letter-spacing:0.04em;">Total Staff</div>
+            <div id="staffCountTotal" style="font-size:1.5rem; font-weight:800; color:var(--color-text);">0</div>
+          </div>
+        </div>
+        <div class="glass-card" style="padding:18px 20px; display:flex; align-items:center; gap:16px; border-radius:14px;">
+          <div style="width:46px; height:46px; border-radius:12px; background:rgba(147,51,234,0.12); color:#9333ea; display:flex; align-items:center; justify-content:center; font-size:22px;">💼</div>
+          <div>
+            <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--color-text-muted); letter-spacing:0.04em;">Receptionists</div>
+            <div id="staffCountReceptionists" style="font-size:1.5rem; font-weight:800; color:var(--color-text);">0</div>
+          </div>
+        </div>
+        <div class="glass-card" style="padding:18px 20px; display:flex; align-items:center; gap:16px; border-radius:14px;">
+          <div style="width:46px; height:46px; border-radius:12px; background:rgba(16,185,129,0.12); color:#10b981; display:flex; align-items:center; justify-content:center; font-size:22px;">🩺</div>
+          <div>
+            <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--color-text-muted); letter-spacing:0.04em;">Dentists &amp; Doctors</div>
+            <div id="staffCountDentists" style="font-size:1.5rem; font-weight:800; color:var(--color-text);">0</div>
+          </div>
+        </div>
+        <div class="glass-card" style="padding:18px 20px; display:flex; align-items:center; gap:16px; border-radius:14px;">
+          <div style="width:46px; height:46px; border-radius:12px; background:rgba(245,158,11,0.12); color:#d97706; display:flex; align-items:center; justify-content:center; font-size:22px;">🔑</div>
+          <div>
+            <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--color-text-muted); letter-spacing:0.04em;">Active Logins</div>
+            <div id="staffCountActiveLogins" style="font-size:1.5rem; font-weight:800; color:var(--color-text);">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search & Filter Controls -->
+      <div class="glass-card" style="padding:16px 20px; margin-bottom:20px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; border-radius:14px;">
+        <div style="flex:1; min-width:220px; position:relative;">
+          <input type="text" id="staffSearchInput" class="input" placeholder="🔍 Search by name, email, phone, or specialization..." style="width:100%; padding-left:14px; font-size:0.88rem;">
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <select id="staffRoleFilter" class="input" style="min-width:140px; font-size:0.88rem;">
+            <option value="all">All Roles</option>
+            <option value="receptionist">Receptionists</option>
+            <option value="dentist">Dentists</option>
+            <option value="hygienist">Hygienists</option>
+            <option value="assistant">Assistants</option>
+            <option value="manager">Managers</option>
+            <option value="other">Other</option>
+          </select>
+          <select id="staffLoginFilter" class="input" style="min-width:140px; font-size:0.88rem;">
+            <option value="all">All Access</option>
+            <option value="with_login">Has Login Access</option>
+            <option value="no_login">No Login Access</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Staff Table Card -->
+      <div class="glass-card" style="border-radius:14px; overflow:hidden;">
         <div class="table-responsive">
-          <table class="table">
+          <table class="table" style="margin:0; width:100%;">
             <thead>
               <tr>
-                <th>Name</th>
+                <th>Staff Member</th>
                 <th>Role</th>
-                <th>Email</th>
-                <th>Actions</th>
+                <th>Contact</th>
+                <th>Dashboard Login</th>
+                <th>Specialization</th>
+                <th style="text-align:right;">Actions</th>
               </tr>
             </thead>
             <tbody id="staffTableBody">
               <tr>
-                <td colspan="4" style="text-align:center; color:var(--text-muted); padding:var(--space-4);">Loading staff...</td>
+                <td colspan="6" style="text-align:center; color:var(--text-muted); padding:var(--space-6);">Loading staff members...</td>
               </tr>
             </tbody>
           </table>
@@ -1965,91 +2029,325 @@
     // Call loadHomeStats on page load immediately!
     loadHomeStats();
 
-    // ── Staff Management Logic ────────────────────────────────────────────────
+    // ── Staff & Team Management Logic ────────────────────────────────────────
+    window.currentStaffList = [];
+
     async function loadStaff() {
+      const tbody = document.getElementById('staffTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:var(--space-6);">Loading staff members...</td></tr>`;
+
       try {
-        const res = await fetch(`${window.api.baseUrl}/staff`, {
-          headers: { 'Authorization': `Bearer ${window.api.getToken()}` }
-        });
-        if (!res.ok) throw new Error('Failed to load staff');
-        const data = await res.json();
-        renderStaffTable(data.staff || []);
+        const res = await window.api.getStaff();
+        window.currentStaffList = res.staff || [];
+
+        // Update Stat Badges
+        const total = window.currentStaffList.length;
+        const receptionists = window.currentStaffList.filter(s => s.role === 'receptionist').length;
+        const dentists = window.currentStaffList.filter(s => s.role === 'dentist').length;
+        const activeLogins = window.currentStaffList.filter(s => !!s.auth_id).length;
+
+        const elTotal = document.getElementById('staffCountTotal');
+        const elRecep = document.getElementById('staffCountReceptionists');
+        const elDent  = document.getElementById('staffCountDentists');
+        const elLogin = document.getElementById('staffCountActiveLogins');
+
+        if (elTotal) elTotal.textContent = total;
+        if (elRecep) elRecep.textContent = receptionists;
+        if (elDent)  elDent.textContent  = dentists;
+        if (elLogin) elLogin.textContent = activeLogins;
+
+        applyStaffFiltersAndRender();
       } catch (err) {
-        console.error(err);
-        document.getElementById('staffTableBody').innerHTML = `<tr><td colspan="4" class="text-center text-danger">Error loading staff</td></tr>`;
+        console.error('Failed to load staff list:', err);
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#dc2626; padding:var(--space-6);">Failed to load team members: ${escapeHtml(err.message || 'Server error')}</td></tr>`;
+      }
+    }
+
+    function applyStaffFiltersAndRender() {
+      const query = (document.getElementById('staffSearchInput')?.value || '').toLowerCase().trim();
+      const roleFilter = document.getElementById('staffRoleFilter')?.value || 'all';
+      const loginFilter = document.getElementById('staffLoginFilter')?.value || 'all';
+
+      let filtered = window.currentStaffList || [];
+
+      if (roleFilter !== 'all') {
+        filtered = filtered.filter(s => s.role === roleFilter);
+      }
+
+      if (loginFilter === 'with_login') {
+        filtered = filtered.filter(s => !!s.auth_id);
+      } else if (loginFilter === 'no_login') {
+        filtered = filtered.filter(s => !s.auth_id);
+      }
+
+      if (query) {
+        filtered = filtered.filter(s => 
+          (s.name && s.name.toLowerCase().includes(query)) ||
+          (s.email && s.email.toLowerCase().includes(query)) ||
+          (s.phone && s.phone.toLowerCase().includes(query)) ||
+          (s.specialization && s.specialization.toLowerCase().includes(query))
+        );
+      }
+
+      renderStaffTable(filtered);
+    }
+
+    // Role badge color helpers
+    function getRoleBadgeStyle(role) {
+      switch (role) {
+        case 'receptionist':
+          return { bg: '#f3e8ff', color: '#7e22ce', border: '#e9d5ff', label: 'Receptionist' };
+        case 'dentist':
+          return { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', label: 'Dentist / Doctor' };
+        case 'hygienist':
+          return { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0', label: 'Hygienist' };
+        case 'assistant':
+          return { bg: '#fffbeb', color: '#b45309', border: '#fde68a', label: 'Assistant' };
+        case 'manager':
+          return { bg: '#eef2ff', color: '#4338ca', border: '#c7d2fe', label: 'Clinic Manager' };
+        default:
+          return { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1', label: role ? role.charAt(0).toUpperCase() + role.slice(1) : 'Staff' };
       }
     }
 
     function renderStaffTable(staffList) {
       const tbody = document.getElementById('staffTableBody');
-      if (!staffList.length) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted" style="padding:var(--space-4);">No staff members found.</td></tr>`;
+      if (!tbody) return;
+
+      if (!staffList || !staffList.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align:center; padding:var(--space-8) var(--space-4); color:var(--color-text-muted);">
+              <div style="font-size:32px; margin-bottom:8px;">👥</div>
+              <div style="font-weight:700; font-size:1rem; color:var(--color-text); margin-bottom:4px;">No team members found</div>
+              <div style="font-size:0.84rem; margin-bottom:14px;">Add your receptionists, dentists, and assistants to manage your clinic team.</div>
+              <button class="btn btn-primary btn-sm" onclick="openAddStaffModal()">+ Add First Staff Member</button>
+            </td>
+          </tr>
+        `;
         return;
       }
-      tbody.innerHTML = staffList.map(s => `
-        <tr>
-          <td>
-            <div style="font-weight:600; color:var(--color-text);">${escapeHtml(s.name)}</div>
-          </td>
-          <td><span class="badge status-pending" style="text-transform:capitalize;">${escapeHtml(s.role)}</span></td>
-          <td>${s.email ? escapeHtml(s.email) : '-'}</td>
-          <td>
-            <button class="btn btn-secondary btn-sm" onclick="deleteStaff('${s.id}')">Delete</button>
-          </td>
-        </tr>
-      `).join('');
+
+      tbody.innerHTML = staffList.map(s => {
+        const roleStyle = getRoleBadgeStyle(s.role);
+        const initials = (s.name || 'S').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        
+        return `
+          <tr>
+            <td>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:38px; height:38px; border-radius:10px; background:${roleStyle.bg}; color:${roleStyle.color}; border:1.5px solid ${roleStyle.border}; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem; flex-shrink:0;">
+                  ${initials}
+                </div>
+                <div>
+                  <div style="font-weight:700; color:var(--color-text); font-size:0.92rem;">${escapeHtml(s.name)}</div>
+                  ${s.schedule ? `<div style="font-size:0.75rem; color:var(--color-text-muted); margin-top:1px;">⏰ ${escapeHtml(s.schedule)}</div>` : ''}
+                </div>
+              </div>
+            </td>
+            <td>
+              <span style="background:${roleStyle.bg}; color:${roleStyle.color}; border:1px solid ${roleStyle.border}; font-size:0.75rem; font-weight:700; padding:3px 10px; border-radius:20px; text-transform:capitalize; display:inline-block;">
+                ${roleStyle.label}
+              </span>
+            </td>
+            <td>
+              <div style="font-size:0.84rem;">
+                ${s.email ? `<div style="display:flex; align-items:center; gap:5px; color:var(--color-text);"><span style="font-size:12px;">✉️</span> <a href="mailto:${escapeHtml(s.email)}" style="color:var(--color-primary); text-decoration:none;">${escapeHtml(s.email)}</a></div>` : '<span style="color:var(--color-text-muted);">No email</span>'}
+                ${s.phone ? `<div style="display:flex; align-items:center; gap:5px; color:var(--color-text-muted); font-size:0.78rem; margin-top:2px;"><span style="font-size:12px;">📞</span> ${escapeHtml(s.phone)}</div>` : ''}
+              </div>
+            </td>
+            <td>
+              ${s.auth_id ? `
+                <span style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-size:0.74rem; font-weight:700; padding:3px 8px; border-radius:20px; display:inline-flex; align-items:center; gap:4px;">
+                  <span style="width:6px; height:6px; border-radius:50%; background:#10b981;"></span> Can Sign In
+                </span>
+              ` : `
+                <span style="background:#f8fafc; color:#94a3b8; border:1px solid #e2e8f0; font-size:0.74rem; font-weight:600; padding:3px 8px; border-radius:20px; display:inline-block;">
+                  — No Login
+                </span>
+              `}
+            </td>
+            <td>
+              <span style="font-size:0.84rem; color:var(--color-text);">${s.specialization ? escapeHtml(s.specialization) : '<span style="color:var(--color-text-muted);">General</span>'}</span>
+            </td>
+            <td style="text-align:right;">
+              <div style="display:inline-flex; gap:6px;">
+                <button class="btn btn-secondary btn-sm" onclick="openEditStaffModal('${s.id}')" title="Edit details or login" style="padding:4px 10px; font-size:0.8rem;">
+                  ✏️ Edit
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="deleteStaff('${s.id}')" title="Delete staff" style="padding:4px 10px; font-size:0.8rem; color:#dc2626;">
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
     }
 
+    // ── Staff Modal Functions ─────────────────────────────────────────────────
+    window.openAddStaffModal = function() {
+      const modal = document.getElementById('staffModal');
+      const form = document.getElementById('staffModalForm');
+      const errBox = document.getElementById('staffModalError');
+      if (!modal || !form) return;
+
+      form.reset();
+      document.getElementById('staffId').value = '';
+      document.getElementById('staffModalTitle').textContent = 'Add New Staff Member';
+      document.getElementById('staffModalSubtitle').textContent = 'Enter staff details & set up login credentials';
+      document.getElementById('saveStaffBtnText').textContent = 'Save Staff Member';
+      document.getElementById('staffPasswordLabel').textContent = 'Set Password';
+      document.getElementById('staffPasswordEditHint').style.display = 'none';
+      document.getElementById('staffPassword').required = false;
+      document.getElementById('staffLoginEnableToggle').checked = true;
+      document.getElementById('staffPasswordWrapper').style.display = 'block';
+
+      if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; }
+      modal.style.display = 'flex';
+    };
+
+    window.openEditStaffModal = function(id) {
+      const staff = (window.currentStaffList || []).find(s => s.id === id);
+      if (!staff) return;
+
+      const modal = document.getElementById('staffModal');
+      const form = document.getElementById('staffModalForm');
+      const errBox = document.getElementById('staffModalError');
+      if (!modal || !form) return;
+
+      form.reset();
+      document.getElementById('staffId').value = staff.id;
+      document.getElementById('staffName').value = staff.name || '';
+      document.getElementById('staffRole').value = staff.role || 'receptionist';
+      document.getElementById('staffEmail').value = staff.email || '';
+      document.getElementById('staffPhone').value = staff.phone || '';
+      document.getElementById('staffSpecialization').value = staff.specialization || '';
+      document.getElementById('staffSchedule').value = staff.schedule || '';
+      document.getElementById('staffJoiningDate').value = staff.joining_date ? staff.joining_date.substring(0, 10) : '';
+
+      document.getElementById('staffModalTitle').textContent = 'Edit Staff Member';
+      document.getElementById('staffModalSubtitle').textContent = 'Update profile details, role, or dashboard password';
+      document.getElementById('saveStaffBtnText').textContent = 'Update Staff Member';
+      document.getElementById('staffPasswordLabel').textContent = staff.auth_id ? 'Change Password' : 'Set Password';
+      document.getElementById('staffPasswordEditHint').style.display = staff.auth_id ? 'block' : 'none';
+      document.getElementById('staffLoginEnableToggle').checked = !!staff.auth_id;
+      document.getElementById('staffPasswordWrapper').style.display = staff.auth_id ? 'block' : 'none';
+
+      if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; }
+      modal.style.display = 'flex';
+    };
+
+    window.closeStaffModal = function() {
+      const modal = document.getElementById('staffModal');
+      if (modal) modal.style.display = 'none';
+    };
+
+    window.toggleStaffPasswordGroup = function(enable) {
+      const pwWrapper = document.getElementById('staffPasswordWrapper');
+      if (pwWrapper) pwWrapper.style.display = enable ? 'block' : 'none';
+    };
+
+    window.toggleStaffPasswordVisibility = function() {
+      const pw = document.getElementById('staffPassword');
+      if (pw) pw.type = pw.type === 'password' ? 'text' : 'password';
+    };
+
     window.deleteStaff = async function(id) {
-      if (!confirm('Remove this staff member?')) return;
+      const staff = (window.currentStaffList || []).find(s => s.id === id);
+      const name = staff ? staff.name : 'this staff member';
+      if (!confirm(`Are you sure you want to remove ${name}? This will permanently revoke their dashboard access.`)) return;
+
       try {
-        const res = await fetch(`${window.api.baseUrl}/staff/${id}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${window.api.getToken()}` }
-        });
-        if (!res.ok) throw new Error('Failed to delete');
-        showToast('Staff member removed');
+        await window.api.deleteStaff(id);
+        showToast(`Staff member "${name}" removed successfully.`);
         loadStaff();
       } catch (err) {
-        alert(err.message);
+        alert(err.message || 'Failed to remove staff member.');
       }
     };
 
-    document.getElementById('addStaffForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('saveStaffBtn');
-      btn.textContent = 'Saving...';
-      btn.disabled = true;
+    // Filter event listeners
+    document.getElementById('staffSearchInput')?.addEventListener('input', applyStaffFiltersAndRender);
+    document.getElementById('staffRoleFilter')?.addEventListener('change', applyStaffFiltersAndRender);
+    document.getElementById('staffLoginFilter')?.addEventListener('change', applyStaffFiltersAndRender);
 
-      const payload = {
-        name: document.getElementById('staffName').value,
-        role: document.getElementById('staffRole').value,
-        email: document.getElementById('staffEmail').value || undefined,
-        password: document.getElementById('staffPassword').value || undefined
-      };
+    // Form submit listener
+    const staffFormEl = document.getElementById('staffModalForm');
+    if (staffFormEl) {
+      staffFormEl.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errBox = document.getElementById('staffModalError');
+        const btn = document.getElementById('saveStaffBtn');
+        const btnText = document.getElementById('saveStaffBtnText');
+        const id = document.getElementById('staffId').value;
+        const enableLogin = document.getElementById('staffLoginEnableToggle').checked;
 
-      try {
-        const res = await fetch(`${window.api.baseUrl}/staff`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${window.api.getToken()}`
-          },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to add staff');
-        
-        closeAddStaffModal();
-        showToast('Staff member added successfully');
-        loadStaff();
-      } catch (err) {
-        alert(err.message);
-      } finally {
-        btn.textContent = 'Save Staff';
-        btn.disabled = false;
-      }
-    });
+        const name = document.getElementById('staffName').value.trim();
+        const role = document.getElementById('staffRole').value;
+        const email = document.getElementById('staffEmail').value.trim();
+        const phone = document.getElementById('staffPhone').value.trim();
+        const specialization = document.getElementById('staffSpecialization').value.trim();
+        const schedule = document.getElementById('staffSchedule').value.trim();
+        const joining_date = document.getElementById('staffJoiningDate').value;
+        const password = document.getElementById('staffPassword').value;
+
+        if (enableLogin && !email) {
+          if (errBox) {
+            errBox.textContent = 'An email address is required when Dashboard Login is enabled.';
+            errBox.style.display = 'block';
+          }
+          return;
+        }
+
+        if (enableLogin && !id && (!password || password.length < 6)) {
+          if (errBox) {
+            errBox.textContent = 'Please enter a password with at least 6 characters for login access.';
+            errBox.style.display = 'block';
+          }
+          return;
+        }
+
+        if (errBox) errBox.style.display = 'none';
+        btn.disabled = true;
+        if (btnText) btnText.textContent = id ? 'Updating...' : 'Saving...';
+
+        const payload = {
+          name,
+          role,
+          email: email || undefined,
+          phone: phone || undefined,
+          specialization: specialization || undefined,
+          schedule: schedule || undefined,
+          joining_date: joining_date || undefined,
+          password: (enableLogin && password) ? password : undefined
+        };
+
+        try {
+          if (id) {
+            await window.api.updateStaff(id, payload);
+            showToast('Staff member updated successfully!');
+          } else {
+            await window.api.createStaff(payload);
+            showToast('Staff member added successfully!');
+          }
+
+          closeStaffModal();
+          loadStaff();
+        } catch (err) {
+          if (errBox) {
+            errBox.textContent = err.message || 'Failed to save staff member.';
+            errBox.style.display = 'block';
+          } else {
+            alert(err.message || 'Failed to save staff member.');
+          }
+        } finally {
+          btn.disabled = false;
+          if (btnText) btnText.textContent = id ? 'Update Staff Member' : 'Save Staff Member';
+        }
+      });
+    }
 
     // ── Helper to switch to appointments tab directly with specific filter ───
     window.showAppointmentsWithTab = function(tabName) {
@@ -3689,6 +3987,112 @@
         </div>
       </div>
     </div>
+  </div>
+<!-- ==================== ADD / EDIT STAFF MODAL ==================== -->
+<div id="staffModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); backdrop-filter:blur(5px); z-index:9999; align-items:center; justify-content:center; padding:16px; overflow-y:auto;">
+  <div style="background:#ffffff; border-radius:18px; width:100%; max-width:540px; box-shadow:0 25px 60px -15px rgba(0,0,0,0.3); border:1px solid rgba(226,232,240,0.8); overflow:hidden;">
+    
+    <!-- Modal Header -->
+    <div style="background:linear-gradient(135deg, #f8fafc, #f1f5f9); padding:20px 24px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="width:36px; height:36px; border-radius:10px; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700;">👥</div>
+        <div>
+          <h3 id="staffModalTitle" style="margin:0; font-size:1.15rem; font-weight:800; color:#0f172a;">Add Staff Member</h3>
+          <p id="staffModalSubtitle" style="margin:2px 0 0; font-size:0.8rem; color:#64748b;">Enter staff details &amp; set up login credentials</p>
+        </div>
+      </div>
+      <button type="button" onclick="closeStaffModal()" style="background:none; border:none; color:#64748b; font-size:24px; cursor:pointer; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:8px; line-height:1;">&times;</button>
+    </div>
+
+    <!-- Modal Form -->
+    <form id="staffModalForm" style="padding:22px 24px; max-height:calc(85vh - 120px); overflow-y:auto;">
+      <input type="hidden" id="staffId" value="">
+
+      <!-- Error Alert -->
+      <div id="staffModalError" style="display:none; background:#fef2f2; border:1px solid #fca5a5; color:#b91c1c; padding:10px 14px; border-radius:8px; font-size:0.84rem; margin-bottom:16px;"></div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+        <div style="grid-column:1 / -1;">
+          <label style="font-size:0.84rem; font-weight:700; color:#1e293b; display:block; margin-bottom:5px;">Full Name <span style="color:#dc2626;">*</span></label>
+          <input type="text" id="staffName" class="input" required placeholder="e.g. Dr. Sarah Jenkins or Priya Sharma" style="width:100%;">
+        </div>
+
+        <div>
+          <label style="font-size:0.84rem; font-weight:700; color:#1e293b; display:block; margin-bottom:5px;">Role <span style="color:#dc2626;">*</span></label>
+          <select id="staffRole" class="input" required style="width:100%; font-size:0.88rem;">
+            <option value="receptionist" selected>Receptionist (Front Desk)</option>
+            <option value="dentist">Dentist / Doctor</option>
+            <option value="hygienist">Dental Hygienist</option>
+            <option value="assistant">Dental Assistant</option>
+            <option value="manager">Clinic Manager</option>
+            <option value="other">Other Staff</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size:0.84rem; font-weight:700; color:#1e293b; display:block; margin-bottom:5px;">Specialization</label>
+          <input type="text" id="staffSpecialization" class="input" placeholder="e.g. Orthodontics, Front Office" style="width:100%;">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
+        <div>
+          <label style="font-size:0.84rem; font-weight:700; color:#1e293b; display:block; margin-bottom:5px;">Email Address</label>
+          <input type="email" id="staffEmail" class="input" placeholder="staff@clinic.com" style="width:100%;">
+        </div>
+
+        <div>
+          <label style="font-size:0.84rem; font-weight:700; color:#1e293b; display:block; margin-bottom:5px;">Phone Number</label>
+          <input type="tel" id="staffPhone" class="input" placeholder="e.g. +91 98765 43210" style="width:100%;">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px;">
+        <div>
+          <label style="font-size:0.84rem; font-weight:700; color:#1e293b; display:block; margin-bottom:5px;">Work Schedule / Shift</label>
+          <input type="text" id="staffSchedule" class="input" placeholder="e.g. Mon-Sat (9 AM - 6 PM)" style="width:100%;">
+        </div>
+
+        <div>
+          <label style="font-size:0.84rem; font-weight:700; color:#1e293b; display:block; margin-bottom:5px;">Joining Date</label>
+          <input type="date" id="staffJoiningDate" class="input" style="width:100%;">
+        </div>
+      </div>
+
+      <!-- Dashboard Login Setup Card -->
+      <div id="staffLoginCard" style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:12px; padding:14px 16px; margin-bottom:18px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:16px;">🔐</span>
+            <span style="font-size:0.88rem; font-weight:700; color:#0f172a;">Dashboard Login Access</span>
+          </div>
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.82rem; font-weight:600; color:#2563eb;">
+            <input type="checkbox" id="staffLoginEnableToggle" checked onchange="toggleStaffPasswordGroup(this.checked)"> Enable Login
+          </label>
+        </div>
+        <p style="margin:0 0 10px; font-size:0.78rem; color:#64748b; line-height:1.4;">
+          Allows this staff member to sign in to the clinic dashboard at <strong>login.html</strong> using their email and password.
+        </p>
+        <div id="staffPasswordWrapper">
+          <label style="font-size:0.82rem; font-weight:600; color:#334155; display:block; margin-bottom:4px;">
+            <span id="staffPasswordLabel">Set Password</span> <span style="font-weight:400; color:#94a3b8; font-size:0.75rem;">(min. 6 characters)</span>
+          </label>
+          <div style="position:relative;">
+            <input type="password" id="staffPassword" class="input" placeholder="••••••••" minlength="6" style="width:100%; padding-right:40px;">
+            <button type="button" onclick="toggleStaffPasswordVisibility()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:#64748b; font-size:16px; padding:4px;" title="Toggle password visibility">👁️</button>
+          </div>
+          <p id="staffPasswordEditHint" style="display:none; font-size:0.75rem; color:#64748b; margin:4px 0 0;">Leave blank if you don't want to change their current password.</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <button type="button" class="btn btn-secondary" onclick="closeStaffModal()" style="font-weight:600;">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveStaffBtn" style="display:flex; align-items:center; gap:6px; font-weight:600; min-width:130px; justify-content:center;">
+          <span id="saveStaffBtnText">Save Staff Member</span>
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 

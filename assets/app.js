@@ -245,10 +245,18 @@ window.api = (function() {
         });
     },
 
+    // ── Staff & Team Management ──────────────────────────────────────────────
+    getStaff: () => request('/staff'),
+    getStaffMember: (id) => request(`/staff/${id}`),
+    createStaff: (data) => request('/staff', { method: 'POST', body: JSON.stringify(data) }),
+    updateStaff: (id, data) => request(`/staff/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteStaff: (id) => request(`/staff/${id}`, { method: 'DELETE' }),
+
     logout: () => {
       localStorage.removeItem('sdd_token');
       localStorage.removeItem('sdd_refresh_token');
       localStorage.removeItem('sdd_user');
+      localStorage.removeItem('sdd_role');
       localStorage.removeItem('sdd_clinic');
       window.location.href = './login.html';
     },

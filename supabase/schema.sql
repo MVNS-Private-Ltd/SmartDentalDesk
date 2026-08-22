@@ -28,6 +28,7 @@ CREATE TABLE patients (
   gender TEXT,
   address TEXT,
   notes TEXT,
+  is_starred BOOLEAN DEFAULT false,
   is_deleted BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),

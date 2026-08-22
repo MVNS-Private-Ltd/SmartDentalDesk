@@ -136,10 +136,12 @@ window.api = (function() {
 
     // Endpoints
     getPatients: (type = 'all') => request(`/patients?type=${type}`),
+    togglePatientStar: (id, is_starred) => request(`/patients/${id}/star`, { method: 'PATCH', body: JSON.stringify({ is_starred }) }),
     getAppointments: (status = 'all') => request(status && status !== 'all' ? `/appointments?status=${encodeURIComponent(status)}` : '/appointments'),
     approveAppointment: (id) => request(`/appointments/${id}/approve`, { method: 'POST' }),
     rejectAppointment: (id, reason = '') => request(`/appointments/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),
     updateAppointmentStatus: (id, status, reason = '') => request(`/appointments/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, reason }) }),
+    completeAppointmentCheckout: (id, payload) => request(`/appointments/${id}/checkout`, { method: 'POST', body: JSON.stringify(payload) }),
     getSettings: () => request('/clinics/settings'),
     updateSettings: (payload) => request('/clinics/settings', { method: 'PUT', body: JSON.stringify(payload) }),
     sendChatMessage: (message, mode = 'thinking', context = '', session_id = null) => {

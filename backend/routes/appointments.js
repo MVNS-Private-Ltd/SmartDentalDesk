@@ -104,7 +104,7 @@ router.get('/', async (req, res, next) => {
       .from('appointments')
       .select(`
         id, date, time, service, reason, status, notes, created_at,
-        patients(id, name, phone, email)
+        patients(id, name, phone, email, is_starred)
       `, { count: 'exact' })
       .eq('clinic_id', req.clinicId)
       .order('date', { ascending: true })
@@ -326,18 +326,121 @@ router.patch('/:id/status', [
   } catch (err) { next(err); }
 });
 
-// ── DELETE /api/appointments/:id ──────────────────────────────────────────────
-router.delete('/:id', async (req, res, next) => {
+// ── POST /api/appointments/:id/checkout ───────────────────────────────────────
+router.post('/:id/checkout', async (req, res, next) => {
   try {
-    const { error } = await supabase
-      .from('appointments')
-      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-      .eq('id', req.params.id)
-      .eq('clinic_id', req.clinicId);
+    const {
+      notes,
+      prescription,
+      amount = 0,
+      payment_method = 'cash',
+      payment_status = 'paid'
+    } = req.body || {};
 
-    if (error) throw error;
-    res.json({ message: 'Appointment cancelled.' });
-  } catch (err) { next(err); }
+    const numericAmount = parseFloat(amount) || 0;
+
+    // 1. Fetch appointment & patient
+    const { data: appt, error: findErr } = await supabase
+      .from('appointments')
+      .select('*, patients(id, name, phone, email, is_starred)')
+      .eq('id', req.params.id)
+      .eq('clinic_id', req.clinicId)
+      .single();
+
+    if (findErr || !appt) return res.status(404).json({ error: 'Appointment not found.' });
+
+    // 2. Mark appointment as completed & update notes
+    const combinedNotes = notes ? (appt.notes ? `${appt.notes}\n[Checkout Notes]: ${notes}` : notes) : appt.notes;
+    const { data: updatedAppt, error: apptErr } = await supabase
+      .from('appointments')
+      .update({
+        status: 'completed',
+        notes: combinedNotes,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', req.params.id)
+      .eq('clinic_id', req.clinicId)
+      .select(`*, patients(id, name, phone, email, is_starred)`)
+      .single();
+
+    if (apptErr) throw apptErr;
+
+    // 3. Insert treatment record
+    let treatmentRecord = null;
+    if (notes || prescription || numericAmount > 0) {
+      const { data: tr, error: trErr } = await supabase
+        .from('treatment_records')
+        .insert({
+          clinic_id: req.clinicId,
+          patient_id: appt.patient_id,
+          appointment_id: appt.id,
+          procedure: appt.service || 'Dental Treatment',
+          notes: notes || null,
+          prescription: prescription || null,
+          cost: numericAmount
+        })
+        .select()
+        .single();
+      if (!trErr) treatmentRecord = tr;
+    }
+
+    // 4. Generate invoice
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    const invoice_number = `INV-${dateStr}-${rand}`;
+
+    const isPaid = payment_status === 'paid';
+    const { data: invoice, error: invErr } = await supabase
+      .from('invoices')
+      .insert({
+        clinic_id: req.clinicId,
+        patient_id: appt.patient_id,
+        appointment_id: appt.id,
+        invoice_number,
+        items: [{
+          description: appt.service || 'Dental Consultation & Procedure',
+          quantity: 1,
+          unit_price: numericAmount,
+          total: numericAmount
+        }],
+        amount: numericAmount,
+        total_amount: numericAmount,
+        tax_rate: 0,
+        tax_amount: 0,
+        status: isPaid ? 'paid' : 'unpaid',
+        payment_method: isPaid ? payment_method : null,
+        paid_at: isPaid ? new Date().toISOString() : null,
+        notes: notes || null
+      })
+      .select()
+      .single();
+
+    if (invErr) console.error('[CHECKOUT_INVOICE] Error creating invoice:', invErr.message);
+
+    // 5. Fetch clinic details for the receipt
+    const { data: clinic } = await supabase
+      .from('clinics')
+      .select('name, email, phone, address')
+      .eq('id', req.clinicId)
+      .single();
+
+    res.json({
+      message: 'Visit completed and receipt generated.',
+      appointment: updatedAppt,
+      treatment: treatmentRecord,
+      invoice: invoice || {
+        invoice_number,
+        amount: numericAmount,
+        total_amount: numericAmount,
+        status: isPaid ? 'paid' : 'unpaid',
+        payment_method: isPaid ? payment_method : null,
+        created_at: new Date().toISOString()
+      },
+      clinic: clinic || { name: 'Smart Dental Clinic' }
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;

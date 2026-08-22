@@ -55,18 +55,39 @@ const createRules = [
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('role').isIn(['dentist','hygienist','receptionist','assistant','manager','other'])
     .withMessage('Invalid role'),
-  body('email').optional().isEmail().withMessage('Invalid email')
+  body('email').optional().isEmail().withMessage('Invalid email'),
+  body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
 ];
 
 router.post('/', createRules, async (req, res, next) => {
   try {
     if (!validate(req, res)) return;
-    const { name, role, email, phone, schedule, specialization, joining_date } = req.body;
+    const { name, role, email, phone, schedule, specialization, joining_date, password } = req.body;
+
+    let authId = null;
+
+    // If an email and password are provided, create an auth user for login
+    if (email && password) {
+      const { data: authData, error: signUpError } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true
+      });
+
+      if (signUpError) {
+        if (signUpError.message.includes('already registered')) {
+          return res.status(409).json({ error: 'An account with this email already exists.' });
+        }
+        throw signUpError;
+      }
+      authId = authData.user.id;
+    }
 
     const { data, error } = await supabase
       .from('staff')
       .insert({
         clinic_id    : req.clinicId,
+        auth_id      : authId,
         name,
         role,
         email        : email         || null,
@@ -79,7 +100,11 @@ router.post('/', createRules, async (req, res, next) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // If db insert fails, we should ideally rollback auth creation, but for MVP we log it
+      console.error('Failed to create staff record after auth user was created:', error);
+      throw error;
+    }
     res.status(201).json({ message: 'Staff member added.', staff: data });
   } catch (err) { next(err); }
 });

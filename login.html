@@ -681,12 +681,17 @@
       localStorage.setItem('sdd_token',         res.access_token);
       localStorage.setItem('sdd_refresh_token', res.refresh_token);
       localStorage.setItem('sdd_user', JSON.stringify(res.user));
+      localStorage.setItem('sdd_role', res.role || 'admin');
       if (res.clinic) {
         localStorage.setItem('sdd_clinic', JSON.stringify(res.clinic));
       }
 
-      // Redirect to dashboard
-      window.location.href = './dashboard.html';
+      // Redirect to correct dashboard based on role
+      if (res.role === 'receptionist') {
+        window.location.href = './receptionist-dashboard.html';
+      } else {
+        window.location.href = './dashboard.html';
+      }
     } catch (error) {
       err.textContent = error.message || 'Login failed. Please try again.';
       err.style.display = 'block';

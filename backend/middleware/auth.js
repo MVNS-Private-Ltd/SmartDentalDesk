@@ -20,19 +20,34 @@ module.exports = async function requireAuth(req, res, next) {
       return res.status(401).json({ error: 'Invalid or expired token. Please sign in again.' });
     }
 
-    // Fetch the associated clinic for this user
-    const { data: clinic, error: clinicErr } = await supabase
+    // Fetch the associated clinic for this user (Admin/Owner)
+    let { data: clinic, error: clinicErr } = await supabase
       .from('clinics')
       .select('id, name, owner_name, subscription_plan')
       .eq('owner_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (clinicErr || !clinic) {
-      return res.status(403).json({ error: 'No clinic associated with this account.' });
+    let userRole = 'admin';
+
+    // If not found in clinics, check if user is a staff member
+    if (!clinic) {
+      const { data: staff, error: staffErr } = await supabase
+        .from('staff')
+        .select('*, clinics(id, name, owner_name, subscription_plan)')
+        .eq('auth_id', user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      if (staffErr || !staff || !staff.clinics) {
+        return res.status(403).json({ error: 'No active clinic or staff profile associated with this account.' });
+      }
+      clinic = staff.clinics;
+      userRole = staff.role; // e.g., 'receptionist'
     }
 
     // Attach to request for use in route handlers
     req.user     = user;
+    req.userRole = userRole;
     req.clinicId = clinic.id;
     req.clinic   = clinic;
 

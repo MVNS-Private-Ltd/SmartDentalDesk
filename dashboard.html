@@ -2446,8 +2446,13 @@
           document.getElementById('bookingLinkText').textContent = fullLink;
           
           if (s.appointment_settings) {
-            document.getElementById('slotDuration').value = s.appointment_settings.slot_duration_minutes || 30;
+            const duration = s.appointment_settings.slot_duration_minutes || 30;
+            document.getElementById('slotDuration').value = duration;
             document.getElementById('autoApprove').value = s.appointment_settings.auto_approve ? 'true' : 'false';
+            
+            // Regenerate the grid structure using the saved slot duration
+            ALL_POSSIBLE_SLOTS = generatePossibleSlots(duration);
+            
             const savedSlots = s.appointment_settings.time_slots || [];
             renderAdminSlotGrid(savedSlots);
             if (s.appointment_settings.max_bookings_per_day) {
@@ -2475,13 +2480,20 @@
     }
 
     // ── Admin Slot Grid Logic ─────────────────────────────────────────────────
-    const ALL_POSSIBLE_SLOTS = [
-      '07:00','07:30','08:00','08:30',
-      '09:00','09:30','10:00','10:30','11:00','11:30',
-      '12:00','12:30',
-      '13:00','13:30','14:00','14:30','15:00','15:30',
-      '16:00','16:30','17:00','17:30','18:00','18:30'
-    ];
+    function generatePossibleSlots(durationMinutes) {
+      const slots = [];
+      let current = 7 * 60; // 07:00
+      const end = 19 * 60;  // 19:00
+      while (current <= end) {
+        const hh = String(Math.floor(current / 60)).padStart(2, '0');
+        const mm = String(current % 60).padStart(2, '0');
+        slots.push(`${hh}:${mm}`);
+        current += durationMinutes;
+      }
+      return slots;
+    }
+
+    let ALL_POSSIBLE_SLOTS = generatePossibleSlots(30);
     const DEFAULT_SLOTS = ['09:00','09:30','10:00','10:30','11:00','11:30','12:00','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30'];
 
     function renderAdminSlotGrid(selectedSlots) {
@@ -2504,6 +2516,13 @@
       return [...document.querySelectorAll('#adminSlotGrid .admin-slot-btn.selected')]
         .map(b => b.dataset.time);
     }
+
+    // Listen for slot duration changes
+    document.getElementById('slotDuration').addEventListener('change', (e) => {
+      const duration = parseInt(e.target.value) || 30;
+      ALL_POSSIBLE_SLOTS = generatePossibleSlots(duration);
+      renderAdminSlotGrid(getSelectedSlots());
+    });
 
     // Render grid with defaults on page load (will be overwritten when settings load)
     renderAdminSlotGrid(DEFAULT_SLOTS);

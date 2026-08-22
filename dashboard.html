@@ -914,9 +914,9 @@
     <nav class="sidebar-nav" id="sidebarNav">
       <button class="sidebar-link active" data-target="home">Dashboard Home</button>
       <button class="sidebar-link" data-target="patients">Patients</button>
-      <button class="sidebar-link" data-target="appointments" style="display: flex; align-items: center; justify-content: space-between;">
-        <span>Appointments</span>
-        <span id="sidebarPendingBadge" style="display:none; background:#d97706; color:#fff; font-size:0.7rem; font-weight:700; padding:1px 6px; border-radius:10px; line-height:1.2;">0</span>
+      <button class="sidebar-link" data-target="appointments">
+        Appointments
+        <span id="sidebarPendingBadge" style="display:none; background:#d97706; color:#fff; font-size:0.7rem; font-weight:700; padding:1px 6px; border-radius:10px; line-height:1.2; margin-left:6px;">0</span>
       </button>
       <button class="sidebar-link" data-target="ai">AI Assistant</button>
       <button class="sidebar-link" data-target="settings">Settings</button>
@@ -1498,15 +1498,15 @@
           if (st === 'pending') {
             actionsHtml = `
               <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
-                <button class="btn btn-sm" id="btnApprove-${a.id}" onclick="handleApproveAppt('${a.id}')" style="background:#16a34a; color:#fff; padding:6px 12px; font-size:0.78rem; border-radius:6px; border:none; font-weight:600; cursor:pointer;" title="Approve booking and send confirmation email">✓ Approve</button>
-                <button class="btn btn-sm" id="btnReject-${a.id}" onclick="handleRejectAppt('${a.id}')" style="background:transparent; color:#dc2626; border:1px solid #dc2626; padding:5px 10px; font-size:0.78rem; border-radius:6px; font-weight:600; cursor:pointer;" title="Decline booking and notify patient">✕ Decline</button>
+                <button type="button" class="btn btn-sm" id="btnApprove-${a.id}" onclick="handleApproveAppt('${a.id}')" style="background:#16a34a; color:#fff; padding:6px 12px; font-size:0.78rem; border-radius:6px; border:none; font-weight:600; cursor:pointer;" title="Approve booking and send confirmation email">✓ Approve</button>
+                <button type="button" class="btn btn-sm" id="btnReject-${a.id}" onclick="handleRejectAppt('${a.id}')" style="background:transparent; color:#dc2626; border:1px solid #dc2626; padding:5px 10px; font-size:0.78rem; border-radius:6px; font-weight:600; cursor:pointer;" title="Decline booking and notify patient">✕ Decline</button>
               </div>
             `;
           } else if (st === 'scheduled' || st === 'confirmed') {
             actionsHtml = `
               <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
-                <button class="btn btn-sm btn-secondary" onclick="handleStatusChange('${a.id}', 'completed')" style="padding:4px 8px; font-size:0.75rem;">✓ Complete</button>
-                <button class="btn btn-sm btn-secondary" onclick="handleStatusChange('${a.id}', 'cancelled')" style="padding:4px 8px; font-size:0.75rem; color:#dc2626;">Cancel</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="handleStatusChange('${a.id}', 'completed')" style="padding:4px 8px; font-size:0.75rem;">✓ Complete</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="handleStatusChange('${a.id}', 'cancelled')" style="padding:4px 8px; font-size:0.75rem; color:#dc2626;">Cancel</button>
               </div>
             `;
           } else {

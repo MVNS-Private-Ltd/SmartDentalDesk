@@ -900,68 +900,6 @@
     color: var(--color-primary);
   }
 
-  /* ── EXECUTIVE KPI METRICS CARDS ── */
-  .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--space-4);
-    margin-bottom: var(--space-6);
-  }
-  .kpi-card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-divider);
-    border-radius: var(--radius-lg);
-    padding: var(--space-4) var(--space-5);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.02);
-    position: relative;
-    overflow: hidden;
-  }
-  .kpi-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-  }
-  .kpi-card-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-3);
-  }
-  .kpi-label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-text-muted);
-  }
-  .kpi-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  .kpi-value {
-    font-size: 1.85rem;
-    font-weight: 700;
-    line-height: 1.1;
-    color: var(--color-text);
-    margin-bottom: 4px;
-    font-feature-settings: "tnum";
-  }
-  .kpi-sub {
-    font-size: 0.76rem;
-    color: var(--color-text-muted);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
   /* ── CHARTS SECTION ── */
   .charts-main-grid {
     display: grid;
@@ -1082,104 +1020,33 @@
         <button class="btn btn-sm" id="bannerReviewBtn" onclick="showAppointmentsWithTab('pending')" style="background:#d97706; color:#fff; white-space:nowrap; border:none; font-weight:600; padding:8px 16px; border-radius:var(--radius-md); cursor:pointer;">Review &amp; Approve →</button>
       </div>
 
-      <!-- Executive KPI Strip -->
-      <div class="kpi-grid">
-        <!-- 1. Today's Appointments -->
-        <div class="kpi-card hoverable" onclick="document.querySelector('[data-target=appointments]').click()" style="cursor:pointer;">
-          <div class="kpi-card-top">
-            <span class="kpi-label">Today's Visits</span>
-            <div class="kpi-icon" style="background:#eff6ff; color:#2563eb;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div>
-          </div>
-          <div class="kpi-value" id="statAppointments">0</div>
-          <div class="kpi-sub">
-            <span style="color:#2563eb; font-weight:600;">Daily Schedule</span> · Active queue
-          </div>
-        </div>
-
-        <!-- 2. Pending Approvals -->
-        <div class="kpi-card hoverable" id="cardPendingApprovals" onclick="showAppointmentsWithTab('pending')" style="cursor:pointer;">
-          <div class="kpi-card-top">
-            <span class="kpi-label" style="color:#92400e;">Pending Approvals</span>
-            <div class="kpi-icon" style="background:#fef3c7; color:#d97706;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div>
-          </div>
-          <div class="kpi-value" id="statPendingApprovals" style="color:#d97706;">0</div>
-          <div class="kpi-sub">
-            <span id="statPendingBadge" style="display:none; color:#d97706; font-weight:600;">Needs Review</span>
-            <span id="statPendingNormal">All caught up</span>
-          </div>
-        </div>
-
-        <!-- 3. Total Active Patients -->
-        <div class="kpi-card hoverable" onclick="document.querySelector('[data-target=patients]').click()" style="cursor:pointer;">
-          <div class="kpi-card-top">
-            <span class="kpi-label">Active Patients</span>
-            <div class="kpi-icon" style="background:#ecfdf5; color:#059669;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </div>
-          </div>
-          <div class="kpi-value" id="statPatients">0</div>
-          <div class="kpi-sub">
-            <span style="color:#059669; font-weight:600;">Registered</span> in clinic records
-          </div>
-        </div>
-
-        <!-- 4. Today's Revenue -->
-        <div class="kpi-card">
-          <div class="kpi-card-top">
-            <span class="kpi-label">Today's Revenue</span>
-            <div class="kpi-icon" style="background:#eef2ff; color:#4f46e5;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-            </div>
-          </div>
-          <div class="kpi-value" id="statRevenue" style="color:#4f46e5;">₹0</div>
-          <div class="kpi-sub" id="statTotalRevSub">
-            <span>Collected payments</span>
-          </div>
-        </div>
-
-        <!-- 5. Pending Invoices -->
-        <div class="kpi-card">
-          <div class="kpi-card-top">
-            <span class="kpi-label">Pending Invoices</span>
-            <div class="kpi-icon" style="background:#fff1f2; color:#e11d48;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            </div>
-          </div>
-          <div class="kpi-value" id="statInvoices" style="color:#e11d48;">0</div>
-          <div class="kpi-sub">
-            <span style="color:#e11d48; font-weight:600;">Awaiting</span> settlement
-          </div>
-        </div>
-      </div>
-
-      <!-- Powerful Interactive Analytics Charts -->
+      <!-- Live Clinic Analytics Charts (Directly replaces the boxes) -->
       <div class="charts-main-grid">
-        <!-- Main Activity Chart -->
+        <!-- 1. Main Appointment Activity Chart -->
         <div class="chart-box">
           <div class="chart-box-header">
             <div>
               <h3 class="chart-box-title">Appointment Activity &amp; Booking Trends</h3>
-              <p class="chart-box-desc">Completed visits vs scheduled appointments over the last 7 days</p>
+              <p class="chart-box-desc">Completed visits, upcoming scheduled, and pending requests over the last 7 days</p>
             </div>
-            <span class="chart-badge-pill">7-Day Activity</span>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <span class="chart-badge-pill" style="background:#eff6ff; color:#2563eb; font-weight:700;">Today: <span id="statTodayAppts">0</span> visits</span>
+              <span id="statPendingBadgePill" style="display:none; background:#fef3c7; color:#d97706; font-weight:700; font-size:0.72rem; padding:3px 8px; border-radius:12px; border:1px solid #fde68a; cursor:pointer;" onclick="showAppointmentsWithTab('pending')">Pending: <span id="statPendingCount">0</span></span>
+            </div>
           </div>
           <div class="chart-canvas-wrap">
             <canvas id="timelineChart"></canvas>
           </div>
         </div>
 
-        <!-- Service Distribution Doughnut -->
+        <!-- 2. Services Breakdown Doughnut -->
         <div class="chart-box">
           <div class="chart-box-header">
             <div>
               <h3 class="chart-box-title">Service Breakdown</h3>
-              <p class="chart-box-desc">Distribution of clinic treatments</p>
+              <p class="chart-box-desc">Distribution of clinic treatments across visits</p>
             </div>
-            <span class="chart-badge-pill">Treatments</span>
+            <span class="chart-badge-pill" style="background:#ecfdf5; color:#059669; font-weight:700;">Patients: <span id="statTotalPatients">0</span></span>
           </div>
           <div class="chart-canvas-wrap">
             <canvas id="servicesChart"></canvas>
@@ -1188,28 +1055,31 @@
       </div>
 
       <div class="charts-sub-grid">
-        <!-- Monthly Revenue & Billing Chart -->
+        <!-- 3. Monthly Revenue & Billing Chart -->
         <div class="chart-box">
           <div class="chart-box-header">
             <div>
               <h3 class="chart-box-title">Revenue &amp; Invoicing Performance</h3>
-              <p class="chart-box-desc">Collected revenue vs pending invoices (Past 6 Months)</p>
+              <p class="chart-box-desc">Collected revenue vs pending invoice balance (Past 6 Months)</p>
             </div>
-            <span class="chart-badge-pill">Financials (₹)</span>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <span class="chart-badge-pill" style="background:#ecfdf5; color:#059669; font-weight:700;">Collected: <span id="statRevenueCollected">₹0</span></span>
+              <span class="chart-badge-pill" style="background:#fff1f2; color:#e11d48; font-weight:700;">Pending: <span id="statRevenuePending">₹0</span></span>
+            </div>
           </div>
           <div class="chart-canvas-wrap">
             <canvas id="revenueChart"></canvas>
           </div>
         </div>
 
-        <!-- Appointment Status Lifecycle Overview -->
+        <!-- 4. Appointment Status Lifecycle Overview -->
         <div class="chart-box">
           <div class="chart-box-header">
             <div>
-              <h3 class="chart-box-title">Appointment Status Lifecycle</h3>
-              <p class="chart-box-desc">Completed, scheduled, pending, and cancelled breakdown</p>
+              <h3 class="chart-box-title">Appointment Lifecycle Overview</h3>
+              <p class="chart-box-desc">Completed, scheduled, pending, and cancelled ratio</p>
             </div>
-            <span class="chart-badge-pill">Status Ratio</span>
+            <span class="chart-badge-pill" id="statStatusPill">Live Status</span>
           </div>
           <div class="chart-canvas-wrap">
             <canvas id="statusChart"></canvas>
@@ -1623,35 +1493,46 @@
     }
 
     function renderOrUpdateCharts(analytics) {
-      if (!window.Chart || !analytics) return;
+      if (!window.Chart) {
+        setTimeout(() => renderOrUpdateCharts(analytics), 120);
+        return;
+      }
       const theme = getChartTheme();
 
       // 1. Timeline Chart (Area / Curved Line)
       const timelineCanvas = document.getElementById('timelineChart');
-      if (timelineCanvas && analytics.timeline) {
+      if (timelineCanvas) {
         const timelineCtx = timelineCanvas.getContext('2d');
         if (timelineChartInstance) timelineChartInstance.destroy();
 
         const gradCompleted = timelineCtx.createLinearGradient(0, 0, 0, 240);
-        gradCompleted.addColorStop(0, 'rgba(22, 163, 74, 0.28)');
-        gradCompleted.addColorStop(1, 'rgba(22, 163, 74, 0.0)');
+        gradCompleted.addColorStop(0, 'rgba(22, 163, 74, 0.32)');
+        gradCompleted.addColorStop(1, 'rgba(22, 163, 74, 0.01)');
 
         const gradScheduled = timelineCtx.createLinearGradient(0, 0, 0, 240);
-        gradScheduled.addColorStop(0, 'rgba(37, 99, 235, 0.28)');
-        gradScheduled.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
+        gradScheduled.addColorStop(0, 'rgba(37, 99, 235, 0.32)');
+        gradScheduled.addColorStop(1, 'rgba(37, 99, 235, 0.01)');
 
         const gradPending = timelineCtx.createLinearGradient(0, 0, 0, 240);
-        gradPending.addColorStop(0, 'rgba(217, 119, 6, 0.28)');
-        gradPending.addColorStop(1, 'rgba(217, 119, 6, 0.0)');
+        gradPending.addColorStop(0, 'rgba(217, 119, 6, 0.32)');
+        gradPending.addColorStop(1, 'rgba(217, 119, 6, 0.01)');
+
+        const labels = analytics?.timeline?.labels && analytics.timeline.labels.length > 0
+          ? analytics.timeline.labels
+          : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'];
+
+        const completedData = analytics?.timeline?.completed || [0, 0, 0, 0, 0, 0, 0];
+        const scheduledData = analytics?.timeline?.scheduled || [0, 0, 0, 0, 0, 0, 0];
+        const pendingData = analytics?.timeline?.pending || [0, 0, 0, 0, 0, 0, 0];
 
         timelineChartInstance = new Chart(timelineCtx, {
           type: 'line',
           data: {
-            labels: analytics.timeline.labels || [],
+            labels: labels,
             datasets: [
               {
                 label: 'Completed Visits',
-                data: analytics.timeline.completed || [],
+                data: completedData,
                 borderColor: '#16a34a',
                 backgroundColor: gradCompleted,
                 borderWidth: 2.5,
@@ -1663,7 +1544,7 @@
               },
               {
                 label: 'Scheduled Visits',
-                data: analytics.timeline.scheduled || [],
+                data: scheduledData,
                 borderColor: '#2563eb',
                 backgroundColor: gradScheduled,
                 borderWidth: 2.5,
@@ -1675,7 +1556,7 @@
               },
               {
                 label: 'Pending Requests',
-                data: analytics.timeline.pending || [],
+                data: pendingData,
                 borderColor: '#d97706',
                 backgroundColor: gradPending,
                 borderWidth: 2,
@@ -1729,12 +1610,19 @@
 
       // 2. Services Distribution (Doughnut)
       const servicesCanvas = document.getElementById('servicesChart');
-      if (servicesCanvas && analytics.services) {
+      if (servicesCanvas) {
         const servicesCtx = servicesCanvas.getContext('2d');
         if (servicesChartInstance) servicesChartInstance.destroy();
 
-        const sLabels = analytics.services.labels || [];
-        const sCounts = analytics.services.counts || [];
+        let sLabels = analytics?.services?.labels || ['General Consultation', 'Routine Checkup', 'Dental Cleaning', 'Whitening'];
+        let sCounts = analytics?.services?.counts || [1, 0, 0, 0];
+        
+        // If empty data, provide default category view
+        if (sLabels.length === 0 || sCounts.every(v => v === 0)) {
+          sLabels = ['General Consultation', 'Routine Checkup', 'Dental Cleaning', 'Whitening'];
+          sCounts = [1, 0, 0, 0];
+        }
+
         const colors = ['#2563eb', '#06b6d4', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'];
 
         servicesChartInstance = new Chart(servicesCtx, {
@@ -1780,25 +1668,29 @@
 
       // 3. Revenue Trends (Bar Chart)
       const revenueCanvas = document.getElementById('revenueChart');
-      if (revenueCanvas && analytics.revenue_trends) {
+      if (revenueCanvas) {
         const revenueCtx = revenueCanvas.getContext('2d');
         if (revenueChartInstance) revenueChartInstance.destroy();
+
+        const monthLabels = analytics?.revenue_trends?.labels || ['3 Mo Ago', '2 Mo Ago', 'Last Month', 'This Month'];
+        const paidData = analytics?.revenue_trends?.paid || [0, 0, 0, 0];
+        const pendingData = analytics?.revenue_trends?.pending || [0, 0, 0, 0];
 
         revenueChartInstance = new Chart(revenueCtx, {
           type: 'bar',
           data: {
-            labels: analytics.revenue_trends.labels || [],
+            labels: monthLabels,
             datasets: [
               {
-                label: 'Collected (Paid)',
-                data: analytics.revenue_trends.paid || [],
+                label: 'Collected Revenue',
+                data: paidData,
                 backgroundColor: '#10b981',
                 borderRadius: 6,
                 barPercentage: 0.6
               },
               {
                 label: 'Pending Invoices',
-                data: analytics.revenue_trends.pending || [],
+                data: pendingData,
                 backgroundColor: '#fb7185',
                 borderRadius: 6,
                 barPercentage: 0.6
@@ -1851,19 +1743,24 @@
 
       // 4. Status Overview (Doughnut)
       const statusCanvas = document.getElementById('statusChart');
-      if (statusCanvas && analytics.status_breakdown) {
+      if (statusCanvas) {
         const statusCtx = statusCanvas.getContext('2d');
         if (statusChartInstance) statusChartInstance.destroy();
 
-        const sb = analytics.status_breakdown;
-        const total = (sb.completed || 0) + (sb.scheduled || 0) + (sb.pending || 0) + (sb.cancelled || 0);
+        const sb = analytics?.status_breakdown || { completed: 0, scheduled: 0, pending: 0, cancelled: 0 };
+        let sData = [sb.completed || 0, sb.scheduled || 0, sb.pending || 0, sb.cancelled || 0];
+        const total = sData.reduce((a, b) => a + b, 0);
+
+        if (total === 0) {
+          sData = [1, 0, 0, 0]; // Default empty state ring
+        }
 
         statusChartInstance = new Chart(statusCtx, {
           type: 'doughnut',
           data: {
             labels: ['Completed', 'Scheduled', 'Pending', 'Cancelled'],
             datasets: [{
-              data: [sb.completed || 0, sb.scheduled || 0, sb.pending || 0, sb.cancelled || 0],
+              data: sData,
               backgroundColor: ['#16a34a', '#2563eb', '#d97706', '#94a3b8'],
               borderWidth: 2,
               borderColor: '#ffffff',
@@ -1909,58 +1806,51 @@
       try {
         const stats = await window.api.getDashboardStats();
         
-        const apptEl = document.getElementById('statAppointments');
-        if (apptEl) apptEl.textContent = stats.today_appointments || 0;
+        // Update Chart Header Metrics
+        const todayApptEl = document.getElementById('statTodayAppts');
+        if (todayApptEl) todayApptEl.textContent = stats.today_appointments || 0;
 
-        const patientsEl = document.getElementById('statPatients');
-        if (patientsEl) patientsEl.textContent = stats.total_patients || 0;
+        const totalPatientsEl = document.getElementById('statTotalPatients');
+        if (totalPatientsEl) totalPatientsEl.textContent = stats.total_patients || 0;
 
-        const revEl = document.getElementById('statRevenue');
-        if (revEl) revEl.textContent = `₹${(stats.today_revenue || 0).toLocaleString()}`;
+        const revCollectedEl = document.getElementById('statRevenueCollected');
+        if (revCollectedEl) revCollectedEl.textContent = `₹${(stats.today_revenue || stats.total_revenue || 0).toLocaleString()}`;
 
-        const totalRevSub = document.getElementById('statTotalRevSub');
-        if (totalRevSub && stats.total_revenue !== undefined) {
-          totalRevSub.innerHTML = `<span>Total all-time: <strong>₹${(stats.total_revenue || 0).toLocaleString()}</strong></span>`;
-        }
-
-        const invEl = document.getElementById('statInvoices');
-        if (invEl) invEl.textContent = stats.pending_invoices || 0;
+        const revPendingEl = document.getElementById('statRevenuePending');
+        if (revPendingEl) revPendingEl.textContent = `₹${(stats.pending_revenue || 0).toLocaleString()}`;
 
         const pendingCount = stats.pending_approvals || 0;
-        const statPendingEl = document.getElementById('statPendingApprovals');
-        if (statPendingEl) statPendingEl.textContent = pendingCount;
-
         const bannerEl = document.getElementById('pendingAlertBanner');
         const alertCountEl = document.getElementById('pendingAlertCount');
         const sidebarBadgeEl = document.getElementById('sidebarPendingBadge');
         const tabBadgeEl = document.getElementById('tabPendingBadge');
-        const statBadgeEl = document.getElementById('statPendingBadge');
-        const statNormalEl = document.getElementById('statPendingNormal');
-        const cardPending = document.getElementById('cardPendingApprovals');
+        const statPendingPill = document.getElementById('statPendingBadgePill');
+        const statPendingCount = document.getElementById('statPendingCount');
 
         if (pendingCount > 0) {
           if (bannerEl) bannerEl.style.display = 'flex';
           if (alertCountEl) alertCountEl.textContent = pendingCount;
           if (sidebarBadgeEl) { sidebarBadgeEl.textContent = pendingCount; sidebarBadgeEl.style.display = 'inline-block'; }
           if (tabBadgeEl) { tabBadgeEl.textContent = pendingCount; tabBadgeEl.style.display = 'inline-block'; }
-          if (statBadgeEl) statBadgeEl.style.display = 'inline-block';
-          if (statNormalEl) statNormalEl.style.display = 'none';
-          if (cardPending) { cardPending.style.borderColor = '#fcd34d'; cardPending.style.background = '#fffdf7'; }
+          if (statPendingPill) statPendingPill.style.display = 'inline-block';
+          if (statPendingCount) statPendingCount.textContent = pendingCount;
         } else {
           if (bannerEl) bannerEl.style.display = 'none';
           if (sidebarBadgeEl) sidebarBadgeEl.style.display = 'none';
           if (tabBadgeEl) tabBadgeEl.style.display = 'none';
-          if (statBadgeEl) statBadgeEl.style.display = 'none';
-          if (statNormalEl) statNormalEl.style.display = 'inline-block';
-          if (cardPending) { cardPending.style.borderColor = 'var(--color-divider)'; cardPending.style.background = 'var(--color-surface)'; }
+          if (statPendingPill) statPendingPill.style.display = 'none';
         }
 
-        // Render the 4 Chart.js charts
-        if (stats.analytics) {
-          renderOrUpdateCharts(stats.analytics);
-        }
-      } catch (err) { console.error('Failed to load stats & analytics:', err); }
+        // Render / Update the 4 Chart.js charts
+        renderOrUpdateCharts(stats.analytics || {});
+      } catch (err) {
+        console.error('Failed to load stats & analytics:', err);
+        renderOrUpdateCharts({});
+      }
     }
+
+    // Call loadHomeStats on page load immediately!
+    loadHomeStats();
 
     // ── Helper to switch to appointments tab directly with specific filter ───
     window.showAppointmentsWithTab = function(tabName) {

@@ -206,21 +206,6 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
           errors.push({ row: i + 2, message: `Duplicate — phone ${normalizedPhone} already exists (${existing.name})` });
           continue;
         }
-      } else {
-        // Secondary: no phone — match by name (case-insensitive) + dob if available
-        let dupQuery = supabase
-          .from('patients')
-          .select('id, name')
-          .eq('clinic_id', req.clinicId)
-          .eq('is_deleted', false)
-          .ilike('name', name.trim());
-        if (normalizedDob) dupQuery = dupQuery.eq('dob', normalizedDob);
-        const { data: existingByName } = await dupQuery.maybeSingle();
-        if (existingByName) {
-          skipped++;
-          errors.push({ row: i + 2, message: `Duplicate — patient "${existingByName.name}" already exists` });
-          continue;
-        }
       }
 
       // ── Normalize gender ──────────────────────────────────────────────────
@@ -330,18 +315,6 @@ router.post('/', createRules, async (req, res, next) => {
         .maybeSingle();
       if (byPhone) {
         return res.status(409).json({ error: `A patient with this phone number already exists (${byPhone.name}).` });
-      }
-    } else {
-      // No phone — check by exact name (case-insensitive)
-      const { data: byName } = await supabase
-        .from('patients')
-        .select('id, name')
-        .eq('clinic_id', req.clinicId)
-        .ilike('name', name.trim())
-        .eq('is_deleted', false)
-        .maybeSingle();
-      if (byName) {
-        return res.status(409).json({ error: `A patient named "${byName.name}" already exists. Add a phone number to distinguish them.` });
       }
     }
 

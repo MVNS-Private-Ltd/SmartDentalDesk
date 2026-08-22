@@ -1966,7 +1966,7 @@
     window._allLoadedPatients = [];
     window._selectedPatientIds = new Set();
 
-    function handlePatientSearch(val) {
+    window.handlePatientSearch = function handlePatientSearch(val) {
       clearTimeout(patientSearchTimeout);
       patientSearchTimeout = setTimeout(() => {
         renderPatientsTable(window._allLoadedPatients.filter(p =>
@@ -1977,7 +1977,7 @@
       }, 220);
     }
 
-    function handleSelectAll(checked) {
+    window.handleSelectAll = function handleSelectAll(checked) {
       window._selectedPatientIds = checked
         ? new Set(window._allLoadedPatients.map(p => p.id))
         : new Set();
@@ -1985,7 +1985,7 @@
       updateBulkDeleteBtn();
     }
 
-    function handleRowSelect(id, checked) {
+    window.handleRowSelect = function handleRowSelect(id, checked) {
       if (checked) window._selectedPatientIds.add(id);
       else window._selectedPatientIds.delete(id);
       updateBulkDeleteBtn();
@@ -2002,7 +2002,7 @@
       if (cnt) cnt.textContent = n;
     }
 
-    async function handleBulkDelete() {
+    window.handleBulkDelete = async function handleBulkDelete() {
       const ids = [...window._selectedPatientIds];
       if (!ids.length) return;
       if (!confirm(`Delete ${ids.length} patient(s)? This cannot be undone.`)) return;

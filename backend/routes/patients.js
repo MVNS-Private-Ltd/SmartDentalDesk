@@ -364,4 +364,39 @@ router.patch('/:id/star', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── DELETE /api/patients/:id ──────────────────────────────────────────────────
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const { data, error } = await supabase
+      .from('patients')
+      .update({ is_deleted: true, updated_at: new Date().toISOString() })
+      .eq('id', req.params.id)
+      .eq('clinic_id', req.clinicId)
+      .select()
+      .single();
+
+    if (error || !data) return res.status(404).json({ error: 'Patient not found.' });
+    res.json({ message: 'Patient deleted successfully.' });
+  } catch (err) { next(err); }
+});
+
+// ── DELETE /api/patients (bulk) ───────────────────────────────────────────────
+router.delete('/', async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Provide an array of patient IDs to delete.' });
+    }
+
+    const { error } = await supabase
+      .from('patients')
+      .update({ is_deleted: true, updated_at: new Date().toISOString() })
+      .in('id', ids)
+      .eq('clinic_id', req.clinicId);
+
+    if (error) throw error;
+    res.json({ message: `${ids.length} patient(s) deleted.` });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

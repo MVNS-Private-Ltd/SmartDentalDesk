@@ -50,11 +50,20 @@ router.get('/stats', async (req, res, next) => {
       .eq('status', 'unpaid');
     if (err4) throw err4;
 
+    // 5. Pending appointment approvals count
+    const { count: pendingApprovals, error: err5 } = await supabase
+      .from('appointments')
+      .select('*', { count: 'exact', head: true })
+      .eq('clinic_id', req.clinicId)
+      .eq('status', 'pending');
+    if (err5) throw err5;
+
     res.json({
       today_appointments: todayAppointments || 0,
       total_patients: totalPatients || 0,
       today_revenue: todayRevenue,
-      pending_invoices: pendingInvoices || 0
+      pending_invoices: pendingInvoices || 0,
+      pending_approvals: pendingApprovals || 0
     });
   } catch (err) {
     next(err);

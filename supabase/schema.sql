@@ -43,7 +43,7 @@ CREATE TABLE appointments (
   time TIME NOT NULL,
   service TEXT NOT NULL,
   reason TEXT,
-  status TEXT DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'in-progress', 'completed', 'cancelled', 'no-show')),
+  status TEXT DEFAULT 'scheduled' CHECK (status IN ('pending', 'scheduled', 'confirmed', 'in-progress', 'completed', 'cancelled', 'no-show')),
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()

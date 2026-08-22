@@ -120,7 +120,8 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
     const parsed = Papa.parse(fileContent, {
       header: true,
       skipEmptyLines: true,
-      transformHeader: h => h.trim().toLowerCase().replace(/\s+/g, '_')
+      // Normalize all headers: lowercase, spaces → underscores, remove special chars
+      transformHeader: h => h.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
     });
     
     const rows = parsed.data;
@@ -128,11 +129,12 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
     let skipped = 0;
     let errors = [];
 
-    // Helper: pick the first matching key from a row
+    // Pick the first non-empty value matching any of the given keys
     function pick(row, ...keys) {
       for (const k of keys) {
-        if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== '') {
-          return String(row[k]).trim();
+        const v = row[k];
+        if (v !== undefined && v !== null && String(v).trim() !== '') {
+          return String(v).trim();
         }
       }
       return null;
@@ -141,39 +143,70 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
 
-      // Accept common column name variants
-      const name  = pick(row, 'patient_name', 'name', 'full_name', 'patient', 'patientname', 'fullname', 'patient_full_name');
-      const phone = pick(row, 'phone', 'phone_number', 'mobile', 'mobile_number', 'contact', 'contact_number', 'cell', 'telephone', 'ph_no', 'phno');
-      const email = pick(row, 'email', 'email_address', 'e_mail', 'emailaddress', 'email_id');
-      const dob   = pick(row, 'date_of_birth', 'dob', 'birth_date', 'birthdate', 'birthday', 'date_of_birth_(yyyy-mm-dd)', 'date_of_birth_(dd/mm/yyyy)');
-      const gender= pick(row, 'gender', 'sex');
-      const address = pick(row, 'address', 'addr', 'location', 'city', 'residence');
-      const notes = pick(row, 'notes', 'note', 'remarks', 'comments', 'medical_notes', 'allergies', 'medical_history');
-      
-      if (!name || !phone) {
+      // ── Resolve name (full name or firstname + lastname) ──────────────────
+      let name = pick(row,
+        'patient_name', 'name', 'full_name', 'fullname',
+        'patientname', 'patient_full_name', 'patient'
+      );
+      if (!name) {
+        const first = pick(row, 'firstname', 'first_name', 'given_name', 'givenname', 'fname');
+        const last  = pick(row, 'lastname',  'last_name',  'surname',    'family_name', 'lname');
+        if (first || last) name = [first, last].filter(Boolean).join(' ');
+      }
+
+      // ── Resolve phone (optional) ──────────────────────────────────────────
+      const rawPhone = pick(row,
+        'phone', 'phone_number', 'phonenumber', 'mobile', 'mobile_number',
+        'mobilenumber', 'contact', 'contact_number', 'cell', 'telephone',
+        'ph_no', 'phno', 'tel'
+      );
+
+      // ── Resolve other fields ──────────────────────────────────────────────
+      const email   = pick(row, 'email', 'email_address', 'emailaddress', 'e_mail', 'email_id');
+      const dobRaw  = pick(row, 'date_of_birth', 'dob', 'birth_date', 'birthdate', 'birthday',
+                                'dateofbirth', 'date_of_birth_yyyymmdd');
+      const gender  = pick(row, 'gender', 'sex');
+      // Combine city + state if available, otherwise just address
+      const city    = pick(row, 'city');
+      const state   = pick(row, 'state', 'province', 'region');
+      const addrRaw = pick(row, 'address', 'addr', 'location', 'residence', 'home_address');
+      const address = addrRaw || [city, state].filter(Boolean).join(', ') || null;
+      // Extra clinical info → notes
+      const notesRaw = pick(row, 'notes', 'note', 'remarks', 'comments',
+                                 'medical_notes', 'allergies', 'medical_history');
+      const diagnosis   = pick(row, 'diagnosis', 'condition', 'chief_complaint');
+      const department  = pick(row, 'department', 'dept', 'specialty', 'speciality');
+      const notes = [notesRaw, diagnosis ? `Diagnosis: ${diagnosis}` : null,
+                     department ? `Dept: ${department}` : null].filter(Boolean).join(' | ') || null;
+
+      // ── Name is required ──────────────────────────────────────────────────
+      if (!name) {
         skipped++;
-        const foundKeys = Object.keys(row).join(', ');
-        errors.push({ row: i + 2, message: `Missing name or phone. Found columns: [${foundKeys}]`, data: row });
+        errors.push({ row: i + 2, message: `No name found. Columns: [${Object.keys(row).join(', ')}]` });
         continue;
       }
 
-      // Normalize phone — strip spaces/dashes/parentheses/+
-      const normalizedPhone = phone.replace(/[\s\-().+]/g, '');
-      
-      const { data: existing } = await supabase
-        .from('patients')
-        .select('id')
-        .eq('clinic_id', req.clinicId)
-        .eq('phone', normalizedPhone)
-        .maybeSingle();
-        
-      if (existing) {
-        skipped++;
-        errors.push({ row: i + 2, message: 'Duplicate phone number', data: row });
-        continue;
+      // ── Phone: normalize or leave null ───────────────────────────────────
+      const normalizedPhone = rawPhone
+        ? rawPhone.replace(/[\s\-().+]/g, '').replace(/^0+/, '') // strip leading zeros too
+        : null;
+
+      // Duplicate check only when phone is present
+      if (normalizedPhone) {
+        const { data: existing } = await supabase
+          .from('patients')
+          .select('id')
+          .eq('clinic_id', req.clinicId)
+          .eq('phone', normalizedPhone)
+          .maybeSingle();
+        if (existing) {
+          skipped++;
+          errors.push({ row: i + 2, message: `Duplicate phone: ${normalizedPhone}` });
+          continue;
+        }
       }
 
-      // Normalize gender
+      // ── Normalize gender ──────────────────────────────────────────────────
       let normalizedGender = null;
       if (gender) {
         const g = gender.toLowerCase();
@@ -182,13 +215,19 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
         else normalizedGender = 'other';
       }
 
-      // Validate dob format
+      // ── Normalize DOB; if only age given, estimate ────────────────────────
       let normalizedDob = null;
-      if (dob) {
-        const d = new Date(dob);
+      if (dobRaw) {
+        const d = new Date(dobRaw);
         if (!isNaN(d.getTime())) normalizedDob = d.toISOString().split('T')[0];
+      } else {
+        const age = pick(row, 'age');
+        if (age && !isNaN(Number(age))) {
+          const year = new Date().getFullYear() - Math.round(Number(age));
+          normalizedDob = `${year}-01-01`;
+        }
       }
-      
+
       const { error: insertErr } = await supabase
         .from('patients')
         .insert({
@@ -204,7 +243,7 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
         
       if (insertErr) {
         skipped++;
-        errors.push({ row: i + 2, message: insertErr.message, data: row });
+        errors.push({ row: i + 2, message: insertErr.message });
       } else {
         imported++;
       }

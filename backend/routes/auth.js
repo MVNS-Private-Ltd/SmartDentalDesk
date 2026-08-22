@@ -126,17 +126,35 @@ router.post('/login', loginRules, async (req, res, next) => {
       throw error;
     }
 
-    // Fetch clinic info
-    const { data: clinic } = await supabase
+    // Fetch clinic info (Admin/Owner)
+    let userRole = 'admin';
+    let { data: clinic } = await supabase
       .from('clinics')
       .select('id, name, owner_name, subscription_plan')
       .eq('owner_id', data.user.id)
-      .single();
+      .maybeSingle();
+
+    // If not admin, check if they are staff
+    if (!clinic) {
+      const { data: staff } = await supabase
+        .from('staff')
+        .select('*, clinics(id, name, owner_name, subscription_plan)')
+        .eq('auth_id', data.user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      if (!staff || !staff.clinics) {
+        return res.status(403).json({ error: 'No active clinic or staff profile associated with this account.' });
+      }
+      clinic = staff.clinics;
+      userRole = staff.role; // e.g. 'receptionist'
+    }
 
     res.json({
       message      : 'Signed in successfully!',
       access_token : data.session.access_token,
       refresh_token: data.session.refresh_token,
+      role         : userRole,
       user: {
         id   : data.user.id,
         email: data.user.email,
@@ -228,6 +246,7 @@ router.post('/logout', requireAuth, async (req, res, next) => {
 // ── GET /api/auth/me ──────────────────────────────────────────────────────────
 router.get('/me', requireAuth, async (req, res) => {
   res.json({
+    role: req.userRole,
     user: {
       id   : req.user.id,
       email: req.user.email,

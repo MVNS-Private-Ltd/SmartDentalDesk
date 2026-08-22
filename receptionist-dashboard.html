@@ -1035,15 +1035,13 @@
     </a>
     
     <nav class="sidebar-nav" id="sidebarNav">
-      <button class="sidebar-link active" data-target="home">Dashboard Home</button>
+      <button class="sidebar-link active" data-target="front-desk">Front Desk</button>
       <button class="sidebar-link" data-target="patients">Patients</button>
       <button class="sidebar-link" data-target="appointments">
         Appointments
         <span id="sidebarPendingBadge" style="display:none; background:#d97706; color:#fff; font-size:0.7rem; font-weight:700; padding:1px 6px; border-radius:10px; line-height:1.2; margin-left:6px;">0</span>
       </button>
-      <button class="sidebar-link" data-target="team">Team / Staff</button>
       <button class="sidebar-link" data-target="ai">AI Assistant</button>
-      <button class="sidebar-link" data-target="settings">Settings</button>
     </nav>
   </aside>
 
@@ -1060,106 +1058,29 @@
       <button id="logoutBtn" class="btn btn-secondary btn-sm">Sign out</button>
     </header>
 
-    <!-- SECTION: HOME -->
-    <section id="section-home" class="dashboard-section active">
-      <!-- Pending Approvals Alert Banner -->
-      <div id="pendingAlertBanner" style="display:none; background:#fffbeb; border:1.5px solid #fcd34d; border-radius:var(--radius-lg); padding:var(--space-4) var(--space-6); margin-bottom:var(--space-6); align-items:center; justify-content:space-between; gap:var(--space-4); box-shadow:0 3px 12px rgba(217,119,6,0.1);">
-        <div style="display:flex; align-items:center; gap:var(--space-3);">
-          <div style="width:40px; height:40px; border-radius:50%; background:#fef3c7; color:#d97706; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-          </div>
-          <div>
-            <h4 style="font-size:var(--text-sm); font-weight:700; color:#92400e; margin:0;">Action Required: New Appointment Bookings</h4>
-            <p style="font-size:var(--text-xs); color:#b45309; margin:2px 0 0;">You have <strong id="pendingAlertCount">0</strong> online appointment request(s) awaiting your review and approval.</p>
-          </div>
-        </div>
-        <button class="btn btn-sm" id="bannerReviewBtn" onclick="showAppointmentsWithTab('pending')" style="background:#d97706; color:#fff; white-space:nowrap; border:none; font-weight:600; padding:8px 16px; border-radius:var(--radius-md); cursor:pointer;">Review &amp; Approve →</button>
+    <!-- SECTION: FRONT DESK -->
+    <section id="section-front-desk" class="dashboard-section active">
+      <div class="patients-header">
+        <h2>Front Desk Overview</h2>
+        <p class="text-muted" style="margin-top: 4px;">Quick actions for daily receptionist tasks.</p>
       </div>
 
-      <!-- Live Clinic Analytics Charts (Directly replaces the boxes) -->
-      <div class="charts-main-grid">
-        <!-- 1. Main Appointment Activity Chart -->
-        <div class="chart-box">
-          <div class="chart-box-header">
-            <div>
-              <h3 class="chart-box-title">Appointment Activity &amp; Booking Trends</h3>
-              <p class="chart-box-desc">Completed visits, upcoming scheduled, and pending requests over the last 7 days</p>
-            </div>
-            <div style="display:flex; gap:6px; align-items:center;">
-              <span class="chart-badge-pill" style="background:#eff6ff; color:#2563eb; font-weight:700;">Today: <span id="statTodayAppts">0</span> visits</span>
-              <span id="statPendingBadgePill" style="display:none; background:#fef3c7; color:#d97706; font-weight:700; font-size:0.72rem; padding:3px 8px; border-radius:12px; border:1px solid #fde68a; cursor:pointer;" onclick="showAppointmentsWithTab('pending')">Pending: <span id="statPendingCount">0</span></span>
-            </div>
-          </div>
-          <div class="chart-canvas-wrap">
-            <canvas id="timelineChart"></canvas>
-          </div>
+      <div class="module-grid" style="margin-top:20px;">
+        <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=appointments]').click(); window.showAppointmentsWithTab('today');">
+          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Today's Appointments</h3>
+          <p class="text-muted mt-6" style="font-size:var(--text-sm)">View patients scheduled for today, mark check-ins and check-outs.</p>
         </div>
-
-        <!-- 2. Services Breakdown Doughnut -->
-        <div class="chart-box">
-          <div class="chart-box-header">
-            <div>
-              <h3 class="chart-box-title">Service Breakdown</h3>
-              <p class="chart-box-desc">Distribution of clinic treatments across visits</p>
-            </div>
-            <span class="chart-badge-pill" style="background:#ecfdf5; color:#059669; font-weight:700;">Patients: <span id="statTotalPatients">0</span></span>
-          </div>
-          <div class="chart-canvas-wrap">
-            <canvas id="servicesChart"></canvas>
-          </div>
+        <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=appointments]').click(); window.showAppointmentsWithTab('pending');">
+          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Pending Online Bookings</h3>
+          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Review and approve incoming appointment requests.</p>
         </div>
-      </div>
-
-      <div class="charts-sub-grid">
-        <!-- 3. Monthly Revenue & Billing Chart -->
-        <div class="chart-box">
-          <div class="chart-box-header">
-            <div>
-              <h3 class="chart-box-title">Revenue &amp; Invoicing Performance</h3>
-              <p class="chart-box-desc">Collected revenue vs pending invoice balance (Past 6 Months)</p>
-            </div>
-            <div style="display:flex; gap:6px; align-items:center;">
-              <span class="chart-badge-pill" style="background:#ecfdf5; color:#059669; font-weight:700;">Collected: <span id="statRevenueCollected">₹0</span></span>
-              <span class="chart-badge-pill" style="background:#fff1f2; color:#e11d48; font-weight:700;">Pending: <span id="statRevenuePending">₹0</span></span>
-            </div>
-          </div>
-          <div class="chart-canvas-wrap">
-            <canvas id="revenueChart"></canvas>
-          </div>
-        </div>
-
-        <!-- 4. Appointment Status Lifecycle Overview -->
-        <div class="chart-box">
-          <div class="chart-box-header">
-            <div>
-              <h3 class="chart-box-title">Appointment Lifecycle Overview</h3>
-              <p class="chart-box-desc">Completed, scheduled, pending, and cancelled ratio</p>
-            </div>
-            <span class="chart-badge-pill" id="statStatusPill">Live Status</span>
-          </div>
-          <div class="chart-canvas-wrap">
-            <canvas id="statusChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Action Modules -->
-      <div class="module-grid">
         <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=patients]').click()">
-          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Patient Directory</h3>
-          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Manage profiles, view medical history &amp; import patient CSVs.</p>
-        </div>
-        <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=appointments]').click()">
-          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Appointments Queue</h3>
-          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Track daily schedule, approve bookings &amp; update statuses.</p>
+          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Add Walk-in Patient</h3>
+          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Register a new patient and book them instantly.</p>
         </div>
         <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=ai]').click()">
-          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">AI Assistant</h3>
-          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Ask questions, summarize schedule &amp; generate patient reminders.</p>
-        </div>
-        <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=settings]').click()">
-          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Settings &amp; Link</h3>
-          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Manage your unique booking link and auto-approve preferences.</p>
+          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Ask AI Assistant</h3>
+          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Quickly draft patient emails or SMS reminders.</p>
         </div>
       </div>
     </section>
@@ -1387,86 +1308,7 @@
       </div>
     </section>
 
-    <!-- SECTION: SETTINGS -->
-    <!-- ==================== TEAM / STAFF TAB ==================== -->
-    <section id="section-team" class="dashboard-section">
-      <div class="patients-header">
-        <h2>Team Management</h2>
-        <button class="btn btn-primary" onclick="openAddStaffModal()">Add Staff Member</button>
-      </div>
 
-      <div class="glass-card">
-        <div class="table-responsive">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Email</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="staffTableBody">
-              <tr>
-                <td colspan="4" style="text-align:center; color:var(--text-muted); padding:var(--space-4);">Loading staff...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==================== SETTINGS TAB ==================== -->
-    <section id="section-settings" class="dashboard-section">
-      <h2>Clinic Settings</h2>
-      <p class="text-muted" style="margin-bottom: var(--space-6);">Manage your clinic details and booking link.</p>
-      
-      <div class="settings-grid">
-        <div class="settings-panel">
-          <h3>Public Booking Link</h3>
-          <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-4);">Share this link with your patients so they can book appointments online.</p>
-          <div class="booking-link-display">
-            <span id="bookingLinkText">Loading...</span>
-            <button class="btn btn-secondary btn-sm" id="copyLinkBtn" style="margin-left: auto;">Copy</button>
-          </div>
-        </div>
-
-        <div class="settings-panel">
-          <h3>Appointment Preferences</h3>
-          <form id="settingsForm">
-            <div class="form-group">
-              <label>Default Slot Duration (minutes)</label>
-              <input type="number" id="slotDuration" class="form-control" value="30" step="5" min="10">
-            </div>
-            <div class="form-group">
-              <label>Auto-Approve Bookings?</label>
-              <select id="autoApprove" class="form-control">
-                <option value="false">No (Manual Review — Admin approves each request)</option>
-                <option value="true">Yes (Auto-Approve — Bookings are instantly confirmed)</option>
-              </select>
-              <p class="text-muted" style="font-size:0.8rem; margin-top:4px; line-height:1.4;">
-                When set to <strong>"No"</strong>, online patient bookings appear in your <em>Pending Approval</em> queue on the dashboard until you approve them.
-              </p>
-            </div>
-            <div class="form-group">
-              <label>Available Time Slots <span style="font-weight:400; color:var(--color-text-muted); font-size:0.8rem;">(click to toggle on/off)</span></label>
-              <div class="admin-slot-grid" id="adminSlotGrid"></div>
-              <div class="slot-grid-actions">
-                <button type="button" id="slotSelectAll">Select All</button>
-                <button type="button" id="slotClearAll">Clear All</button>
-                <button type="button" id="slotAddCustom">+ Custom Time</button>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Max Bookings Per Day</label>
-              <input type="number" id="maxBookingsPerDay" class="form-control" value="20" min="1">
-            </div>
-            <button type="submit" class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
-            <p id="settingsFeedback" style="color:var(--success); font-size:var(--text-sm); display:none; margin-top:var(--space-2);">Settings saved!</p>
-          </form>
-        </div>
-      </div>
-    </section>
 
   </main>
 </div>
@@ -1525,11 +1367,9 @@
       }
 
       // Trigger section-specific loads
-      if (targetId === 'home') loadHomeStats();
+      if (targetId === 'front-desk') { /* No specific load needed yet */ }
       if (targetId === 'patients') loadPatients('all');
       if (targetId === 'appointments') loadAppointments();
-      if (targetId === 'settings') loadSettings();
-      if (targetId === 'team') loadStaff();
     }
 
     // ── AI Random Greeting ────────────────────────────────────────────────────
@@ -1916,53 +1756,8 @@
 
     // ── Home Stats & Analytics Loader ─────────────────────────────────────────
     async function loadHomeStats() {
-      try {
-        const stats = await window.api.getDashboardStats();
-        
-        // Update Chart Header Metrics
-        const todayApptEl = document.getElementById('statTodayAppts');
-        if (todayApptEl) todayApptEl.textContent = stats.today_appointments || 0;
-
-        const totalPatientsEl = document.getElementById('statTotalPatients');
-        if (totalPatientsEl) totalPatientsEl.textContent = stats.total_patients || 0;
-
-        const revCollectedEl = document.getElementById('statRevenueCollected');
-        if (revCollectedEl) revCollectedEl.textContent = `₹${(stats.today_revenue || stats.total_revenue || 0).toLocaleString()}`;
-
-        const revPendingEl = document.getElementById('statRevenuePending');
-        if (revPendingEl) revPendingEl.textContent = `₹${(stats.pending_revenue || 0).toLocaleString()}`;
-
-        const pendingCount = stats.pending_approvals || 0;
-        const bannerEl = document.getElementById('pendingAlertBanner');
-        const alertCountEl = document.getElementById('pendingAlertCount');
-        const sidebarBadgeEl = document.getElementById('sidebarPendingBadge');
-        const tabBadgeEl = document.getElementById('tabPendingBadge');
-        const statPendingPill = document.getElementById('statPendingBadgePill');
-        const statPendingCount = document.getElementById('statPendingCount');
-
-        if (pendingCount > 0) {
-          if (bannerEl) bannerEl.style.display = 'flex';
-          if (alertCountEl) alertCountEl.textContent = pendingCount;
-          if (sidebarBadgeEl) { sidebarBadgeEl.textContent = pendingCount; sidebarBadgeEl.style.display = 'inline-block'; }
-          if (tabBadgeEl) { tabBadgeEl.textContent = pendingCount; tabBadgeEl.style.display = 'inline-block'; }
-          if (statPendingPill) statPendingPill.style.display = 'inline-block';
-          if (statPendingCount) statPendingCount.textContent = pendingCount;
-        } else {
-          if (bannerEl) bannerEl.style.display = 'none';
-          if (sidebarBadgeEl) sidebarBadgeEl.style.display = 'none';
-          if (tabBadgeEl) tabBadgeEl.style.display = 'none';
-          if (statPendingPill) statPendingPill.style.display = 'none';
-        }
-
-        // Render / Update the 4 Chart.js charts
-        renderOrUpdateCharts(stats.analytics || {});
-      } catch (err) {
-        console.error('Failed to load stats & analytics:', err);
-        renderOrUpdateCharts({});
-      }
+      // Disabled for Receptionist Dashboard
     }
-
-    // Call loadHomeStats on page load immediately!
     loadHomeStats();
 
     // ── Staff Management Logic ────────────────────────────────────────────────

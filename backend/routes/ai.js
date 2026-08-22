@@ -81,6 +81,7 @@ async function fetchClinicContext(clinicId) {
     unpaidInvoicesResult,
     upcomingApptResult,
     recentRevenueResult,
+    pendingApptResult,
   ] = await Promise.allSettled([
     // 1. Dashboard summary stats
     Promise.all([
@@ -93,6 +94,8 @@ async function fetchClinicContext(clinicId) {
         .gte('paid_at', `${today}T00:00:00.000Z`),
       supabase.from('invoices').select('*', { count: 'exact', head: true })
         .eq('clinic_id', clinicId).eq('status', 'unpaid'),
+      supabase.from('appointments').select('*', { count: 'exact', head: true })
+        .eq('clinic_id', clinicId).eq('status', 'pending'),
     ]),
 
     // 2. Today's appointments with patient names
@@ -136,16 +139,26 @@ async function fetchClinicContext(clinicId) {
       .eq('clinic_id', clinicId)
       .eq('status', 'paid')
       .gte('paid_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+
+    // 7. Pending appointments awaiting approval
+    supabase.from('appointments')
+      .select('id, date, time, service, reason, patients(name, phone, email)')
+      .eq('clinic_id', clinicId)
+      .eq('status', 'pending')
+      .order('date', { ascending: true })
+      .order('time', { ascending: true })
+      .limit(20),
   ]);
 
   // ── Parse stats ──────────────────────────────────────────────────────────────
-  let todayApptCount = 0, totalPatients = 0, todayRevenue = 0, pendingInvoiceCount = 0;
+  let todayApptCount = 0, totalPatients = 0, todayRevenue = 0, pendingInvoiceCount = 0, pendingApptCount = 0;
   if (statsResult.status === 'fulfilled') {
-    const [apptRes, patientRes, revenueRes, pendingRes] = statsResult.value;
-    todayApptCount    = apptRes.count   || 0;
-    totalPatients     = patientRes.count || 0;
+    const [apptRes, patientRes, revenueRes, pendingRes, pendingApptRes] = statsResult.value;
+    todayApptCount      = apptRes.count   || 0;
+    totalPatients       = patientRes.count || 0;
     pendingInvoiceCount = pendingRes.count || 0;
-    todayRevenue      = (revenueRes.data || []).reduce((s, i) => s + Number(i.total_amount), 0);
+    pendingApptCount    = pendingApptRes?.count || 0;
+    todayRevenue        = (revenueRes.data || []).reduce((s, i) => s + Number(i.total_amount), 0);
   }
 
   // ── Parse today's appointments ───────────────────────────────────────────────
@@ -168,6 +181,11 @@ async function fetchClinicContext(clinicId) {
     ? (upcomingApptResult.value.data || [])
     : [];
 
+  // ── Parse pending appointments ───────────────────────────────────────────────
+  const pendingAppts = pendingApptResult.status === 'fulfilled'
+    ? (pendingApptResult.value.data || [])
+    : [];
+
   // ── Parse 30-day revenue ─────────────────────────────────────────────────────
   let revenue30 = 0;
   if (recentRevenueResult.status === 'fulfilled') {
@@ -181,10 +199,12 @@ async function fetchClinicContext(clinicId) {
     totalPatients,
     todayRevenue,
     pendingInvoiceCount,
+    pendingApptCount,
     todayAppts,
     recentPatients,
     unpaidInvoices,
     upcomingAppts,
+    pendingAppts,
     revenue30,
   };
 }
@@ -262,11 +282,23 @@ function serializeContext(ctx, patientMatch) {
   // Summary stats
   lines.push('--- SUMMARY ---');
   lines.push(`Today's appointments : ${ctx.todayApptCount}`);
+  lines.push(`Pending approvals    : ${ctx.pendingApptCount}`);
   lines.push(`Total active patients: ${ctx.totalPatients}`);
   lines.push(`Today's revenue      : ${fmt(ctx.todayRevenue)}`);
   lines.push(`Pending invoices     : ${ctx.pendingInvoiceCount}`);
   lines.push(`Revenue (last 30d)   : ${fmt(ctx.revenue30)}`);
   lines.push('');
+
+  // Pending Approvals
+  if (ctx.pendingAppts && ctx.pendingAppts.length > 0) {
+    lines.push(`--- PENDING APPOINTMENTS AWAITING CLINIC APPROVAL (${ctx.pendingAppts.length}) ---`);
+    ctx.pendingAppts.forEach(a => {
+      const name = a.patients?.name || 'Unknown';
+      const phone = a.patients?.phone || 'No phone';
+      lines.push(`  ID: ${a.id} — ${name} (${phone}) requested ${a.service} on ${a.date} at ${a.time}${a.reason ? ` - Reason: ${a.reason}` : ''}`);
+    });
+    lines.push('');
+  }
 
   // Today's schedule
   if (ctx.todayAppts.length > 0) {

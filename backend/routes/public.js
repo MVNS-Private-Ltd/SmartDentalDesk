@@ -140,14 +140,16 @@ router.post('/book', async (req, res, next) => {
       }
     }
 
-    // ── Guard 2: Clinic daily cap ─────────────────────────────────────────────
+    // ── Guard 2: Clinic daily cap & settings ──────────────────────────────────
     const { data: clinic } = await supabase
       .from('clinics')
-      .select('appointment_settings, name')
+      .select('appointment_settings, name, email, phone')
       .eq('id', clinic_id)
       .single();
 
     const maxPerDay = clinic?.appointment_settings?.max_bookings_per_day || 20;
+    const autoApprove = clinic?.appointment_settings?.auto_approve === true;
+    const initialStatus = autoApprove ? 'scheduled' : 'pending';
 
     const { data: dayAppts } = await supabase
       .from('appointments')
@@ -156,7 +158,7 @@ router.post('/book', async (req, res, next) => {
       .eq('date', date)
       .neq('status', 'cancelled');
 
-    console.log(`[BOOK] Guard2 — day total: ${(dayAppts||[]).length}/${maxPerDay}`);
+    console.log(`[BOOK] Guard2 — day total: ${(dayAppts||[]).length}/${maxPerDay}, autoApprove: ${autoApprove}`);
 
     if ((dayAppts || []).length >= maxPerDay) {
       return res.status(409).json({ error: `Sorry, this day is fully booked (max ${maxPerDay} appointments). Please choose another date.` });
@@ -202,52 +204,120 @@ router.post('/book', async (req, res, next) => {
       patientId = newPatient.id;
     }
 
-    console.log(`[BOOK] All guards passed — creating appointment for patientId=${patientId}`);
+    console.log(`[BOOK] All guards passed — creating appointment (status=${initialStatus}) for patientId=${patientId}`);
 
     // ── Create appointment ────────────────────────────────────────────────────
     const { data: appointment, error: apptErr } = await supabase
       .from('appointments')
-      .insert({ clinic_id, patient_id: patientId, date, time, service, reason, status: 'scheduled' })
+      .insert({ clinic_id, patient_id: patientId, date, time, service, reason, status: initialStatus })
       .select()
       .single();
 
     if (apptErr) throw apptErr;
 
-    // ── Send confirmation email ───────────────────────────────────────────────
-    if (patient_email) {
-      const clinicName = clinic?.name || 'Smart Dental Desk';
-      const [hourStr, minStr] = time.split(':');
-      let hour = parseInt(hourStr, 10);
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      hour = hour % 12 || 12;
-      const formattedTime = `${hour}:${minStr} ${ampm}`;
+    // ── Format time for emails ────────────────────────────────────────────────
+    const clinicName = clinic?.name || 'Smart Dental Desk';
+    const [hourStr, minStr] = time.split(':');
+    let hour = parseInt(hourStr, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12;
+    const formattedTime = `${hour}:${minStr} ${ampm}`;
 
-      const htmlBody = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-          <h2 style="color: #2563eb;">Appointment Confirmed</h2>
-          <p>Hello ${patient_name},</p>
-          <p>Your appointment for <strong>${service}</strong> has been successfully scheduled.</p>
-          <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${date}</p>
-            <p style="margin: 0;"><strong>Time:</strong> ${formattedTime}</p>
+    // ── Send patient email ───────────────────────────────────────────────────
+    if (patient_email) {
+      if (autoApprove) {
+        // Auto-approved email
+        const htmlBody = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+            <h2 style="color: #2563eb;">Appointment Confirmed</h2>
+            <p>Hello ${patient_name},</p>
+            <p>Your appointment for <strong>${service}</strong> has been successfully scheduled.</p>
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
+              <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${date}</p>
+              <p style="margin: 0 0 10px 0;"><strong>Time:</strong> ${formattedTime}</p>
+              <p style="margin: 0;"><strong>Status:</strong> <span style="color: #16a34a; font-weight: bold;">Confirmed</span></p>
+            </div>
+            <p>We look forward to seeing you!</p>
+            <p>Best regards,<br><strong>${clinicName}</strong></p>
           </div>
-          <p>We look forward to seeing you!</p>
-          <p>Best regards,<br><strong>${clinicName}</strong></p>
+        `;
+        try {
+          await sendMail({
+            to: patient_email,
+            subject: `Appointment Confirmed - ${clinicName}`,
+            text: `Hello ${patient_name},\n\nYour ${service} appointment is confirmed for ${date} at ${formattedTime}.\n\nThank you,\n${clinicName}`,
+            html: htmlBody
+          });
+        } catch (mailErr) {
+          console.error('[BOOK] Failed to send confirmation email:', mailErr);
+        }
+      } else {
+        // Manual review pending email
+        const htmlBody = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+            <h2 style="color: #d97706;">Appointment Request Received</h2>
+            <p>Hello ${patient_name},</p>
+            <p>Thank you for booking with <strong>${clinicName}</strong>. We have received your appointment request for <strong>${service}</strong>.</p>
+            <div style="background: #fffbeb; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #fef3c7;">
+              <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${date}</p>
+              <p style="margin: 0 0 10px 0;"><strong>Time:</strong> ${formattedTime}</p>
+              <p style="margin: 0;"><strong>Status:</strong> <span style="color: #d97706; font-weight: bold;">Pending Clinic Approval</span></p>
+            </div>
+            <p>Our clinic team is reviewing your requested slot. You will receive a confirmation email as soon as your appointment is approved.</p>
+            <p>Best regards,<br><strong>${clinicName}</strong></p>
+          </div>
+        `;
+        try {
+          await sendMail({
+            to: patient_email,
+            subject: `Appointment Request Received (Pending Approval) - ${clinicName}`,
+            text: `Hello ${patient_name},\n\nWe have received your ${service} appointment request for ${date} at ${formattedTime}. It is currently pending approval by the clinic. You will receive an email once approved.\n\nThank you,\n${clinicName}`,
+            html: htmlBody
+          });
+        } catch (mailErr) {
+          console.error('[BOOK] Failed to send pending email:', mailErr);
+        }
+      }
+    }
+
+    // ── Notify clinic admin about new pending booking request ────────────────
+    if (!autoApprove && clinic?.email) {
+      const adminHtmlBody = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+          <h2 style="color: #2563eb;">🔔 New Appointment Request Awaiting Approval</h2>
+          <p>Hello <strong>${clinicName}</strong>,</p>
+          <p>A new appointment request has been submitted online and requires your approval:</p>
+          <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
+            <p style="margin: 0 0 8px 0;"><strong>Patient:</strong> ${patient_name}</p>
+            <p style="margin: 0 0 8px 0;"><strong>Phone:</strong> ${patient_phone}</p>
+            <p style="margin: 0 0 8px 0;"><strong>Email:</strong> ${patient_email || 'Not provided'}</p>
+            <p style="margin: 0 0 8px 0;"><strong>Service:</strong> ${service}</p>
+            <p style="margin: 0 0 8px 0;"><strong>Date:</strong> ${date}</p>
+            <p style="margin: 0 0 8px 0;"><strong>Time:</strong> ${formattedTime}</p>
+            ${reason ? `<p style="margin: 0;"><strong>Reason:</strong> ${reason}</p>` : ''}
+          </div>
+          <p>Please log in to your <strong>Smart Dental Desk</strong> dashboard to approve or decline this appointment.</p>
         </div>
       `;
       try {
         await sendMail({
-          to: patient_email,
-          subject: `Appointment Confirmed - ${clinicName}`,
-          text: `Hello ${patient_name},\n\nYour ${service} appointment is confirmed for ${date} at ${formattedTime}.\n\nThank you,\n${clinicName}`,
-          html: htmlBody
+          to: clinic.email,
+          subject: `🔔 New Appointment Request: ${patient_name} (${date} at ${formattedTime})`,
+          text: `New appointment request from ${patient_name} for ${service} on ${date} at ${formattedTime}. Phone: ${patient_phone}. Please log in to your dashboard to review and approve.`,
+          html: adminHtmlBody
         });
-      } catch (mailErr) {
-        console.error('[BOOK] Failed to send confirmation email:', mailErr);
+      } catch (adminMailErr) {
+        console.error('[BOOK] Failed to send admin notification email:', adminMailErr);
       }
     }
 
-    res.status(201).json({ message: 'Appointment booked successfully!', appointment });
+    res.status(201).json({
+      message: autoApprove
+        ? 'Appointment booked and confirmed successfully!'
+        : 'Appointment request submitted! Awaiting clinic approval.',
+      appointment,
+      auto_approved: autoApprove
+    });
   } catch (err) {
     next(err);
   }

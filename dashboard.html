@@ -914,7 +914,10 @@
     <nav class="sidebar-nav" id="sidebarNav">
       <button class="sidebar-link active" data-target="home">Dashboard Home</button>
       <button class="sidebar-link" data-target="patients">Patients</button>
-      <button class="sidebar-link" data-target="appointments">Appointments</button>
+      <button class="sidebar-link" data-target="appointments" style="display: flex; align-items: center; justify-content: space-between;">
+        <span>Appointments</span>
+        <span id="sidebarPendingBadge" style="display:none; background:#d97706; color:#fff; font-size:0.7rem; font-weight:700; padding:1px 6px; border-radius:10px; line-height:1.2;">0</span>
+      </button>
       <button class="sidebar-link" data-target="ai">AI Assistant</button>
       <button class="sidebar-link" data-target="settings">Settings</button>
     </nav>
@@ -935,10 +938,31 @@
 
     <!-- SECTION: HOME -->
     <section id="section-home" class="dashboard-section active">
+      <!-- Pending Approvals Alert Banner -->
+      <div id="pendingAlertBanner" style="display:none; background:#fffbeb; border:1.5px solid #fcd34d; border-radius:var(--radius-lg); padding:var(--space-4) var(--space-6); margin-bottom:var(--space-6); align-items:center; justify-content:space-between; gap:var(--space-4); box-shadow:0 3px 12px rgba(217,119,6,0.1);">
+        <div style="display:flex; align-items:center; gap:var(--space-3);">
+          <div style="width:40px; height:40px; border-radius:50%; background:#fef3c7; color:#d97706; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </div>
+          <div>
+            <h4 style="font-size:var(--text-sm); font-weight:700; color:#92400e; margin:0;">Action Required: New Appointment Bookings</h4>
+            <p style="font-size:var(--text-xs); color:#b45309; margin:2px 0 0;">You have <strong id="pendingAlertCount">0</strong> online appointment request(s) awaiting your review and approval.</p>
+          </div>
+        </div>
+        <button class="btn btn-sm" id="bannerReviewBtn" onclick="showAppointmentsWithTab('pending')" style="background:#d97706; color:#fff; white-space:nowrap; border:none; font-weight:600; padding:8px 16px; border-radius:var(--radius-md); cursor:pointer;">Review &amp; Approve →</button>
+      </div>
+
       <div class="module-grid" style="margin-bottom: var(--space-8);">
         <div class="card card-pad">
           <h3 style="font-size:var(--text-sm);color:var(--color-text-muted)">Today's Appointments</h3>
           <p id="statAppointments" style="font-size:2rem;font-weight:700;color:var(--color-primary);margin-top:0.5rem">...</p>
+        </div>
+        <div class="card card-pad hoverable" id="cardPendingApprovals" onclick="showAppointmentsWithTab('pending')" style="cursor:pointer;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="font-size:var(--text-sm);color:var(--color-text-muted)">Pending Approvals</h3>
+            <span id="statPendingBadge" style="display:none; background:#fef3c7; color:#d97706; font-size:0.7rem; font-weight:700; padding:2px 7px; border-radius:10px; border:1px solid #fde68a;">Review</span>
+          </div>
+          <p id="statPendingApprovals" style="font-size:2rem;font-weight:700;color:#d97706;margin-top:0.5rem">0</p>
         </div>
         <div class="card card-pad">
           <h3 style="font-size:var(--text-sm);color:var(--color-text-muted)">Total Patients</h3>
@@ -961,15 +985,15 @@
         </div>
         <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=appointments]').click()">
           <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Appointments</h3>
-          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Track daily schedule and patient status.</p>
+          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Track daily schedule, approve bookings &amp; update statuses.</p>
         </div>
         <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=ai]').click()">
           <h3 style="font-size:var(--text-lg);color:var(--color-primary)">AI Assistant</h3>
           <p class="text-muted mt-6" style="font-size:var(--text-sm)">Chat with your smart dental desk assistant.</p>
         </div>
         <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=settings]').click()">
-          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Settings & Link</h3>
-          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Manage your unique booking link and options.</p>
+          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Settings &amp; Link</h3>
+          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Manage your unique booking link and auto-approve preferences.</p>
         </div>
       </div>
     </section>
@@ -1005,20 +1029,36 @@
 
     <!-- SECTION: APPOINTMENTS -->
     <section id="section-appointments" class="dashboard-section">
-      <h2>Appointments</h2>
-      <p class="text-muted" style="margin-bottom: var(--space-6);">Your upcoming schedule.</p>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
+        <div>
+          <h2 style="margin: 0;">Appointments</h2>
+          <p class="text-muted" style="margin-top: 4px; font-size:var(--text-sm);">Review booking requests, approve visits, and manage your clinic schedule.</p>
+        </div>
+      </div>
+
+      <div class="tabs-nav" id="appointmentTabs">
+        <button class="tab-btn active" data-tab="all">All Appointments</button>
+        <button class="tab-btn" data-tab="pending" id="tabPendingBtn">
+          Pending Approval <span id="tabPendingBadge" style="display:none; background:#d97706; color:#fff; font-size:0.7rem; font-weight:700; padding:1px 6px; border-radius:10px; margin-left:4px;">0</span>
+        </button>
+        <button class="tab-btn" data-tab="scheduled">Scheduled / Upcoming</button>
+        <button class="tab-btn" data-tab="completed">Completed</button>
+        <button class="tab-btn" data-tab="cancelled">Cancelled</button>
+      </div>
+
       <div class="card table-responsive">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Date & Time</th>
+              <th>Date &amp; Time</th>
               <th>Patient</th>
-              <th>Service</th>
+              <th>Service &amp; Notes</th>
               <th>Status</th>
+              <th style="text-align:right;">Actions</th>
             </tr>
           </thead>
           <tbody id="appointmentsTableBody">
-            <tr><td colspan="4" style="text-align:center;">Loading appointments...</td></tr>
+            <tr><td colspan="5" style="text-align:center;">Loading appointments...</td></tr>
           </tbody>
         </table>
       </div>
@@ -1178,9 +1218,12 @@
             <div class="form-group">
               <label>Auto-Approve Bookings?</label>
               <select id="autoApprove" class="form-control">
-                <option value="false">No (Manual Review)</option>
-                <option value="true">Yes (Instantly Booked)</option>
+                <option value="false">No (Manual Review — Admin approves each request)</option>
+                <option value="true">Yes (Auto-Approve — Bookings are instantly confirmed)</option>
               </select>
+              <p class="text-muted" style="font-size:0.8rem; margin-top:4px; line-height:1.4;">
+                When set to <strong>"No"</strong>, online patient bookings appear in your <em>Pending Approval</em> queue on the dashboard until you approve them.
+              </p>
             </div>
             <div class="form-group">
               <label>Available Time Slots <span style="font-weight:400; color:var(--color-text-muted); font-size:0.8rem;">(click to toggle on/off)</span></label>
@@ -1331,8 +1374,45 @@
         document.getElementById('statPatients').textContent = stats.total_patients;
         document.getElementById('statRevenue').textContent = `₹${stats.today_revenue.toLocaleString()}`;
         document.getElementById('statInvoices').textContent = stats.pending_invoices;
+
+        const pendingCount = stats.pending_approvals || 0;
+        const statPendingEl = document.getElementById('statPendingApprovals');
+        if (statPendingEl) statPendingEl.textContent = pendingCount;
+
+        const bannerEl = document.getElementById('pendingAlertBanner');
+        const alertCountEl = document.getElementById('pendingAlertCount');
+        const sidebarBadgeEl = document.getElementById('sidebarPendingBadge');
+        const tabBadgeEl = document.getElementById('tabPendingBadge');
+        const statBadgeEl = document.getElementById('statPendingBadge');
+        const cardPending = document.getElementById('cardPendingApprovals');
+
+        if (pendingCount > 0) {
+          if (bannerEl) { bannerEl.style.display = 'flex'; }
+          if (alertCountEl) { alertCountEl.textContent = pendingCount; }
+          if (sidebarBadgeEl) { sidebarBadgeEl.textContent = pendingCount; sidebarBadgeEl.style.display = 'inline-block'; }
+          if (tabBadgeEl) { tabBadgeEl.textContent = pendingCount; tabBadgeEl.style.display = 'inline-block'; }
+          if (statBadgeEl) { statBadgeEl.style.display = 'inline-block'; }
+          if (cardPending) { cardPending.style.borderColor = '#fcd34d'; cardPending.style.background = '#fffdf7'; }
+        } else {
+          if (bannerEl) { bannerEl.style.display = 'none'; }
+          if (sidebarBadgeEl) { sidebarBadgeEl.style.display = 'none'; }
+          if (tabBadgeEl) { tabBadgeEl.style.display = 'none'; }
+          if (statBadgeEl) { statBadgeEl.style.display = 'none'; }
+          if (cardPending) { cardPending.style.borderColor = 'var(--color-divider)'; cardPending.style.background = 'var(--color-surface)'; }
+        }
       } catch (err) { console.error('Failed to load stats:', err); }
     }
+
+    // ── Helper to switch to appointments tab directly with specific filter ───
+    window.showAppointmentsWithTab = function(tabName) {
+      showSection('appointments');
+      const targetTab = document.querySelector(`#appointmentTabs .tab-btn[data-tab="${tabName}"]`);
+      if (targetTab) {
+        targetTab.click();
+      } else {
+        loadAppointments(tabName);
+      }
+    };
 
     // ── Patients ──────────────────────────────────────────────────────────────
     const patientTabs = document.querySelectorAll('#patientTabs .tab-btn');
@@ -1365,26 +1445,163 @@
       } catch (err) { tbody.innerHTML = `<tr><td colspan="5" style="color:red;text-align:center;">Error loading patients.</td></tr>`; }
     }
 
-    // ── Appointments ──────────────────────────────────────────────────────────
-    async function loadAppointments() {
+    // ── Appointments Management & Approval Flow ──────────────────────────────
+    let currentAppointmentStatus = 'all';
+
+    const appointmentTabs = document.querySelectorAll('#appointmentTabs .tab-btn');
+    appointmentTabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        appointmentTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentAppointmentStatus = tab.getAttribute('data-tab');
+        loadAppointments(currentAppointmentStatus);
+      });
+    });
+
+    async function loadAppointments(statusFilter = currentAppointmentStatus) {
       const tbody = document.getElementById('appointmentsTableBody');
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem;">Loading appointments...</td></tr>';
       try {
-        const res = await window.api.getAppointments();
-        if (res.appointments.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No upcoming appointments.</td></tr>';
+        const res = await window.api.getAppointments(statusFilter);
+        const appts = res.appointments || [];
+
+        // Also update pending count on badges if in 'all' view or from backend
+        if (statusFilter === 'pending' || statusFilter === 'all') {
+          loadHomeStats();
+        }
+
+        if (appts.length === 0) {
+          const emptyMsg = statusFilter === 'pending'
+            ? 'No pending appointment requests. All caught up!'
+            : `No ${statusFilter === 'all' ? '' : statusFilter} appointments found.`;
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2.5rem; color:var(--color-text-muted);">${emptyMsg}</td></tr>`;
           return;
         }
-        tbody.innerHTML = res.appointments.map(a => `
-          <tr>
-            <td><strong>${a.date}</strong> <br> <span class="text-muted">${formatTime12h(a.time)}</span></td>
-            <td>${a.patients?.name || 'Unknown'}</td>
-            <td>${a.service}</td>
-            <td style="text-transform:capitalize;">${a.status}</td>
-          </tr>
-        `).join('');
-      } catch (err) { tbody.innerHTML = `<tr><td colspan="4" style="color:red;text-align:center;">Error loading appointments.</td></tr>`; }
+
+        tbody.innerHTML = appts.map(a => {
+          const st = a.status || 'scheduled';
+          
+          let statusBadge = '';
+          if (st === 'pending') {
+            statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#fef3c7; color:#b45309; font-weight:700; font-size:0.75rem; border:1px solid #fde68a;">⏳ Pending Approval</span>';
+          } else if (st === 'scheduled' || st === 'confirmed') {
+            statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#dbeafe; color:#1d4ed8; font-weight:600; font-size:0.75rem; border:1px solid #bfdbfe;">📅 Scheduled</span>';
+          } else if (st === 'completed') {
+            statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#dcfce7; color:#15803d; font-weight:600; font-size:0.75rem; border:1px solid #bbf7d0;">✓ Completed</span>';
+          } else if (st === 'cancelled') {
+            statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#f1f5f9; color:#64748b; font-weight:600; font-size:0.75rem; border:1px solid #e2e8f0;">✕ Cancelled</span>';
+          } else {
+            statusBadge = `<span style="display:inline-block; padding:3px 9px; border-radius:12px; background:#f1f5f9; color:var(--color-text); font-size:0.75rem; text-transform:capitalize;">${st}</span>`;
+          }
+
+          let actionsHtml = '';
+          if (st === 'pending') {
+            actionsHtml = `
+              <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
+                <button class="btn btn-sm" id="btnApprove-${a.id}" onclick="handleApproveAppt('${a.id}')" style="background:#16a34a; color:#fff; padding:6px 12px; font-size:0.78rem; border-radius:6px; border:none; font-weight:600; cursor:pointer;" title="Approve booking and send confirmation email">✓ Approve</button>
+                <button class="btn btn-sm" id="btnReject-${a.id}" onclick="handleRejectAppt('${a.id}')" style="background:transparent; color:#dc2626; border:1px solid #dc2626; padding:5px 10px; font-size:0.78rem; border-radius:6px; font-weight:600; cursor:pointer;" title="Decline booking and notify patient">✕ Decline</button>
+              </div>
+            `;
+          } else if (st === 'scheduled' || st === 'confirmed') {
+            actionsHtml = `
+              <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
+                <button class="btn btn-sm btn-secondary" onclick="handleStatusChange('${a.id}', 'completed')" style="padding:4px 8px; font-size:0.75rem;">✓ Complete</button>
+                <button class="btn btn-sm btn-secondary" onclick="handleStatusChange('${a.id}', 'cancelled')" style="padding:4px 8px; font-size:0.75rem; color:#dc2626;">Cancel</button>
+              </div>
+            `;
+          } else {
+            actionsHtml = '<span class="text-muted" style="font-size:0.8rem; display:block; text-align:right;">—</span>';
+          }
+
+          const patientName = a.patients?.name || 'Unknown Patient';
+          const patientPhone = a.patients?.phone || '';
+          const patientEmail = a.patients?.email || '';
+
+          return `
+            <tr>
+              <td>
+                <strong style="color:var(--color-text);">${a.date}</strong>
+                <div style="font-size:0.8rem; color:var(--color-text-muted); margin-top:2px;">${formatTime12h(a.time)}</div>
+              </td>
+              <td>
+                <strong>${patientName}</strong>
+                <div style="font-size:0.78rem; color:var(--color-text-muted); margin-top:2px;">
+                  ${patientPhone ? `📞 ${patientPhone}` : ''}
+                  ${patientEmail ? `<br>✉️ ${patientEmail}` : ''}
+                </div>
+              </td>
+              <td>
+                <strong>${a.service}</strong>
+                ${a.reason ? `<div style="font-size:0.78rem; color:var(--color-text-muted); margin-top:2px; font-style:italic;">"${a.reason}"</div>` : ''}
+              </td>
+              <td>${statusBadge}</td>
+              <td style="text-align:right;">${actionsHtml}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center; padding:2rem;">Error loading appointments: ${err.message}</td></tr>`;
+      }
     }
+
+    // ── Approve Appointment Handler ──
+    window.handleApproveAppt = async function(id) {
+      const btn = document.getElementById(`btnApprove-${id}`);
+      if (btn) {
+        btn.textContent = 'Approving...';
+        btn.disabled = true;
+      }
+      try {
+        const res = await window.api.approveAppointment(id);
+        alert('✅ Appointment approved successfully! Confirmation email has been sent to the patient.');
+        await loadAppointments(currentAppointmentStatus);
+        await loadHomeStats();
+      } catch (err) {
+        alert('Failed to approve appointment: ' + err.message);
+        if (btn) {
+          btn.textContent = '✓ Approve';
+          btn.disabled = false;
+        }
+      }
+    };
+
+    // ── Reject Appointment Handler ──
+    window.handleRejectAppt = async function(id) {
+      const reason = prompt('Optional: Enter a brief reason for declining this request (this will be sent to the patient):');
+      if (reason === null) return; // cancelled prompt
+
+      const btn = document.getElementById(`btnReject-${id}`);
+      if (btn) {
+        btn.textContent = 'Declining...';
+        btn.disabled = true;
+      }
+      try {
+        await window.api.rejectAppointment(id, reason);
+        alert('Appointment request declined. Patient has been notified.');
+        await loadAppointments(currentAppointmentStatus);
+        await loadHomeStats();
+      } catch (err) {
+        alert('Failed to decline appointment: ' + err.message);
+        if (btn) {
+          btn.textContent = '✕ Decline';
+          btn.disabled = false;
+        }
+      }
+    };
+
+    // ── General Status Change Handler ──
+    window.handleStatusChange = async function(id, newStatus) {
+      if (newStatus === 'cancelled' && !confirm('Are you sure you want to cancel this appointment?')) {
+        return;
+      }
+      try {
+        await window.api.updateAppointmentStatus(id, newStatus);
+        await loadAppointments(currentAppointmentStatus);
+        await loadHomeStats();
+      } catch (err) {
+        alert('Failed to update status: ' + err.message);
+      }
+    };
 
     // ── Settings & Booking Link ───────────────────────────────────────────────
     let clinicSlug = '';

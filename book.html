@@ -310,19 +310,26 @@
 
     <!-- SUCCESS STATE -->
     <div class="step-panel" id="stepSuccess" style="text-align:center; padding: 3rem 2rem;">
-      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" style="margin-bottom:1rem;">
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-        <polyline points="22 4 12 14.01 9 11.01"></polyline>
-      </svg>
-      <h2 style="font-size:1.5rem; margin-bottom:0.5rem; color:var(--text-main);">Booking Confirmed!</h2>
-      <p style="color:var(--text-muted);">Your appointment has been successfully scheduled. We look forward to seeing you.</p>
+      <div id="successIconWrap" style="margin-bottom:1rem;">
+        <svg id="successIconApproved" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        <svg id="successIconPending" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" style="display:none;">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      </div>
+      <h2 id="successTitle" style="font-size:1.5rem; margin-bottom:0.5rem; color:var(--text-main);">Booking Confirmed!</h2>
+      <p id="successDesc" style="color:var(--text-muted); line-height:1.6;">Your appointment has been successfully scheduled. We look forward to seeing you.</p>
     </div>
 
   </div>
 
 <script>
-const API_URL = 'https://smartdentaldesk.onrender.com/api/public';
-// For local testing: const API_URL = 'http://localhost:3001/api/public';
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:3001/api/public'
+  : 'https://smartdentaldesk.onrender.com/api/public';
 
 let clinicId = null;
 let clinicData = null;
@@ -559,7 +566,23 @@ document.getElementById('btnStep4').addEventListener('click', async () => {
       })
     });
     
-    if (!res.ok) throw new Error((await res.json()).error);
+    const resData = await res.json();
+    if (!res.ok) throw new Error(resData.error || 'Failed to book appointment.');
+
+    const isPending = resData.appointment?.status === 'pending' || resData.auto_approved === false;
+    if (isPending) {
+      document.getElementById('successIconApproved').style.display = 'none';
+      document.getElementById('successIconPending').style.display = 'inline-block';
+      document.getElementById('successTitle').textContent = 'Appointment Requested!';
+      document.getElementById('successTitle').style.color = '#d97706';
+      document.getElementById('successDesc').innerHTML = `Your request for <strong>${bookingData.service}</strong> on <strong>${bookingData.date}</strong> at <strong>${formatTime12h(bookingData.time)}</strong> has been sent to the clinic.<br><br>The clinic will review and approve your appointment request. You will receive an email confirmation once approved.`;
+    } else {
+      document.getElementById('successIconApproved').style.display = 'inline-block';
+      document.getElementById('successIconPending').style.display = 'none';
+      document.getElementById('successTitle').textContent = 'Booking Confirmed!';
+      document.getElementById('successTitle').style.color = 'var(--text-main)';
+      document.getElementById('successDesc').innerHTML = `Your appointment for <strong>${bookingData.service}</strong> on <strong>${bookingData.date}</strong> at <strong>${formatTime12h(bookingData.time)}</strong> has been successfully scheduled. We look forward to seeing you.`;
+    }
 
     // Hide steps nav and show success
     document.getElementById('stepsNav').style.display = 'none';

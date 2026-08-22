@@ -191,17 +191,34 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
         ? rawPhone.replace(/[\s\-().+]/g, '').replace(/^0+/, '') // strip leading zeros too
         : null;
 
-      // Duplicate check only when phone is present
+      // ── Duplicate check ───────────────────────────────────────────────────
       if (normalizedPhone) {
+        // Primary: match by phone
         const { data: existing } = await supabase
           .from('patients')
-          .select('id')
+          .select('id, name')
           .eq('clinic_id', req.clinicId)
           .eq('phone', normalizedPhone)
+          .eq('is_deleted', false)
           .maybeSingle();
         if (existing) {
           skipped++;
-          errors.push({ row: i + 2, message: `Duplicate phone: ${normalizedPhone}` });
+          errors.push({ row: i + 2, message: `Duplicate — phone ${normalizedPhone} already exists (${existing.name})` });
+          continue;
+        }
+      } else {
+        // Secondary: no phone — match by name (case-insensitive) + dob if available
+        let dupQuery = supabase
+          .from('patients')
+          .select('id, name')
+          .eq('clinic_id', req.clinicId)
+          .eq('is_deleted', false)
+          .ilike('name', name.trim());
+        if (normalizedDob) dupQuery = dupQuery.eq('dob', normalizedDob);
+        const { data: existingByName } = await dupQuery.maybeSingle();
+        if (existingByName) {
+          skipped++;
+          errors.push({ row: i + 2, message: `Duplicate — patient "${existingByName.name}" already exists` });
           continue;
         }
       }
@@ -300,6 +317,33 @@ router.post('/', createRules, async (req, res, next) => {
   try {
     if (!validate(req, res)) return;
     const { name, phone, email, dob, gender, address, notes } = req.body;
+
+    // ── Duplicate checks before insert ───────────────────────────────────────
+    if (phone) {
+      const normalizedPhone = phone.replace(/[\s\-().+]/g, '').replace(/^0+/, '');
+      const { data: byPhone } = await supabase
+        .from('patients')
+        .select('id, name')
+        .eq('clinic_id', req.clinicId)
+        .eq('phone', normalizedPhone)
+        .eq('is_deleted', false)
+        .maybeSingle();
+      if (byPhone) {
+        return res.status(409).json({ error: `A patient with this phone number already exists (${byPhone.name}).` });
+      }
+    } else {
+      // No phone — check by exact name (case-insensitive)
+      const { data: byName } = await supabase
+        .from('patients')
+        .select('id, name')
+        .eq('clinic_id', req.clinicId)
+        .ilike('name', name.trim())
+        .eq('is_deleted', false)
+        .maybeSingle();
+      if (byName) {
+        return res.status(409).json({ error: `A patient named "${byName.name}" already exists. Add a phone number to distinguish them.` });
+      }
+    }
 
     const { data, error } = await supabase
       .from('patients')

@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=General+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./assets/style-v3.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
   .dashboard-layout {
@@ -898,6 +899,135 @@
     border-color: var(--color-primary);
     color: var(--color-primary);
   }
+
+  /* ── EXECUTIVE KPI METRICS CARDS ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+  .kpi-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-5);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  }
+  .kpi-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-3);
+  }
+  .kpi-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+  }
+  .kpi-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .kpi-value {
+    font-size: 1.85rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--color-text);
+    margin-bottom: 4px;
+    font-feature-settings: "tnum";
+  }
+  .kpi-sub {
+    font-size: 0.76rem;
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* ── CHARTS SECTION ── */
+  .charts-main-grid {
+    display: grid;
+    grid-template-columns: 1.65fr 1fr;
+    gap: var(--space-6);
+    margin-bottom: var(--space-6);
+  }
+  @media (max-width: 1100px) {
+    .charts-main-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .charts-sub-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: var(--space-6);
+    margin-bottom: var(--space-8);
+  }
+  @media (max-width: 900px) {
+    .charts-sub-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .chart-box {
+    background: var(--color-surface);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .chart-box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-4);
+  }
+  .chart-box-title {
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--color-text);
+    margin: 0;
+  }
+  .chart-box-desc {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    margin-top: 2px;
+  }
+  .chart-canvas-wrap {
+    position: relative;
+    width: 100%;
+    flex: 1;
+    min-height: 250px;
+    max-height: 290px;
+  }
+  .chart-badge-pill {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 12px;
+    background: var(--color-bg);
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-divider);
+  }
 </style>
 </head>
 <body>
@@ -952,44 +1082,154 @@
         <button class="btn btn-sm" id="bannerReviewBtn" onclick="showAppointmentsWithTab('pending')" style="background:#d97706; color:#fff; white-space:nowrap; border:none; font-weight:600; padding:8px 16px; border-radius:var(--radius-md); cursor:pointer;">Review &amp; Approve →</button>
       </div>
 
-      <div class="module-grid" style="margin-bottom: var(--space-8);">
-        <div class="card card-pad">
-          <h3 style="font-size:var(--text-sm);color:var(--color-text-muted)">Today's Appointments</h3>
-          <p id="statAppointments" style="font-size:2rem;font-weight:700;color:var(--color-primary);margin-top:0.5rem">...</p>
-        </div>
-        <div class="card card-pad hoverable" id="cardPendingApprovals" onclick="showAppointmentsWithTab('pending')" style="cursor:pointer;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="font-size:var(--text-sm);color:var(--color-text-muted)">Pending Approvals</h3>
-            <span id="statPendingBadge" style="display:none; background:#fef3c7; color:#d97706; font-size:0.7rem; font-weight:700; padding:2px 7px; border-radius:10px; border:1px solid #fde68a;">Review</span>
+      <!-- Executive KPI Strip -->
+      <div class="kpi-grid">
+        <!-- 1. Today's Appointments -->
+        <div class="kpi-card hoverable" onclick="document.querySelector('[data-target=appointments]').click()" style="cursor:pointer;">
+          <div class="kpi-card-top">
+            <span class="kpi-label">Today's Visits</span>
+            <div class="kpi-icon" style="background:#eff6ff; color:#2563eb;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
           </div>
-          <p id="statPendingApprovals" style="font-size:2rem;font-weight:700;color:#d97706;margin-top:0.5rem">0</p>
+          <div class="kpi-value" id="statAppointments">0</div>
+          <div class="kpi-sub">
+            <span style="color:#2563eb; font-weight:600;">Daily Schedule</span> · Active queue
+          </div>
         </div>
-        <div class="card card-pad">
-          <h3 style="font-size:var(--text-sm);color:var(--color-text-muted)">Total Patients</h3>
-          <p id="statPatients" style="font-size:2rem;font-weight:700;color:var(--color-primary);margin-top:0.5rem">...</p>
+
+        <!-- 2. Pending Approvals -->
+        <div class="kpi-card hoverable" id="cardPendingApprovals" onclick="showAppointmentsWithTab('pending')" style="cursor:pointer;">
+          <div class="kpi-card-top">
+            <span class="kpi-label" style="color:#92400e;">Pending Approvals</span>
+            <div class="kpi-icon" style="background:#fef3c7; color:#d97706;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="statPendingApprovals" style="color:#d97706;">0</div>
+          <div class="kpi-sub">
+            <span id="statPendingBadge" style="display:none; color:#d97706; font-weight:600;">Needs Review</span>
+            <span id="statPendingNormal">All caught up</span>
+          </div>
         </div>
-        <div class="card card-pad">
-          <h3 style="font-size:var(--text-sm);color:var(--color-text-muted)">Today's Revenue</h3>
-          <p id="statRevenue" style="font-size:2rem;font-weight:700;color:var(--color-primary);margin-top:0.5rem">₹...</p>
+
+        <!-- 3. Total Active Patients -->
+        <div class="kpi-card hoverable" onclick="document.querySelector('[data-target=patients]').click()" style="cursor:pointer;">
+          <div class="kpi-card-top">
+            <span class="kpi-label">Active Patients</span>
+            <div class="kpi-icon" style="background:#ecfdf5; color:#059669;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="statPatients">0</div>
+          <div class="kpi-sub">
+            <span style="color:#059669; font-weight:600;">Registered</span> in clinic records
+          </div>
         </div>
-        <div class="card card-pad">
-          <h3 style="font-size:var(--text-sm);color:var(--color-text-muted)">Pending Invoices</h3>
-          <p id="statInvoices" style="font-size:2rem;font-weight:700;color:var(--color-primary);margin-top:0.5rem">...</p>
+
+        <!-- 4. Today's Revenue -->
+        <div class="kpi-card">
+          <div class="kpi-card-top">
+            <span class="kpi-label">Today's Revenue</span>
+            <div class="kpi-icon" style="background:#eef2ff; color:#4f46e5;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="statRevenue" style="color:#4f46e5;">₹0</div>
+          <div class="kpi-sub" id="statTotalRevSub">
+            <span>Collected payments</span>
+          </div>
+        </div>
+
+        <!-- 5. Pending Invoices -->
+        <div class="kpi-card">
+          <div class="kpi-card-top">
+            <span class="kpi-label">Pending Invoices</span>
+            <div class="kpi-icon" style="background:#fff1f2; color:#e11d48;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="statInvoices" style="color:#e11d48;">0</div>
+          <div class="kpi-sub">
+            <span style="color:#e11d48; font-weight:600;">Awaiting</span> settlement
+          </div>
         </div>
       </div>
 
+      <!-- Powerful Interactive Analytics Charts -->
+      <div class="charts-main-grid">
+        <!-- Main Activity Chart -->
+        <div class="chart-box">
+          <div class="chart-box-header">
+            <div>
+              <h3 class="chart-box-title">Appointment Activity &amp; Booking Trends</h3>
+              <p class="chart-box-desc">Completed visits vs scheduled appointments over the last 7 days</p>
+            </div>
+            <span class="chart-badge-pill">7-Day Activity</span>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="timelineChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Service Distribution Doughnut -->
+        <div class="chart-box">
+          <div class="chart-box-header">
+            <div>
+              <h3 class="chart-box-title">Service Breakdown</h3>
+              <p class="chart-box-desc">Distribution of clinic treatments</p>
+            </div>
+            <span class="chart-badge-pill">Treatments</span>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="servicesChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-sub-grid">
+        <!-- Monthly Revenue & Billing Chart -->
+        <div class="chart-box">
+          <div class="chart-box-header">
+            <div>
+              <h3 class="chart-box-title">Revenue &amp; Invoicing Performance</h3>
+              <p class="chart-box-desc">Collected revenue vs pending invoices (Past 6 Months)</p>
+            </div>
+            <span class="chart-badge-pill">Financials (₹)</span>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="revenueChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Appointment Status Lifecycle Overview -->
+        <div class="chart-box">
+          <div class="chart-box-header">
+            <div>
+              <h3 class="chart-box-title">Appointment Status Lifecycle</h3>
+              <p class="chart-box-desc">Completed, scheduled, pending, and cancelled breakdown</p>
+            </div>
+            <span class="chart-badge-pill">Status Ratio</span>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="statusChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action Modules -->
       <div class="module-grid">
         <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=patients]').click()">
-          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Patient Management</h3>
-          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Manage profiles, view regular vs past patients.</p>
+          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Patient Directory</h3>
+          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Manage profiles, view medical history &amp; import patient CSVs.</p>
         </div>
         <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=appointments]').click()">
-          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Appointments</h3>
+          <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Appointments Queue</h3>
           <p class="text-muted mt-6" style="font-size:var(--text-sm)">Track daily schedule, approve bookings &amp; update statuses.</p>
         </div>
         <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=ai]').click()">
           <h3 style="font-size:var(--text-lg);color:var(--color-primary)">AI Assistant</h3>
-          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Chat with your smart dental desk assistant.</p>
+          <p class="text-muted mt-6" style="font-size:var(--text-sm)">Ask questions, summarize schedule &amp; generate patient reminders.</p>
         </div>
         <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=settings]').click()">
           <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Settings &amp; Link</h3>
@@ -1367,14 +1607,324 @@
       });
     });
 
-    // ── Home Stats ────────────────────────────────────────────────────────────
+    // ── Chart Instances & Themes ──────────────────────────────────────────────
+    let timelineChartInstance = null;
+    let servicesChartInstance = null;
+    let revenueChartInstance = null;
+    let statusChartInstance = null;
+
+    function getChartTheme() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      return {
+        textColor: isDark ? '#94a3b8' : '#64748b',
+        gridColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+        fontFamily: "'General Sans', system-ui, -apple-system, sans-serif"
+      };
+    }
+
+    function renderOrUpdateCharts(analytics) {
+      if (!window.Chart || !analytics) return;
+      const theme = getChartTheme();
+
+      // 1. Timeline Chart (Area / Curved Line)
+      const timelineCanvas = document.getElementById('timelineChart');
+      if (timelineCanvas && analytics.timeline) {
+        const timelineCtx = timelineCanvas.getContext('2d');
+        if (timelineChartInstance) timelineChartInstance.destroy();
+
+        const gradCompleted = timelineCtx.createLinearGradient(0, 0, 0, 240);
+        gradCompleted.addColorStop(0, 'rgba(22, 163, 74, 0.28)');
+        gradCompleted.addColorStop(1, 'rgba(22, 163, 74, 0.0)');
+
+        const gradScheduled = timelineCtx.createLinearGradient(0, 0, 0, 240);
+        gradScheduled.addColorStop(0, 'rgba(37, 99, 235, 0.28)');
+        gradScheduled.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
+
+        const gradPending = timelineCtx.createLinearGradient(0, 0, 0, 240);
+        gradPending.addColorStop(0, 'rgba(217, 119, 6, 0.28)');
+        gradPending.addColorStop(1, 'rgba(217, 119, 6, 0.0)');
+
+        timelineChartInstance = new Chart(timelineCtx, {
+          type: 'line',
+          data: {
+            labels: analytics.timeline.labels || [],
+            datasets: [
+              {
+                label: 'Completed Visits',
+                data: analytics.timeline.completed || [],
+                borderColor: '#16a34a',
+                backgroundColor: gradCompleted,
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.38,
+                pointBackgroundColor: '#16a34a',
+                pointRadius: 4,
+                pointHoverRadius: 6
+              },
+              {
+                label: 'Scheduled Visits',
+                data: analytics.timeline.scheduled || [],
+                borderColor: '#2563eb',
+                backgroundColor: gradScheduled,
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.38,
+                pointBackgroundColor: '#2563eb',
+                pointRadius: 4,
+                pointHoverRadius: 6
+              },
+              {
+                label: 'Pending Requests',
+                data: analytics.timeline.pending || [],
+                borderColor: '#d97706',
+                backgroundColor: gradPending,
+                borderWidth: 2,
+                borderDash: [4, 4],
+                fill: true,
+                tension: 0.38,
+                pointBackgroundColor: '#d97706',
+                pointRadius: 3,
+                pointHoverRadius: 5
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: {
+                position: 'top',
+                align: 'end',
+                labels: {
+                  color: theme.textColor,
+                  font: { family: theme.fontFamily, size: 11, weight: '600' },
+                  boxWidth: 12,
+                  boxHeight: 12,
+                  usePointStyle: true
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                padding: 10,
+                cornerRadius: 8,
+                titleFont: { family: theme.fontFamily, size: 12, weight: 'bold' },
+                bodyFont: { family: theme.fontFamily, size: 12 }
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { color: theme.textColor, font: { family: theme.fontFamily, size: 11 } }
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: theme.gridColor },
+                ticks: { stepSize: 1, color: theme.textColor, font: { family: theme.fontFamily, size: 11 } }
+              }
+            }
+          }
+        });
+      }
+
+      // 2. Services Distribution (Doughnut)
+      const servicesCanvas = document.getElementById('servicesChart');
+      if (servicesCanvas && analytics.services) {
+        const servicesCtx = servicesCanvas.getContext('2d');
+        if (servicesChartInstance) servicesChartInstance.destroy();
+
+        const sLabels = analytics.services.labels || [];
+        const sCounts = analytics.services.counts || [];
+        const colors = ['#2563eb', '#06b6d4', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'];
+
+        servicesChartInstance = new Chart(servicesCtx, {
+          type: 'doughnut',
+          data: {
+            labels: sLabels,
+            datasets: [{
+              data: sCounts,
+              backgroundColor: colors.slice(0, sLabels.length),
+              borderWidth: 2,
+              borderColor: '#ffffff',
+              hoverOffset: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+              legend: {
+                position: 'right',
+                labels: {
+                  color: theme.textColor,
+                  font: { family: theme.fontFamily, size: 11 },
+                  boxWidth: 12,
+                  boxHeight: 12,
+                  usePointStyle: true,
+                  padding: 10
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                padding: 10,
+                cornerRadius: 8,
+                callbacks: {
+                  label: (ctx) => ` ${ctx.label}: ${ctx.raw} visit${ctx.raw !== 1 ? 's' : ''}`
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // 3. Revenue Trends (Bar Chart)
+      const revenueCanvas = document.getElementById('revenueChart');
+      if (revenueCanvas && analytics.revenue_trends) {
+        const revenueCtx = revenueCanvas.getContext('2d');
+        if (revenueChartInstance) revenueChartInstance.destroy();
+
+        revenueChartInstance = new Chart(revenueCtx, {
+          type: 'bar',
+          data: {
+            labels: analytics.revenue_trends.labels || [],
+            datasets: [
+              {
+                label: 'Collected (Paid)',
+                data: analytics.revenue_trends.paid || [],
+                backgroundColor: '#10b981',
+                borderRadius: 6,
+                barPercentage: 0.6
+              },
+              {
+                label: 'Pending Invoices',
+                data: analytics.revenue_trends.pending || [],
+                backgroundColor: '#fb7185',
+                borderRadius: 6,
+                barPercentage: 0.6
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: {
+                position: 'top',
+                align: 'end',
+                labels: {
+                  color: theme.textColor,
+                  font: { family: theme.fontFamily, size: 11, weight: '600' },
+                  boxWidth: 12,
+                  boxHeight: 12,
+                  usePointStyle: true
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                padding: 10,
+                cornerRadius: 8,
+                callbacks: {
+                  label: (ctx) => ` ${ctx.dataset.label}: ₹${Number(ctx.raw || 0).toLocaleString()}`
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { color: theme.textColor, font: { family: theme.fontFamily, size: 11 } }
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: theme.gridColor },
+                ticks: {
+                  color: theme.textColor,
+                  font: { family: theme.fontFamily, size: 11 },
+                  callback: (val) => `₹${val.toLocaleString()}`
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // 4. Status Overview (Doughnut)
+      const statusCanvas = document.getElementById('statusChart');
+      if (statusCanvas && analytics.status_breakdown) {
+        const statusCtx = statusCanvas.getContext('2d');
+        if (statusChartInstance) statusChartInstance.destroy();
+
+        const sb = analytics.status_breakdown;
+        const total = (sb.completed || 0) + (sb.scheduled || 0) + (sb.pending || 0) + (sb.cancelled || 0);
+
+        statusChartInstance = new Chart(statusCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Completed', 'Scheduled', 'Pending', 'Cancelled'],
+            datasets: [{
+              data: [sb.completed || 0, sb.scheduled || 0, sb.pending || 0, sb.cancelled || 0],
+              backgroundColor: ['#16a34a', '#2563eb', '#d97706', '#94a3b8'],
+              borderWidth: 2,
+              borderColor: '#ffffff',
+              hoverOffset: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+              legend: {
+                position: 'right',
+                labels: {
+                  color: theme.textColor,
+                  font: { family: theme.fontFamily, size: 11 },
+                  boxWidth: 12,
+                  boxHeight: 12,
+                  usePointStyle: true,
+                  padding: 10
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                padding: 10,
+                cornerRadius: 8,
+                callbacks: {
+                  label: (ctx) => {
+                    const count = ctx.raw || 0;
+                    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                    return ` ${ctx.label}: ${count} (${pct}%)`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // ── Home Stats & Analytics Loader ─────────────────────────────────────────
     async function loadHomeStats() {
       try {
         const stats = await window.api.getDashboardStats();
-        document.getElementById('statAppointments').textContent = stats.today_appointments;
-        document.getElementById('statPatients').textContent = stats.total_patients;
-        document.getElementById('statRevenue').textContent = `₹${stats.today_revenue.toLocaleString()}`;
-        document.getElementById('statInvoices').textContent = stats.pending_invoices;
+        
+        const apptEl = document.getElementById('statAppointments');
+        if (apptEl) apptEl.textContent = stats.today_appointments || 0;
+
+        const patientsEl = document.getElementById('statPatients');
+        if (patientsEl) patientsEl.textContent = stats.total_patients || 0;
+
+        const revEl = document.getElementById('statRevenue');
+        if (revEl) revEl.textContent = `₹${(stats.today_revenue || 0).toLocaleString()}`;
+
+        const totalRevSub = document.getElementById('statTotalRevSub');
+        if (totalRevSub && stats.total_revenue !== undefined) {
+          totalRevSub.innerHTML = `<span>Total all-time: <strong>₹${(stats.total_revenue || 0).toLocaleString()}</strong></span>`;
+        }
+
+        const invEl = document.getElementById('statInvoices');
+        if (invEl) invEl.textContent = stats.pending_invoices || 0;
 
         const pendingCount = stats.pending_approvals || 0;
         const statPendingEl = document.getElementById('statPendingApprovals');
@@ -1385,23 +1935,31 @@
         const sidebarBadgeEl = document.getElementById('sidebarPendingBadge');
         const tabBadgeEl = document.getElementById('tabPendingBadge');
         const statBadgeEl = document.getElementById('statPendingBadge');
+        const statNormalEl = document.getElementById('statPendingNormal');
         const cardPending = document.getElementById('cardPendingApprovals');
 
         if (pendingCount > 0) {
-          if (bannerEl) { bannerEl.style.display = 'flex'; }
-          if (alertCountEl) { alertCountEl.textContent = pendingCount; }
+          if (bannerEl) bannerEl.style.display = 'flex';
+          if (alertCountEl) alertCountEl.textContent = pendingCount;
           if (sidebarBadgeEl) { sidebarBadgeEl.textContent = pendingCount; sidebarBadgeEl.style.display = 'inline-block'; }
           if (tabBadgeEl) { tabBadgeEl.textContent = pendingCount; tabBadgeEl.style.display = 'inline-block'; }
-          if (statBadgeEl) { statBadgeEl.style.display = 'inline-block'; }
+          if (statBadgeEl) statBadgeEl.style.display = 'inline-block';
+          if (statNormalEl) statNormalEl.style.display = 'none';
           if (cardPending) { cardPending.style.borderColor = '#fcd34d'; cardPending.style.background = '#fffdf7'; }
         } else {
-          if (bannerEl) { bannerEl.style.display = 'none'; }
-          if (sidebarBadgeEl) { sidebarBadgeEl.style.display = 'none'; }
-          if (tabBadgeEl) { tabBadgeEl.style.display = 'none'; }
-          if (statBadgeEl) { statBadgeEl.style.display = 'none'; }
+          if (bannerEl) bannerEl.style.display = 'none';
+          if (sidebarBadgeEl) sidebarBadgeEl.style.display = 'none';
+          if (tabBadgeEl) tabBadgeEl.style.display = 'none';
+          if (statBadgeEl) statBadgeEl.style.display = 'none';
+          if (statNormalEl) statNormalEl.style.display = 'inline-block';
           if (cardPending) { cardPending.style.borderColor = 'var(--color-divider)'; cardPending.style.background = 'var(--color-surface)'; }
         }
-      } catch (err) { console.error('Failed to load stats:', err); }
+
+        // Render the 4 Chart.js charts
+        if (stats.analytics) {
+          renderOrUpdateCharts(stats.analytics);
+        }
+      } catch (err) { console.error('Failed to load stats & analytics:', err); }
     }
 
     // ── Helper to switch to appointments tab directly with specific filter ───

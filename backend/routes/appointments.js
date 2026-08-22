@@ -122,6 +122,9 @@ router.get('/', async (req, res, next) => {
         q = q.eq('status', 'completed');
       } else if (status === 'cancelled') {
         q = q.eq('status', 'cancelled');
+      } else if (status === 'active') {
+        // Active means not completed and not cancelled
+        q = q.not('status', 'in', '("completed","cancelled")');
       } else if (status !== 'all') {
         q = q.eq('status', status);
       }

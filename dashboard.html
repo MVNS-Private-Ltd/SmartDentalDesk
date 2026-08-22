@@ -1037,13 +1037,14 @@
       </div>
 
       <div class="tabs-nav" id="appointmentTabs">
-        <button class="tab-btn active" data-tab="all">All Appointments</button>
+        <button class="tab-btn active" data-tab="active">Active Appointments</button>
         <button class="tab-btn" data-tab="pending" id="tabPendingBtn">
           Pending Approval <span id="tabPendingBadge" style="display:none; background:#d97706; color:#fff; font-size:0.7rem; font-weight:700; padding:1px 6px; border-radius:10px; margin-left:4px;">0</span>
         </button>
         <button class="tab-btn" data-tab="scheduled">Scheduled / Upcoming</button>
         <button class="tab-btn" data-tab="completed">Completed</button>
         <button class="tab-btn" data-tab="cancelled">Cancelled</button>
+        <button class="tab-btn" data-tab="all">All</button>
       </div>
 
       <div class="card table-responsive">
@@ -1446,7 +1447,7 @@
     }
 
     // ── Appointments Management & Approval Flow ──────────────────────────────
-    let currentAppointmentStatus = 'all';
+    let currentAppointmentStatus = 'active';
 
     const appointmentTabs = document.querySelectorAll('#appointmentTabs .tab-btn');
     appointmentTabs.forEach(tab => {
@@ -1465,15 +1466,16 @@
         const res = await window.api.getAppointments(statusFilter);
         const appts = res.appointments || [];
 
-        // Also update pending count on badges if in 'all' view or from backend
-        if (statusFilter === 'pending' || statusFilter === 'all') {
+        // Also update pending count on badges if in 'active' or 'pending' view
+        if (statusFilter === 'pending' || statusFilter === 'active' || statusFilter === 'all') {
           loadHomeStats();
         }
 
         if (appts.length === 0) {
-          const emptyMsg = statusFilter === 'pending'
-            ? 'No pending appointment requests. All caught up!'
-            : `No ${statusFilter === 'all' ? '' : statusFilter} appointments found.`;
+          let emptyMsg = `No ${statusFilter === 'all' ? '' : statusFilter} appointments found.`;
+          if (statusFilter === 'pending') emptyMsg = 'No pending appointment requests. All caught up!';
+          if (statusFilter === 'active') emptyMsg = 'No active appointments.';
+          
           tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2.5rem; color:var(--color-text-muted);">${emptyMsg}</td></tr>`;
           return;
         }

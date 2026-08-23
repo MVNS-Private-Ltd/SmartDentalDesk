@@ -285,6 +285,39 @@ window.api = (function() {
     },
     toggleStaffActive: (id, is_active) => request(`/super-admin/staff/${id}/toggle-active`, { method: 'PATCH', body: JSON.stringify({ is_active }) }),
     getSuperAdminAIAnalytics: () => request('/super-admin/ai-analytics'),
+    sendSuperAdminChatMessage: (message, mode = 'strategy', session_id = null) => {
+      const payload = { message, mode };
+      if (session_id) payload.session_id = session_id;
+      return request('/super-admin/ai/chat', { method: 'POST', body: JSON.stringify(payload) });
+    },
+    getSuperAdminChatHistory: (session_id = null) => request(`/super-admin/ai/history${session_id ? '?session_id=' + session_id : ''}`),
+    deleteSuperAdminChatSession: (session_id) => request(`/super-admin/ai/sessions/${session_id}`, { method: 'DELETE' }),
+    getSuperAdminFinancials: (params = {}) => {
+      const qs = new URLSearchParams();
+      if (params.status && params.status !== 'all') qs.set('status', params.status);
+      if (params.q) qs.set('q', params.q);
+      if (params.page) qs.set('page', params.page);
+      if (params.limit) qs.set('limit', params.limit);
+      const str = qs.toString();
+      return request(`/super-admin/financials${str ? '?' + str : ''}`);
+    },
+    exportSuperAdminCSV: async (type) => {
+      const token = getToken();
+      const filename = `smartdentaldesk_${type}_${new Date().toISOString().slice(0,10)}.csv`;
+      const res = await fetch(`${BASE_URL}/super-admin/export/${type}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (!res.ok) throw new Error('CSV export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
     getSystemHealth: () => request('/super-admin/system-health'),
     getBroadcast: () => request('/super-admin/broadcast'),
     publishBroadcast: (payload) => request('/super-admin/broadcast', { method: 'POST', body: JSON.stringify(payload) }),

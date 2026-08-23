@@ -356,6 +356,8 @@
     justify-content: space-between;
     align-items: flex-end;
     margin-bottom: 1.75rem;
+    gap: 1rem;
+    flex-wrap: wrap;
   }
 
   .section-title-group h1 {
@@ -549,6 +551,7 @@
     display: flex;
     align-items: center;
     gap: 0.6rem;
+    flex-wrap: wrap;
   }
 
   .select-custom {
@@ -621,6 +624,230 @@
 
   .badge-active { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
   .badge-suspended { background: rgba(244, 63, 94, 0.15); color: #fda4af; border: 1px solid rgba(244, 63, 94, 0.3); }
+
+  /* ── Super Admin AI Copilot Styles ───────────────────────────────────────── */
+  .super-ai-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    min-height: calc(100vh - 200px);
+  }
+
+  .ai-command-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .ai-chat-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.02);
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .mode-pills {
+    display: flex;
+    gap: 0.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.25rem;
+    border-radius: 9999px;
+    border: 1px solid var(--border-color);
+  }
+
+  .mode-pill {
+    padding: 0.3rem 0.85rem;
+    border-radius: 9999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .mode-pill.active {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 2px 8px var(--primary-glow);
+  }
+
+  .chat-messages-wrap {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    max-height: 520px;
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .chat-msg {
+    display: flex;
+    gap: 0.85rem;
+    max-width: 88%;
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  .chat-msg.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  .chat-msg.assistant {
+    align-self: flex-start;
+  }
+
+  .msg-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .chat-msg.user .msg-avatar {
+    background: linear-gradient(135deg, var(--primary), var(--accent-cyan));
+    color: #fff;
+  }
+
+  .chat-msg.assistant .msg-avatar {
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    color: #fff;
+  }
+
+  .msg-bubble {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.85rem 1.15rem;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: var(--text-main);
+  }
+
+  .chat-msg.user .msg-bubble {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(79, 70, 229, 0.25));
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #fff;
+  }
+
+  .msg-bubble h3, .msg-bubble h4 {
+    margin: 0.6rem 0 0.3rem;
+    color: #fff;
+    font-size: 0.95rem;
+  }
+
+  .msg-bubble ul, .msg-bubble ol {
+    margin-left: 1.25rem;
+    margin-top: 0.4rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .msg-bubble li {
+    margin-bottom: 0.25rem;
+  }
+
+  .prompt-chips-wrap {
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  .chip-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.4rem 0.85rem;
+    border-radius: 9999px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .chip-btn:hover {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: var(--primary-light);
+    color: #fff;
+    transform: translateY(-1px);
+  }
+
+  .chat-input-bar {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 0.75rem;
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .chat-input-bar input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.88rem;
+    outline: none;
+  }
+
+  .chat-input-bar input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+  }
+
+  /* ── System Health Diagnostics Modern Cards ───────────────────────────────── */
+  .health-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .health-metric-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .progress-wrap {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 9999px;
+    overflow: hidden;
+    margin-top: 0.6rem;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-cyan), var(--primary));
+    border-radius: 9999px;
+    transition: width 0.4s ease;
+  }
 
   /* Modals */
   .modal-overlay {
@@ -713,18 +940,6 @@
   .form-control:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px var(--primary-glow);
-  }
-
-  /* Impersonation Banner */
-  .impersonate-banner {
-    background: linear-gradient(90deg, #b91c1c, #991b1b);
-    color: #fee2e2;
-    padding: 0.5rem 1.5rem;
-    font-size: 0.82rem;
-    font-weight: 600;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
   }
 
   /* Toast notification */
@@ -824,14 +1039,26 @@
             Global Staff Hub
           </button>
         </li>
+        <li class="nav-item">
+          <button data-view="financials">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Financials & Ledger
+          </button>
+        </li>
       </ul>
 
-      <div class="nav-section-title">Telemetry & Engine</div>
+      <div class="nav-section-title">Telemetry & Intelligence</div>
       <ul class="nav-list">
         <li class="nav-item">
-          <button data-view="ai">
+          <button data-view="super-ai">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
-            AI Copilot Telemetry
+            Platform AI Copilot
+          </button>
+        </li>
+        <li class="nav-item">
+          <button data-view="ai">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            AI Usage Telemetry
           </button>
         </li>
         <li class="nav-item">
@@ -864,10 +1091,16 @@
           <h1>Platform Executive Overview</h1>
           <p class="section-subtitle">Real-time telemetry and consolidated metrics across all onboarded dental clinics.</p>
         </div>
-        <button class="btn btn-outline btn-sm" onclick="loadOverviewData()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          Refresh Telemetry
-        </button>
+        <div style="display: flex; gap: 0.6rem;">
+          <button class="btn btn-outline btn-sm" onclick="window.api.exportSuperAdminCSV('clinics')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Export Clinics (CSV)
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="loadOverviewData()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Refresh Telemetry
+          </button>
+        </div>
       </div>
 
       <!-- KPI Cards Grid -->
@@ -952,7 +1185,7 @@
       <!-- Recent Platform Activity Stream -->
       <div class="table-card">
         <div class="table-toolbar">
-          <div class="chart-title">Recent Platform Activity</div>
+          <div class="chart-title">Recent Platform Activity Stream</div>
         </div>
         <div class="table-responsive">
           <table class="data-table" id="recentActivityTable">
@@ -978,6 +1211,10 @@
           <h1>Clinics Fleet Management</h1>
           <p class="section-subtitle">Manage, upgrade, suspend, and directly inspect all dental clinic accounts.</p>
         </div>
+        <button class="btn btn-outline btn-sm" onclick="window.api.exportSuperAdminCSV('clinics')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Export Clinics CSV
+        </button>
       </div>
 
       <div class="table-card">
@@ -1026,6 +1263,10 @@
           <h1>Global Staff & Receptionist Directory</h1>
           <p class="section-subtitle">Centralized oversight of all dentists, receptionists, and managers across all clinics.</p>
         </div>
+        <button class="btn btn-outline btn-sm" onclick="window.api.exportSuperAdminCSV('staff')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Export Staff CSV
+        </button>
       </div>
 
       <div class="table-card">
@@ -1067,7 +1308,143 @@
       </div>
     </div>
 
-    <!-- ── 4. AI TELEMETRY VIEW ────────────────────────────────────────────── -->
+    <!-- ── 4. FINANCIALS & REVENUE LEDGER VIEW ───────────────────────────────── -->
+    <div class="view-container" id="view-financials">
+      <div class="section-header">
+        <div class="section-title-group">
+          <h1>Platform Financials & Revenue Ledger</h1>
+          <p class="section-subtitle">Consolidated billing telemetry, gross merchandise value (GMV), and cross-clinic invoices ledger.</p>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="window.api.exportSuperAdminCSV('invoices')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Export Invoices (CSV)
+        </button>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card" style="--card-accent: #10b981;">
+          <div class="kpi-header">
+            <span class="kpi-title">Gross Merchandise Value</span>
+            <div class="kpi-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          </div>
+          <div class="kpi-value" id="finTotalGmv">₹0</div>
+          <div class="kpi-subtext positive">Total collected platform volume</div>
+        </div>
+
+        <div class="kpi-card" style="--card-accent: #06b6d4;">
+          <div class="kpi-header">
+            <span class="kpi-title">This Month GMV</span>
+            <div class="kpi-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          </div>
+          <div class="kpi-value" id="finThisMonthGmv">₹0</div>
+          <div class="kpi-subtext" id="finPaidCount">0 invoices paid</div>
+        </div>
+
+        <div class="kpi-card" style="--card-accent: #f43f5e;">
+          <div class="kpi-header">
+            <span class="kpi-title">Pending Receivables</span>
+            <div class="kpi-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+          </div>
+          <div class="kpi-value" id="finPendingDebt">₹0</div>
+          <div class="kpi-subtext">Unpaid invoice balance across clinics</div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="search-input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="invoiceSearchInput" class="search-input" placeholder="Search invoices by number, clinic, or patient…">
+          </div>
+          <div class="filter-group">
+            <select id="invoiceStatusFilter" class="select-custom">
+              <option value="all">All Statuses</option>
+              <option value="paid">Paid</option>
+              <option value="unpaid">Unpaid</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Invoice #</th>
+                <th>Clinic Name</th>
+                <th>Patient Name</th>
+                <th>Total Amount</th>
+                <th>Status</th>
+                <th>Issue Date</th>
+                <th>Paid Date</th>
+              </tr>
+            </thead>
+            <tbody id="invoicesTableBody">
+              <tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 2rem;">Loading financial ledger…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 5. PLATFORM AI COPILOT VIEW (NEW) ───────────────────────────────── -->
+    <div class="view-container" id="view-super-ai">
+      <div class="section-header">
+        <div class="section-title-group">
+          <h1>Super Admin Platform AI Copilot</h1>
+          <p class="section-subtitle">Real-time LLM reasoning on multi-tenant SaaS metrics, growth strategy, and system operations.</p>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="clearSuperAiChat()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Clear Chat Session
+        </button>
+      </div>
+
+      <div class="super-ai-container">
+        <div class="ai-command-card">
+          <div class="ai-chat-header">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <span class="status-dot"></span>
+              <span style="font-size: 0.85rem; font-weight: 700; color: #fff;">Gemma 31B Platform Copilot</span>
+            </div>
+            <div class="mode-pills">
+              <button class="mode-pill active" data-mode="strategy" onclick="setSuperAiMode('strategy')">🎯 Strategy & Growth</button>
+              <button class="mode-pill" data-mode="data" onclick="setSuperAiMode('data')">📊 Deep Telemetry</button>
+              <button class="mode-pill" data-mode="announcement" onclick="setSuperAiMode('announcement')">📢 Broadcast Drafter</button>
+            </div>
+          </div>
+
+          <div class="chat-messages-wrap" id="superAiMessages">
+            <div class="chat-msg assistant">
+              <div class="msg-avatar">AI</div>
+              <div class="msg-bubble">
+                <strong>Greetings, Platform Super Admin! 🚀</strong><br>
+                I am your live SaaS intelligence assistant. I have full real-time visibility into all onboarded clinics, patient volumes, gross merchandise value (GMV), database latency, and subscription distributions.<br><br>
+                How can I assist your executive decisions today?
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Action Prompt Chips -->
+          <div class="prompt-chips-wrap">
+            <button class="chip-btn" onclick="sendQuickPrompt('Give me a high-level executive briefing on our platform health and revenue metrics.')">📊 Executive Briefing</button>
+            <button class="chip-btn" onclick="sendQuickPrompt('Which clinics on the free tier have high patient/appointment volume and are ready for an upgrade to starter/premium?')">🚀 Upsell Detection</button>
+            <button class="chip-btn" onclick="sendQuickPrompt('Analyze our platform revenue GMV, paid invoices, and unpaid receivables breakdown.')">💰 Revenue & Receivables</button>
+            <button class="chip-btn" onclick="sendQuickPrompt('Draft a concise platform broadcast notice for scheduled database maintenance tonight at 2 AM UTC.')">📢 Draft Maintenance Notice</button>
+            <button class="chip-btn" onclick="sendQuickPrompt('Identify any dormant clinics with zero bookings so we can reach out for onboarding support.')">🔍 Dormant Fleet Audit</button>
+          </div>
+
+          <div class="chat-input-bar">
+            <input type="text" id="superAiInput" placeholder="Ask anything about your clinics, revenue, telemetry, or draft announcements…" onkeydown="if(event.key==='Enter') submitSuperAiMessage()">
+            <button class="btn btn-primary" id="superAiSendBtn" onclick="submitSuperAiMessage()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Ask AI
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 6. AI USAGE TELEMETRY VIEW ──────────────────────────────────────── -->
     <div class="view-container" id="view-ai">
       <div class="section-header">
         <div class="section-title-group">
@@ -1130,20 +1507,54 @@
       </div>
     </div>
 
-    <!-- ── 5. SYSTEM HEALTH & BROADCAST VIEW ───────────────────────────────── -->
+    <!-- ── 7. SYSTEM HEALTH & BROADCAST VIEW ───────────────────────────────── -->
     <div class="view-container" id="view-health">
       <div class="section-header">
         <div class="section-title-group">
           <h1>System Health & Platform Hub</h1>
           <p class="section-subtitle">Real-time Node process telemetry, Supabase database latency, and global announcements.</p>
         </div>
+        <button class="btn btn-primary btn-sm" onclick="loadSystemHealth()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Ping Server Probe
+        </button>
+      </div>
+
+      <div class="health-metric-grid">
+        <div class="health-metric-card">
+          <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Database Latency</div>
+          <div style="display: flex; align-items: baseline; gap: 0.4rem; margin-top: 0.4rem;">
+            <span style="font-size: 1.8rem; font-weight: 800; color: #fff;" id="healthDbLatency">--</span>
+            <span style="font-size: 0.82rem; color: var(--accent-emerald);" id="healthDbStatus">Healthy</span>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.3rem;">Supabase PostgreSQL connection</div>
+        </div>
+
+        <div class="health-metric-card">
+          <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Memory Heap Load</div>
+          <div style="display: flex; align-items: baseline; gap: 0.4rem; margin-top: 0.4rem;">
+            <span style="font-size: 1.8rem; font-weight: 800; color: #fff;" id="healthMemHeap">-- MB</span>
+            <span style="font-size: 0.78rem; color: var(--text-dim);" id="healthMemTotal">/ -- MB Total</span>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-fill" id="healthMemProgress" style="width: 25%;"></div>
+          </div>
+        </div>
+
+        <div class="health-metric-card">
+          <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Node Runtime & Uptime</div>
+          <div style="display: flex; align-items: baseline; gap: 0.4rem; margin-top: 0.4rem;">
+            <span style="font-size: 1.3rem; font-weight: 800; color: #fff;" id="healthUptime">--</span>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.3rem;" id="healthNodeVer">Node.js Engine</div>
+        </div>
       </div>
 
       <div class="analytics-grid">
-        <!-- System Health Diagnostics -->
+        <!-- System Health Diagnostics JSON Details -->
         <div class="chart-card">
           <div class="chart-header">
-            <div class="chart-title">Server Runtime Diagnostics</div>
+            <div class="chart-title">Server Runtime Diagnostics Payload</div>
           </div>
           <div class="code-box" id="systemDiagnosticsBox">
             Loading server diagnostics…
@@ -1234,6 +1645,8 @@
   let planChartInstance = null;
   let cachedClinics = [];
   let cachedStaff = [];
+  let currentSuperAiMode = 'strategy';
+  let currentSuperAiSessionId = localStorage.getItem('sdd_super_ai_session') || null;
 
   // Toast Helper
   function showToast(msg, isError = false) {
@@ -1253,10 +1666,20 @@
     document.getElementById(id).classList.add('active');
   }
 
-  // Auth Guard: Ensure user is Super Admin
+  // Auth Guard: Ensure user is authenticated AND has super_admin role
   (async function verifySuperAdminAuth() {
     if (!window.api.isAuthenticated()) {
       window.location.href = './login.html';
+      return;
+    }
+
+    const role = localStorage.getItem('sdd_role');
+    if (role !== 'super_admin') {
+      if (role === 'receptionist') {
+        window.location.href = './receptionist-dashboard.html';
+      } else {
+        window.location.href = './dashboard.html';
+      }
       return;
     }
 
@@ -1284,6 +1707,8 @@
       if (targetView === 'overview') loadOverviewData();
       if (targetView === 'clinics') loadClinicsData();
       if (targetView === 'staff') loadStaffData();
+      if (targetView === 'financials') loadFinancialsData();
+      if (targetView === 'super-ai') loadSuperAiHistory();
       if (targetView === 'ai') loadAiTelemetry();
       if (targetView === 'health') loadSystemHealth();
     });
@@ -1464,6 +1889,7 @@
               <button class="btn ${isSuspended ? 'btn-outline' : 'btn-danger'} btn-sm" onclick="toggleClinicStatus('${c.id}', ${!isSuspended})" title="${isSuspended ? 'Activate' : 'Suspend'}">
                 ${isSuspended ? '🔓' : '🔒'}
               </button>
+              <button class="btn btn-danger btn-sm" onclick="deleteClinic('${c.id}', '${c.name}')" title="Permanently Delete Clinic">🗑️</button>
             </div>
           </td>
         </tr>
@@ -1536,6 +1962,22 @@
       loadClinicsData();
     } catch (err) {
       showToast(err.message || 'Plan update failed', true);
+    }
+  }
+
+  async function deleteClinic(id, name) {
+    if (!confirm(`⚠️ PERMANENT DELETE\n\nThis will delete "${name}" and ALL associated patients, appointments, invoices, staff, and AI data.\n\nThis cannot be undone. Type the clinic name to confirm or click Cancel.`)) return;
+    const typed = prompt(`Type the clinic name exactly to confirm deletion:\n"${name}"`);
+    if (typed !== name) {
+      showToast('Clinic name did not match. Deletion cancelled.', true);
+      return;
+    }
+    try {
+      const res = await window.api.deleteClinic(id);
+      showToast(res.message);
+      loadClinicsData();
+    } catch (err) {
+      showToast(err.message || 'Delete failed', true);
     }
   }
 
@@ -1615,7 +2057,169 @@
     }
   }
 
-  // ── 4. LOAD AI TELEMETRY ───────────────────────────────────────────────────
+  // ── 4. LOAD FINANCIALS & REVENUE LEDGER ─────────────────────────────────────
+  async function loadFinancialsData() {
+    const q = document.getElementById('invoiceSearchInput').value.trim();
+    const status = document.getElementById('invoiceStatusFilter').value;
+
+    try {
+      const data = await window.api.getSuperAdminFinancials({ q, status });
+      const m = data.metrics;
+
+      document.getElementById('finTotalGmv').textContent = `₹${(m.total_gmv || 0).toLocaleString()}`;
+      document.getElementById('finThisMonthGmv').textContent = `₹${(m.this_month_gmv || 0).toLocaleString()}`;
+      document.getElementById('finPaidCount').textContent = `${m.paid_invoices_count || 0} invoices settled`;
+      document.getElementById('finPendingDebt').textContent = `₹${(m.pending_debt || 0).toLocaleString()}`;
+
+      const tbody = document.getElementById('invoicesTableBody');
+      if (!data.invoices || data.invoices.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 2rem;">No invoices recorded.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.invoices.map(inv => `
+        <tr>
+          <td><strong style="font-family: monospace;">${inv.invoice_number || 'INV-' + inv.id.slice(0,6)}</strong></td>
+          <td>${inv.clinics?.name || 'Clinic'}</td>
+          <td>${inv.patients?.name || 'Patient'}</td>
+          <td><strong>₹${Number(inv.total_amount || 0).toLocaleString()}</strong></td>
+          <td><span class="badge badge-${inv.status === 'paid' ? 'active' : 'suspended'}">${inv.status.toUpperCase()}</span></td>
+          <td>${inv.created_at ? inv.created_at.slice(0, 10) : '-'}</td>
+          <td>${inv.paid_at ? inv.paid_at.slice(0, 10) : '-'}</td>
+        </tr>
+      `).join('');
+
+    } catch (err) {
+      showToast(err.message || 'Failed to load financials', true);
+    }
+  }
+
+  document.getElementById('invoiceSearchInput').addEventListener('input', debounce(loadFinancialsData, 300));
+  document.getElementById('invoiceStatusFilter').addEventListener('change', loadFinancialsData);
+
+  // ── 5. PLATFORM AI COPILOT LOGIC ───────────────────────────────────────────
+  function setSuperAiMode(mode) {
+    currentSuperAiMode = mode;
+    document.querySelectorAll('.mode-pill').forEach(p => {
+      p.classList.toggle('active', p.getAttribute('data-mode') === mode);
+    });
+  }
+
+  function sendQuickPrompt(text) {
+    document.getElementById('superAiInput').value = text;
+    submitSuperAiMessage();
+  }
+
+  async function loadSuperAiHistory() {
+    try {
+      const res = await window.api.getSuperAdminChatHistory(currentSuperAiSessionId);
+      const container = document.getElementById('superAiMessages');
+      if (res.history && res.history.length > 0) {
+        container.innerHTML = res.history.map(m => `
+          <div class="chat-msg ${m.role}">
+            <div class="msg-avatar">${m.role === 'user' ? 'SA' : 'AI'}</div>
+            <div class="msg-bubble">${formatAiMarkdown(m.content)}</div>
+          </div>
+        `).join('');
+        container.scrollTop = container.scrollHeight;
+      }
+    } catch (err) {
+      console.error('Failed to load AI history:', err);
+    }
+  }
+
+  async function submitSuperAiMessage() {
+    const input = document.getElementById('superAiInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    input.value = '';
+    const container = document.getElementById('superAiMessages');
+
+    // Append User Message
+    container.innerHTML += `
+      <div class="chat-msg user">
+        <div class="msg-avatar">SA</div>
+        <div class="msg-bubble">${escapeHtml(msg)}</div>
+      </div>
+    `;
+
+    // Append Typing Indicator
+    const typingId = 'typing-' + Date.now();
+    container.innerHTML += `
+      <div class="chat-msg assistant" id="${typingId}">
+        <div class="msg-avatar">AI</div>
+        <div class="msg-bubble" style="display:flex; align-items:center; gap:6px;">
+          <span class="status-dot"></span> Analyzing live platform telemetry…
+        </div>
+      </div>
+    `;
+    container.scrollTop = container.scrollHeight;
+
+    const sendBtn = document.getElementById('superAiSendBtn');
+    sendBtn.disabled = true;
+
+    try {
+      const res = await window.api.sendSuperAdminChatMessage(msg, currentSuperAiMode, currentSuperAiSessionId);
+      currentSuperAiSessionId = res.session_id;
+      localStorage.setItem('sdd_super_ai_session', res.session_id);
+
+      const typingEl = document.getElementById(typingId);
+      if (typingEl) typingEl.remove();
+
+      container.innerHTML += `
+        <div class="chat-msg assistant">
+          <div class="msg-avatar">AI</div>
+          <div class="msg-bubble">${formatAiMarkdown(res.reply.content)}</div>
+        </div>
+      `;
+      container.scrollTop = container.scrollHeight;
+
+    } catch (err) {
+      const typingEl = document.getElementById(typingId);
+      if (typingEl) typingEl.remove();
+      showToast(err.message || 'AI request failed', true);
+    } finally {
+      sendBtn.disabled = false;
+    }
+  }
+
+  async function clearSuperAiChat() {
+    if (currentSuperAiSessionId) {
+      try {
+        await window.api.deleteSuperAdminChatSession(currentSuperAiSessionId);
+      } catch (e) {}
+    }
+    localStorage.removeItem('sdd_super_ai_session');
+    currentSuperAiSessionId = null;
+    document.getElementById('superAiMessages').innerHTML = `
+      <div class="chat-msg assistant">
+        <div class="msg-avatar">AI</div>
+        <div class="msg-bubble">
+          <strong>Chat session cleared. 🧹</strong><br>
+          Ask me anything regarding your platform telemetry, strategy, or announcements!
+        </div>
+      </div>
+    `;
+  }
+
+  function formatAiMarkdown(text) {
+    if (!text) return '';
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/### (.*?)\n/g, '<h4>$1</h4>')
+      .replace(/## (.*?)\n/g, '<h3>$1</h3>')
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n• (.*?)/g, '<br>• $1')
+      .replace(/\n- (.*?)/g, '<br>• $1');
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]);
+  }
+
+  // ── 6. LOAD AI TELEMETRY ───────────────────────────────────────────────────
   async function loadAiTelemetry() {
     try {
       const data = await window.api.getSuperAdminAIAnalytics();
@@ -1648,14 +2252,29 @@
     }
   }
 
-  // ── 5. LOAD SYSTEM HEALTH & BROADCAST ──────────────────────────────────────
+  // ── 7. LOAD SYSTEM HEALTH & BROADCAST ──────────────────────────────────────
   async function loadSystemHealth() {
     try {
       const res = await window.api.getSystemHealth();
       const box = document.getElementById('systemDiagnosticsBox');
       box.textContent = JSON.stringify(res, null, 2);
+
+      // Visual Metrics Cards
+      document.getElementById('healthDbLatency').textContent = `${res.database.latency_ms} ms`;
+      document.getElementById('healthDbStatus').textContent = res.database.status.toUpperCase();
+      document.getElementById('healthMemHeap').textContent = `${res.memory.heap_used_mb} MB`;
+      document.getElementById('healthMemTotal').textContent = `/ ${res.memory.heap_total_mb} MB Total`;
+      
+      const memPercent = Math.min(100, Math.round((parseFloat(res.memory.heap_used_mb) / parseFloat(res.memory.heap_total_mb)) * 100));
+      document.getElementById('healthMemProgress').style.width = `${memPercent}%`;
+
+      document.getElementById('healthUptime').textContent = res.uptime_formatted;
+      document.getElementById('healthNodeVer').textContent = `${res.node_version} (${res.platform} · ${res.environment})`;
+
+      showToast('System health verified — online');
     } catch (err) {
       document.getElementById('systemDiagnosticsBox').textContent = 'Error connecting to system health probe: ' + err.message;
+      showToast('Health probe check failed', true);
     }
   }
 

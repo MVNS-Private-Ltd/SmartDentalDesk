@@ -1024,6 +1024,13 @@
 </style>
 </head>
 <body>
+
+<!-- ── PLATFORM BROADCAST BANNER ─────────────────────────────────────────── -->
+<div id="broadcastBanner" style="display:none; align-items:center; justify-content:space-between; gap:1rem; padding:0.6rem 1.5rem; font-size:0.84rem; font-weight:600; z-index:999; position:relative;">
+  <span id="broadcastBannerText"></span>
+  <button onclick="document.getElementById('broadcastBanner').style.display='none'" style="background:transparent; border:none; cursor:pointer; font-size:1rem; opacity:0.7; flex-shrink:0; color:inherit;">×</button>
+</div>
+
 <div class="dashboard-layout">
   <aside class="sidebar">
     <a href="./index.html" class="brand" aria-label="Smart Dental Clinic home">
@@ -4128,5 +4135,36 @@
     </form>
   </div>
 </div>
+
+<script>
+// ── Platform Broadcast Banner ────────────────────────────────────────────────
+// Fetches active broadcast from the super admin and shows it above the dashboard.
+(async function loadBroadcastBanner() {
+  try {
+    const res = await window.api.getBroadcast();
+    const bc = res?.broadcast;
+    if (!bc || !bc.is_active || !bc.message) return;
+
+    const banner = document.getElementById('broadcastBanner');
+    const text   = document.getElementById('broadcastBannerText');
+    if (!banner || !text) return;
+
+    text.textContent = bc.message;
+
+    const styles = {
+      info:    { bg: '#dbeafe', color: '#1d4ed8', border: '#93c5fd' },
+      warning: { bg: '#fef3c7', color: '#92400e', border: '#fcd34d' },
+      alert:   { bg: '#fee2e2', color: '#991b1b', border: '#fca5a5' }
+    };
+    const s = styles[bc.type] || styles.info;
+    banner.style.background   = s.bg;
+    banner.style.color        = s.color;
+    banner.style.borderBottom = `2px solid ${s.border}`;
+    banner.style.display      = 'flex';
+  } catch (e) {
+    // Silently skip if backend unreachable or user is not authenticated yet
+  }
+})();
+</script>
 
 </html>

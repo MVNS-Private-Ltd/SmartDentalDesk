@@ -324,4 +324,48 @@ router.post('/reset-password', [
   }
 });
 
+// ── GET /api/auth/google-url ──────────────────────────────────────────────────
+// Returns the Supabase OAuth URL to initiate Google login securely
+router.get('/google-url', (req, res) => {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const redirectUri = process.env.OAUTH_REDIRECT || 'https://smart-dental-desk.vercel.app/login.html';
+  
+  if (!supabaseUrl) {
+    return res.status(500).json({ error: 'Supabase URL not configured on server.' });
+  }
+  
+  const url = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUri)}`;
+  res.json({ url });
+});
+
+// ── POST /api/auth/refresh ────────────────────────────────────────────────────
+// Refreshes the Supabase access token securely from the backend
+router.post('/refresh', async (req, res, next) => {
+  try {
+    const { refresh_token } = req.body;
+    if (!refresh_token) {
+      return res.status(400).json({ error: 'Refresh token is required.' });
+    }
+
+    // Using global fetch (Node 18+)
+    const response = await fetch(`${process.env.SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': process.env.SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ refresh_token }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json(data);
+    }
+
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

@@ -1,7 +1,8 @@
 const { Client } = require('pg');
 const path = require('path');
 
-const uri = 'postgresql://postgres:REDACTED_PASSWORD@db.qxioydfqnuuphgisbqxx.supabase.co:5432/postgres';
+require('dotenv').config();
+const uri = process.env.DATABASE_URL;
 
 const client = new Client({
   connectionString: uri,

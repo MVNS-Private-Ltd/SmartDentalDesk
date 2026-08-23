@@ -6,6 +6,8 @@ require('dotenv').config();
 const express  = require('express');
 const cors     = require('cors');
 const morgan   = require('morgan');
+const helmet   = require('helmet');
+const rateLimit = require('express-rate-limit');
 const https    = require('https');
 const http     = require('http');
 
@@ -26,6 +28,26 @@ const app  = express();
 const PORT = process.env.PORT || 3001;
 
 // ── Middleware ────────────────────────────────────────────────────────────────
+app.use(helmet());
+
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // Limit each IP to 200 requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests from this IP, please try again after 15 minutes' }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 auth requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many auth requests from this IP, please try again after 15 minutes' }
+});
+
+app.use('/api', globalLimiter);
+
 app.use(cors({
   origin : process.env.FRONTEND_ORIGIN || '*',
   methods : ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -48,7 +70,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 // ── API Routes ────────────────────────────────────────────────────────────────
-app.use('/api/auth',         authRoutes);
+app.use('/api/auth',         authLimiter, authRoutes);
 app.use('/api/patients',     patientRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/treatments',   treatmentRoutes);

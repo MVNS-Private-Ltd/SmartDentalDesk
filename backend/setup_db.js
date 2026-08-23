@@ -3,7 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 // Hardcode the URI directly with the URL-encoded password
-const uri = 'postgresql://postgres:REDACTED_PASSWORD@db.qxioydfqnuuphgisbqxx.supabase.co:5432/postgres';
+require('dotenv').config();
+const uri = process.env.DATABASE_URL;
 
 const client = new Client({
   connectionString: uri,

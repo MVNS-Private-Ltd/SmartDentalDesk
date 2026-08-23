@@ -3,10 +3,8 @@ window.api = (function() {
   const BASE_URL       = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
     ? 'http://localhost:3001/api' 
     : 'https://smartdentaldesk.onrender.com/api';
-  const SUPABASE_URL   = 'https://qxioydfqnuuphgisbqxx.supabase.co';
-  const SUPABASE_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4aW95ZGZxbnV1cGhnaXNicXh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxODc1NjMsImV4cCI6MjEwMTc2MzU2M30.LZAeQdUADzSRyL2ydBs3mdOAm681PHFUmKkCXtZErec';
-  // Redirect URIs — must match what is set in Supabase dashboard > Auth > URL Configuration
-  const OAUTH_REDIRECT  = 'https://smart-dental-desk.vercel.app/login.html';
+  // Removed hardcoded SUPABASE_URL and SUPABASE_ANON for security.
+  // OAuth URL is now fetched securely from the backend.
 
   let activeChatController = null;
 
@@ -18,11 +16,10 @@ window.api = (function() {
     const refreshToken = getRefreshToken();
     if (!refreshToken) throw new Error('No refresh token available.');
 
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+    const res = await fetch(`${BASE_URL}/auth/refresh`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
@@ -81,10 +78,19 @@ window.api = (function() {
 
   // ── Google OAuth ────────────────────────────────────────────────────────────
 
-  // Step 1: Redirect user to Google via Supabase OAuth
   async function loginWithGoogle() {
-    const url = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(OAUTH_REDIRECT)}`;
-    window.location.href = url;
+    try {
+      const res = await fetch(`${BASE_URL}/auth/google-url`);
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Could not initiate Google login');
+      }
+    } catch (err) {
+      console.error('Google login error:', err);
+      alert('Could not initiate Google login');
+    }
   }
 
   // Step 2: Called on login.html load — checks if Google just redirected back with a token

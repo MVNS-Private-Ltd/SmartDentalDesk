@@ -17,7 +17,19 @@ const Papa        = require('papaparse');
 const router = express.Router();
 router.use(requireAuth); // All patient routes require auth
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+  fileFilter: (_req, file, cb) => {
+    // Only allow CSV and plain text
+    const allowed = ['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel'];
+    if (allowed.includes(file.mimetype) || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed for patient import.'));
+    }
+  }
+});
 
 function validate(req, res) {
   const errors = validationResult(req);

@@ -1,12 +1,54 @@
 const express  = require('express');
+const rateLimit = require('express-rate-limit');
+const { body, param, query, validationResult } = require('express-validator');
 const supabase = require('../lib/supabase');
 const { sendMail } = require('../lib/mailer');
 
 const router = express.Router();
 
+// ── Rate limiters for unauthenticated public endpoints ────────────────────────
+// OTP: max 5 requests per 10 min per IP — prevent OTP spam abuse
+const otpLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many OTP requests. Please wait 10 minutes before trying again.' }
+});
+
+// Booking: max 10 per 15 min per IP
+const bookingLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many booking requests from your IP. Please try again later.' }
+});
+
+// Availability: max 60 per 15 min per IP
+const availabilityLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please try again later.' }
+});
+
+function validate(req, res) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ error: errors.array()[0].msg });
+    return false;
+  }
+  return true;
+}
+
 // ── GET /api/public/clinic/:slug ──────────────────────────────────────────────
-router.get('/clinic/:slug', async (req, res, next) => {
+router.get('/clinic/:slug', [
+  param('slug').trim().isLength({ min: 1, max: 64 }).withMessage('Invalid slug')
+], async (req, res, next) => {
   try {
+    if (!validate(req, res)) return;
     const { slug } = req.params;
 
     const { data, error } = await supabase
@@ -26,10 +68,12 @@ router.get('/clinic/:slug', async (req, res, next) => {
 });
 
 // ── POST /api/public/send-otp ─────────────────────────────────────────────────
-router.post('/send-otp', async (req, res, next) => {
+router.post('/send-otp', otpLimiter, [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required')
+], async (req, res, next) => {
   try {
+    if (!validate(req, res)) return;
     const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required' });
 
     const { error } = await supabase.auth.signInWithOtp({ email });
     if (error) throw error;
@@ -41,10 +85,13 @@ router.post('/send-otp', async (req, res, next) => {
 });
 
 // ── POST /api/public/verify-otp ───────────────────────────────────────────────
-router.post('/verify-otp', async (req, res, next) => {
+router.post('/verify-otp', otpLimiter, [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+  body('otp').trim().isLength({ min: 6, max: 6 }).isNumeric().withMessage('OTP must be a 6-digit code')
+], async (req, res, next) => {
   try {
+    if (!validate(req, res)) return;
     const { email, otp } = req.body;
-    if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required' });
 
     const { data, error } = await supabase.auth.verifyOtp({
       email,
@@ -65,12 +112,13 @@ router.post('/verify-otp', async (req, res, next) => {
 // ── GET /api/public/availability ─────────────────────────────────────────────
 // Returns booked time slots and remaining capacity for a clinic on a given date.
 // Query params: clinic_id, date
-router.get('/availability', async (req, res, next) => {
+router.get('/availability', availabilityLimiter, [
+  query('clinic_id').notEmpty().isUUID().withMessage('Valid clinic_id is required'),
+  query('date').notEmpty().isISO8601().withMessage('Valid date is required')
+], async (req, res, next) => {
   try {
+    if (!validate(req, res)) return;
     const { clinic_id, date } = req.query;
-    if (!clinic_id || !date) {
-      return res.status(400).json({ error: 'clinic_id and date are required' });
-    }
 
     const { data: clinic } = await supabase
       .from('clinics')
@@ -101,15 +149,19 @@ router.get('/availability', async (req, res, next) => {
 });
 
 // ── POST /api/public/book ─────────────────────────────────────────────────────
-router.post('/book', async (req, res, next) => {
+router.post('/book', bookingLimiter, [
+  body('clinic_id').notEmpty().isUUID().withMessage('Valid clinic_id is required'),
+  body('patient_name').trim().notEmpty().isLength({ max: 120 }).withMessage('Patient name is required'),
+  body('patient_phone').trim().notEmpty().isLength({ max: 20 }).withMessage('Phone number is required'),
+  body('patient_email').optional({ checkFalsy: true }).isEmail().normalizeEmail().withMessage('Invalid email'),
+  body('date').notEmpty().isISO8601().withMessage('Valid date is required'),
+  body('time').notEmpty().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid time (HH:MM) is required'),
+  body('service').trim().notEmpty().isLength({ max: 120 }).withMessage('Service is required'),
+  body('reason').optional().trim().isLength({ max: 500 })
+], async (req, res, next) => {
   try {
+    if (!validate(req, res)) return;
     const { clinic_id, patient_name, patient_phone, patient_email, date, time, service, reason } = req.body;
-
-    console.log(`[BOOK] clinic=${clinic_id} email=${patient_email} phone=${patient_phone} date=${date} time=${time}`);
-
-    if (!clinic_id || !patient_name || !patient_phone || !date || !time || !service) {
-      return res.status(400).json({ error: 'Missing required booking fields' });
-    }
 
     // ── Guard 1: One booking per email per day ────────────────────────────────
     // Done FIRST, before any patient creation, using case-insensitive email match

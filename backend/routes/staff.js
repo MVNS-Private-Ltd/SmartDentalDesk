@@ -14,6 +14,14 @@ const requireAuth = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
+// Only clinic admins/owners may modify staff — receptionists can only read
+function adminOnly(req, res, next) {
+  if (req.userRole !== 'admin') {
+    return res.status(403).json({ error: 'Only clinic administrators can manage staff.' });
+  }
+  next();
+}
+
 function validate(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) { 
@@ -62,7 +70,7 @@ const createRules = [
   body('password').optional({ checkFalsy: true }).isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
 ];
 
-router.post('/', createRules, async (req, res, next) => {
+router.post('/', adminOnly, createRules, async (req, res, next) => {
   try {
     if (!validate(req, res)) return;
     const { name, role, email, phone, schedule, specialization, joining_date, password } = req.body;
@@ -129,7 +137,7 @@ router.post('/', createRules, async (req, res, next) => {
 });
 
 // ── PUT /api/staff/:id ────────────────────────────────────────────────────────
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', adminOnly, async (req, res, next) => {
   try {
     const { name, role, email, phone, schedule, specialization, joining_date, is_active, password } = req.body;
 
@@ -207,7 +215,7 @@ router.put('/:id', async (req, res, next) => {
 });
 
 // ── DELETE /api/staff/:id ─────────────────────────────────────────────────────
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', adminOnly, async (req, res, next) => {
   try {
     // 1. Fetch staff to check for auth_id
     const { data: staff, error: fetchErr } = await supabase

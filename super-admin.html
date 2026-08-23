@@ -1,0 +1,1698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Platform Command Center · SmartDentalDesk SaaS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  :root {
+    --bg-dark: #090d16;
+    --bg-card: rgba(17, 24, 39, 0.85);
+    --bg-card-hover: rgba(26, 36, 56, 0.95);
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-glow: rgba(99, 102, 241, 0.3);
+    --primary: #6366f1;
+    --primary-light: #818cf8;
+    --primary-glow: rgba(99, 102, 241, 0.25);
+    --accent-cyan: #06b6d4;
+    --accent-emerald: #10b981;
+    --accent-amber: #f59e0b;
+    --accent-rose: #f43f5e;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --text-dim: #6b7280;
+    --radius-lg: 16px;
+    --radius-md: 10px;
+    --radius-sm: 6px;
+    --shadow-main: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* Ambient background glow */
+  .bg-glow {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: 
+      radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
+      radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.08) 0%, transparent 45%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Top Navigation Bar */
+  header.command-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(9, 13, 22, 0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.85rem 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .brand-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    color: var(--text-main);
+    font-weight: 800;
+    font-size: 1.15rem;
+    letter-spacing: -0.02em;
+  }
+
+  .brand-logo svg {
+    width: 28px;
+    height: 28px;
+    color: var(--primary-light);
+  }
+
+  .badge-super-admin {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(6, 182, 212, 0.2));
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    color: #c7d2fe;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.25rem 0.6rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .badge-super-admin::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-cyan);
+    box-shadow: 0 0 8px var(--accent-cyan);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .system-status-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    color: #6ee7b7;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.35rem 0.8rem;
+    border-radius: 9999px;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent-emerald);
+    box-shadow: 0 0 8px var(--accent-emerald);
+    animation: pulseGlow 2s infinite ease-in-out;
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.7; }
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.55rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--primary), #4f46e5);
+    color: #fff;
+    box-shadow: 0 4px 14px var(--primary-glow);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, var(--primary-light), var(--primary));
+    transform: translateY(-1px);
+  }
+
+  .btn-outline {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--border-color);
+    color: var(--text-main);
+  }
+  .btn-outline:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-sm {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.78rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .btn-danger {
+    background: rgba(244, 63, 94, 0.15);
+    border-color: rgba(244, 63, 94, 0.3);
+    color: #fda4af;
+  }
+  .btn-danger:hover {
+    background: rgba(244, 63, 94, 0.25);
+    border-color: var(--accent-rose);
+  }
+
+  /* Main App Container */
+  .app-container {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex: 1;
+  }
+
+  /* Sidebar Navigation */
+  aside.command-sidebar {
+    width: 260px;
+    background: rgba(13, 18, 30, 0.9);
+    border-right: 1px solid var(--border-color);
+    padding: 1.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .nav-section-title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin: 1.25rem 0.5rem 0.5rem;
+  }
+
+  .nav-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .nav-item button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.7rem 0.85rem;
+    border-radius: var(--radius-md);
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+  }
+
+  .nav-item button svg {
+    width: 19px;
+    height: 19px;
+    color: var(--text-dim);
+    transition: color 0.2s;
+  }
+
+  .nav-item button:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .nav-item button:hover svg {
+    color: var(--primary-light);
+  }
+
+  .nav-item button.active {
+    color: #fff;
+    background: linear-gradient(90deg, rgba(99, 102, 241, 0.22), rgba(99, 102, 241, 0.05));
+    border-left: 3px solid var(--primary-light);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  }
+
+  .nav-item button.active svg {
+    color: var(--primary-light);
+  }
+
+  .sidebar-bottom {
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .admin-user-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .admin-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--accent-cyan));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #fff;
+    font-size: 0.85rem;
+  }
+
+  .admin-info {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .admin-name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .admin-role {
+    font-size: 0.7rem;
+    color: var(--accent-cyan);
+  }
+
+  /* Main Workspace Content */
+  main.command-main {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+    max-height: calc(100vh - 65px);
+  }
+
+  .view-container {
+    display: none;
+    animation: fadeIn 0.25s ease-out;
+  }
+  .view-container.active {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Section Title Bar */
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 1.75rem;
+  }
+
+  .section-title-group h1 {
+    font-size: 1.65rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .section-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+  }
+
+  /* KPI Cards Grid */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.35rem;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-glow);
+  }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--card-accent, var(--primary));
+  }
+
+  .kpi-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.85rem;
+  }
+
+  .kpi-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  .kpi-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--card-accent, var(--primary-light));
+  }
+
+  .kpi-value {
+    font-size: 1.85rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 0.4rem;
+  }
+
+  .kpi-subtext {
+    font-size: 0.74rem;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .kpi-subtext.positive { color: var(--accent-emerald); }
+
+  /* Charts & Analytics Layout */
+  .analytics-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  @media (max-width: 1100px) {
+    .analytics-grid { grid-template-columns: 1fr; }
+    aside.command-sidebar { width: 220px; }
+  }
+
+  .chart-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+  }
+
+  .chart-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .chart-wrapper {
+    position: relative;
+    flex: 1;
+    min-height: 260px;
+  }
+
+  /* Data Tables */
+  .table-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 2rem;
+  }
+
+  .table-toolbar {
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
+  }
+
+  .search-input-wrap {
+    position: relative;
+    flex: 1;
+    max-width: 380px;
+  }
+
+  .search-input-wrap svg {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    width: 16px;
+    height: 16px;
+  }
+
+  .search-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.55rem 0.85rem 0.55rem 2.35rem;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.85rem;
+    outline: none;
+    transition: all 0.2s ease;
+  }
+
+  .search-input:focus {
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+  }
+
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .select-custom {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.55rem 0.85rem;
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.82rem;
+    outline: none;
+    cursor: pointer;
+  }
+  .select-custom option {
+    background: #111827;
+    color: #fff;
+  }
+
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.85rem;
+  }
+
+  table.data-table th {
+    padding: 0.85rem 1.25rem;
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  table.data-table td {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    color: var(--text-main);
+    vertical-align: middle;
+  }
+
+  table.data-table tr:hover td {
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  /* Plan & Status Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .badge-free { background: rgba(156, 163, 175, 0.15); color: #d1d5db; border: 1px solid rgba(156, 163, 175, 0.25); }
+  .badge-starter { background: rgba(59, 130, 246, 0.15); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); }
+  .badge-premium { background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.3); }
+  .badge-enterprise { background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(239, 68, 68, 0.2)); color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.4); }
+
+  .badge-active { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+  .badge-suspended { background: rgba(244, 63, 94, 0.15); color: #fda4af; border: 1px solid rgba(244, 63, 94, 0.3); }
+
+  /* Modals */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+  .modal-overlay.active { display: flex; }
+
+  .modal-box {
+    background: #111827;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 680px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-main);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-header {
+    padding: 1.25rem 1.75rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .modal-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .modal-close {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: color 0.2s;
+  }
+  .modal-close:hover { color: #fff; }
+
+  .modal-body {
+    padding: 1.75rem;
+  }
+
+  .modal-footer {
+    padding: 1.25rem 1.75rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    background: rgba(255, 255, 255, 0.01);
+  }
+
+  /* Form Elements in Modals */
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+  .form-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .form-control {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.65rem 0.85rem;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.88rem;
+    outline: none;
+  }
+  .form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+  }
+
+  /* Impersonation Banner */
+  .impersonate-banner {
+    background: linear-gradient(90deg, #b91c1c, #991b1b);
+    color: #fee2e2;
+    padding: 0.5rem 1.5rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* Toast notification */
+  .toast-container {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .toast {
+    background: #1f2937;
+    border: 1px solid var(--border-color);
+    padding: 0.85rem 1.25rem;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
+    font-size: 0.85rem;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    animation: slideUp 0.25s ease-out;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Telemetry code snippet box */
+  .code-box {
+    background: #0d1117;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: #e6edf3;
+    overflow-x: auto;
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+
+<!-- Top Command Header -->
+<header class="command-header">
+  <div class="brand-group">
+    <a href="./super-admin.html" class="brand-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+      <span>SmartDentalDesk</span>
+    </a>
+    <span class="badge-super-admin">Platform Command Room</span>
+  </div>
+
+  <div class="header-actions">
+    <div class="system-status-pill">
+      <span class="status-dot"></span>
+      <span id="systemStatusText">All Systems Operational</span>
+    </div>
+    <a href="./dashboard.html" class="btn btn-outline btn-sm" title="Open Clinic Owner Dashboard">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      Clinic View
+    </a>
+    <button id="logoutBtn" class="btn btn-danger btn-sm">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      Sign Out
+    </button>
+  </div>
+</header>
+
+<div class="app-container">
+  <!-- Sidebar Navigation -->
+  <aside class="command-sidebar">
+    <nav>
+      <div class="nav-section-title">Fleet Controls</div>
+      <ul class="nav-list">
+        <li class="nav-item">
+          <button class="active" data-view="overview">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Executive Overview
+          </button>
+        </li>
+        <li class="nav-item">
+          <button data-view="clinics">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Clinics Fleet
+          </button>
+        </li>
+        <li class="nav-item">
+          <button data-view="staff">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Global Staff Hub
+          </button>
+        </li>
+      </ul>
+
+      <div class="nav-section-title">Telemetry & Engine</div>
+      <ul class="nav-list">
+        <li class="nav-item">
+          <button data-view="ai">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
+            AI Copilot Telemetry
+          </button>
+        </li>
+        <li class="nav-item">
+          <button data-view="health">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            System Health & Broadcast
+          </button>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="admin-user-card">
+        <div class="admin-avatar" id="adminInitials">SA</div>
+        <div class="admin-info">
+          <div class="admin-name" id="adminEmail">Owner Account</div>
+          <div class="admin-role">Super Admin</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Workspace -->
+  <main class="command-main">
+
+    <!-- ── 1. OVERVIEW VIEW ────────────────────────────────────────────────── -->
+    <div class="view-container active" id="view-overview">
+      <div class="section-header">
+        <div class="section-title-group">
+          <h1>Platform Executive Overview</h1>
+          <p class="section-subtitle">Real-time telemetry and consolidated metrics across all onboarded dental clinics.</p>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="loadOverviewData()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refresh Telemetry
+        </button>
+      </div>
+
+      <!-- KPI Cards Grid -->
+      <div class="kpi-grid">
+        <div class="kpi-card" style="--card-accent: #6366f1;">
+          <div class="kpi-header">
+            <span class="kpi-title">Total Clinics</span>
+            <div class="kpi-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpiTotalClinics">0</div>
+          <div class="kpi-subtext" id="kpiActiveClinics">Active SaaS tenants</div>
+        </div>
+
+        <div class="kpi-card" style="--card-accent: #06b6d4;">
+          <div class="kpi-header">
+            <span class="kpi-title">Total Patients</span>
+            <div class="kpi-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpiTotalPatients">0</div>
+          <div class="kpi-subtext">Across all clinics</div>
+        </div>
+
+        <div class="kpi-card" style="--card-accent: #10b981;">
+          <div class="kpi-header">
+            <span class="kpi-title">Platform Revenue (GMV)</span>
+            <div class="kpi-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpiTotalRevenue">₹0</div>
+          <div class="kpi-subtext positive" id="kpiThisMonthRevenue">₹0 processed this month</div>
+        </div>
+
+        <div class="kpi-card" style="--card-accent: #f59e0b;">
+          <div class="kpi-header">
+            <span class="kpi-title">Appointments Booked</span>
+            <div class="kpi-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpiTotalAppointments">0</div>
+          <div class="kpi-subtext" id="kpiTodayAppointments">0 scheduled today</div>
+        </div>
+
+        <div class="kpi-card" style="--card-accent: #ec4899;">
+          <div class="kpi-header">
+            <span class="kpi-title">AI Invocations</span>
+            <div class="kpi-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpiTotalAi">0</div>
+          <div class="kpi-subtext">Queries & automations</div>
+        </div>
+      </div>
+
+      <!-- Charts Grid -->
+      <div class="analytics-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">30-Day Platform Activity Trends</div>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="growthChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Subscription Tier Breakdown</div>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="planChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Platform Activity Stream -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="chart-title">Recent Platform Activity</div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" id="recentActivityTable">
+            <thead>
+              <tr>
+                <th>Event Type</th>
+                <th>Details</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody id="recentActivityBody">
+              <tr><td colspan="3" style="text-align: center; color: var(--text-dim);">Loading activity stream…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 2. CLINICS FLEET VIEW ────────────────────────────────────────────── -->
+    <div class="view-container" id="view-clinics">
+      <div class="section-header">
+        <div class="section-title-group">
+          <h1>Clinics Fleet Management</h1>
+          <p class="section-subtitle">Manage, upgrade, suspend, and directly inspect all dental clinic accounts.</p>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="search-input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="clinicSearchInput" class="search-input" placeholder="Search clinics by name, owner, email, or slug…">
+          </div>
+          <div class="filter-group">
+            <select id="clinicPlanFilter" class="select-custom">
+              <option value="all">All Plans</option>
+              <option value="free">Free</option>
+              <option value="starter">Starter</option>
+              <option value="premium">Premium</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Clinic Name & Slug</th>
+                <th>Owner Details</th>
+                <th>Plan Tier</th>
+                <th>Patients</th>
+                <th>Appts</th>
+                <th>Revenue</th>
+                <th>AI Calls</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="clinicsTableBody">
+              <tr><td colspan="8" style="text-align:center; color: var(--text-dim); padding: 2rem;">Loading clinics fleet…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 3. GLOBAL STAFF HUB ─────────────────────────────────────────────── -->
+    <div class="view-container" id="view-staff">
+      <div class="section-header">
+        <div class="section-title-group">
+          <h1>Global Staff & Receptionist Directory</h1>
+          <p class="section-subtitle">Centralized oversight of all dentists, receptionists, and managers across all clinics.</p>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="search-input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="staffSearchInput" class="search-input" placeholder="Search staff by name, email, clinic…">
+          </div>
+          <div class="filter-group">
+            <select id="staffRoleFilter" class="select-custom">
+              <option value="all">All Roles</option>
+              <option value="dentist">Dentist</option>
+              <option value="receptionist">Receptionist</option>
+              <option value="manager">Manager</option>
+              <option value="hygienist">Hygienist</option>
+              <option value="assistant">Assistant</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Staff Member</th>
+                <th>Role</th>
+                <th>Clinic Affiliation</th>
+                <th>Contact</th>
+                <th>Login Access</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="staffTableBody">
+              <tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 2rem;">Loading staff directory…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 4. AI TELEMETRY VIEW ────────────────────────────────────────────── -->
+    <div class="view-container" id="view-ai">
+      <div class="section-header">
+        <div class="section-title-group">
+          <h1>AI Copilot Intelligence Telemetry</h1>
+          <p class="section-subtitle">Monitor OpenRouter LLM model usage, token consumption, and clinic copilot interactions.</p>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card" style="--card-accent: #8b5cf6;">
+          <div class="kpi-header">
+            <span class="kpi-title">Total AI Requests</span>
+            <div class="kpi-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg></div>
+          </div>
+          <div class="kpi-value" id="aiTotalRequests">0</div>
+          <div class="kpi-subtext">Across platform history</div>
+        </div>
+
+        <div class="kpi-card" style="--card-accent: #06b6d4;">
+          <div class="kpi-header">
+            <span class="kpi-title">Top Active Model</span>
+            <div class="kpi-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/></svg></div>
+          </div>
+          <div class="kpi-value" style="font-size: 1.3rem;" id="aiTopModel">Gemma 31B</div>
+          <div class="kpi-subtext">High precision reasoning</div>
+        </div>
+
+        <div class="kpi-card" style="--card-accent: #10b981;">
+          <div class="kpi-header">
+            <span class="kpi-title">Automation Actions</span>
+            <div class="kpi-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+          </div>
+          <div class="kpi-value" id="aiAutomationCount">0</div>
+          <div class="kpi-subtext">JSON automation executions</div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="chart-title">Clinic AI Usage Leaderboard</div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Clinic Name</th>
+                <th>Subscription</th>
+                <th>Total Requests</th>
+                <th>Thinking Mode</th>
+                <th>Data Queries</th>
+                <th>Automations</th>
+              </tr>
+            </thead>
+            <tbody id="aiLeaderboardBody">
+              <tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 2rem;">Loading AI telemetry…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 5. SYSTEM HEALTH & BROADCAST VIEW ───────────────────────────────── -->
+    <div class="view-container" id="view-health">
+      <div class="section-header">
+        <div class="section-title-group">
+          <h1>System Health & Platform Hub</h1>
+          <p class="section-subtitle">Real-time Node process telemetry, Supabase database latency, and global announcements.</p>
+        </div>
+      </div>
+
+      <div class="analytics-grid">
+        <!-- System Health Diagnostics -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Server Runtime Diagnostics</div>
+          </div>
+          <div class="code-box" id="systemDiagnosticsBox">
+            Loading server diagnostics…
+          </div>
+        </div>
+
+        <!-- Broadcast Announcement Manager -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Platform Broadcast Banner</div>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Publish an urgent announcement or maintenance alert displayed at the top of all clinic dashboards.
+          </p>
+          <div class="form-group">
+            <label class="form-label">Broadcast Message</label>
+            <textarea id="broadcastMsgInput" class="form-control" rows="3" placeholder="e.g. Scheduled maintenance tonight at 2 AM UTC…"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Alert Severity</label>
+            <select id="broadcastTypeInput" class="select-custom" style="width: 100%;">
+              <option value="info">Info (Blue)</option>
+              <option value="warning">Warning (Amber)</option>
+              <option value="alert">Critical Alert (Red)</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 0.75rem;">
+            <button class="btn btn-primary" onclick="saveBroadcast(true)">Publish Banner</button>
+            <button class="btn btn-outline" onclick="saveBroadcast(false)">Clear Banner</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── MODAL: CLINIC DETAILS DOSSIER ──────────────────────────────────────── -->
+<div class="modal-overlay" id="clinicDetailsModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="dossierClinicName">Clinic Details</div>
+      <button class="modal-close" onclick="closeModal('clinicDetailsModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="dossierModalBody">
+      Loading clinic dossier…
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('clinicDetailsModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: CHANGE SUBSCRIPTION TIER ────────────────────────────────────── -->
+<div class="modal-overlay" id="changePlanModal">
+  <div class="modal-box" style="max-width: 460px;">
+    <div class="modal-header">
+      <div class="modal-title">Change Subscription Tier</div>
+      <button class="modal-close" onclick="closeModal('changePlanModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="targetPlanClinicId">
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+        Select the target tier for <strong id="targetPlanClinicName" style="color: #fff;"></strong>. This changes AI model limits and feature access immediately.
+      </p>
+      <div class="form-group">
+        <label class="form-label">Subscription Plan</label>
+        <select id="newPlanSelect" class="form-control">
+          <option value="free">Free Tier (Base limits)</option>
+          <option value="starter">Starter Plan (Gemma 31B Data/Thinking)</option>
+          <option value="premium">Premium Plan (High Speed AI & Full Automations)</option>
+          <option value="enterprise">Enterprise VIP (Unlimited)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('changePlanModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitPlanChange()">Save Plan</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="./assets/app.js"></script>
+<script>
+  let growthChartInstance = null;
+  let planChartInstance = null;
+  let cachedClinics = [];
+  let cachedStaff = [];
+
+  // Toast Helper
+  function showToast(msg, isError = false) {
+    const el = document.createElement('div');
+    el.className = 'toast';
+    if (isError) el.style.borderColor = 'var(--accent-rose)';
+    el.innerHTML = `<span>${isError ? '⚠️' : '✅'}</span><span>${msg}</span>`;
+    document.getElementById('toastContainer').appendChild(el);
+    setTimeout(() => { el.remove(); }, 3500);
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+  }
+
+  function openModal(id) {
+    document.getElementById(id).classList.add('active');
+  }
+
+  // Auth Guard: Ensure user is Super Admin
+  (async function verifySuperAdminAuth() {
+    if (!window.api.isAuthenticated()) {
+      window.location.href = './login.html';
+      return;
+    }
+
+    const userData = JSON.parse(localStorage.getItem('sdd_user') || '{}');
+    if (userData.email) {
+      document.getElementById('adminEmail').textContent = userData.email;
+      document.getElementById('adminInitials').textContent = (userData.email[0] || 'S').toUpperCase();
+    }
+
+    // Load initial data
+    loadOverviewData();
+  })();
+
+  // Sidebar navigation switching
+  document.querySelectorAll('.nav-item button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const targetView = btn.getAttribute('data-view');
+      document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+      const activeEl = document.getElementById(`view-${targetView}`);
+      if (activeEl) activeEl.classList.add('active');
+
+      if (targetView === 'overview') loadOverviewData();
+      if (targetView === 'clinics') loadClinicsData();
+      if (targetView === 'staff') loadStaffData();
+      if (targetView === 'ai') loadAiTelemetry();
+      if (targetView === 'health') loadSystemHealth();
+    });
+  });
+
+  // ── 1. LOAD OVERVIEW ────────────────────────────────────────────────────────
+  async function loadOverviewData() {
+    try {
+      const data = await window.api.getSuperAdminOverview();
+      const kpis = data.kpis;
+
+      document.getElementById('kpiTotalClinics').textContent = kpis.total_clinics || 0;
+      document.getElementById('kpiActiveClinics').textContent = `${kpis.total_clinics} active SaaS clinics`;
+      document.getElementById('kpiTotalPatients').textContent = (kpis.total_patients || 0).toLocaleString();
+      document.getElementById('kpiTotalRevenue').textContent = `₹${(kpis.total_revenue || 0).toLocaleString()}`;
+      document.getElementById('kpiThisMonthRevenue').textContent = `₹${(kpis.this_month_revenue || 0).toLocaleString()} this month`;
+      document.getElementById('kpiTotalAppointments').textContent = (kpis.total_appointments || 0).toLocaleString();
+      document.getElementById('kpiTodayAppointments').textContent = `${kpis.today_appointments || 0} scheduled today`;
+      document.getElementById('kpiTotalAi').textContent = (kpis.total_ai_interactions || 0).toLocaleString();
+
+      // Render Growth Chart
+      renderGrowthChart(data.growth_timeline);
+      renderPlanChart(kpis.plan_distribution);
+
+      // Render Activity Table
+      const actBody = document.getElementById('recentActivityBody');
+      if (data.recent_activity && data.recent_activity.length > 0) {
+        actBody.innerHTML = data.recent_activity.map(a => `
+          <tr>
+            <td><span class="badge badge-starter">${a.type.replace('_', ' ')}</span></td>
+            <td><strong>${a.title}</strong><br><span style="font-size: 0.75rem; color: var(--text-dim);">${a.subtitle}</span></td>
+            <td><span style="font-size: 0.78rem; color: var(--text-muted);">${new Date(a.timestamp).toLocaleString()}</span></td>
+          </tr>
+        `).join('');
+      } else {
+        actBody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: var(--text-dim);">No recent activity recorded.</td></tr>';
+      }
+
+      // Populate broadcast input if active
+      if (data.broadcast) {
+        document.getElementById('broadcastMsgInput').value = data.broadcast.message || '';
+        document.getElementById('broadcastTypeInput').value = data.broadcast.type || 'info';
+      }
+
+    } catch (err) {
+      showToast(err.message || 'Failed to load telemetry', true);
+    }
+  }
+
+  function renderGrowthChart(timeline) {
+    if (!timeline) return;
+    const ctx = document.getElementById('growthChart').getContext('2d');
+    if (growthChartInstance) growthChartInstance.destroy();
+
+    growthChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: timeline.labels,
+        datasets: [
+          {
+            label: 'Appointments',
+            data: timeline.appointments,
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            fill: true,
+            tension: 0.35,
+            borderWidth: 2
+          },
+          {
+            label: 'AI Invocations',
+            data: timeline.ai_calls,
+            borderColor: '#06b6d4',
+            backgroundColor: 'transparent',
+            tension: 0.35,
+            borderWidth: 2,
+            borderDash: [4, 4]
+          },
+          {
+            label: 'Clinic Signups',
+            data: timeline.signups,
+            borderColor: '#10b981',
+            backgroundColor: 'transparent',
+            tension: 0.35,
+            borderWidth: 2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#9ca3af', font: { family: 'Plus Jakarta Sans', size: 11 } } }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7280', font: { size: 10 } } },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7280', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+
+  function renderPlanChart(plans) {
+    if (!plans) return;
+    const ctx = document.getElementById('planChart').getContext('2d');
+    if (planChartInstance) planChartInstance.destroy();
+
+    planChartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Free', 'Starter', 'Premium', 'Enterprise'],
+        datasets: [{
+          data: [plans.free || 0, plans.starter || 0, plans.premium || 0, plans.enterprise || 0],
+          backgroundColor: ['#6b7280', '#3b82f6', '#8b5cf6', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#9ca3af', font: { family: 'Plus Jakarta Sans', size: 11 } } }
+        },
+        cutout: '70%'
+      }
+    });
+  }
+
+  // ── 2. LOAD CLINICS FLEET ──────────────────────────────────────────────────
+  async function loadClinicsData() {
+    const q = document.getElementById('clinicSearchInput').value.trim();
+    const plan = document.getElementById('clinicPlanFilter').value;
+
+    try {
+      const res = await window.api.getSuperAdminClinics({ q, plan });
+      cachedClinics = res.clinics || [];
+      renderClinicsTable(cachedClinics);
+    } catch (err) {
+      showToast(err.message || 'Failed to load clinics', true);
+    }
+  }
+
+  document.getElementById('clinicSearchInput').addEventListener('input', debounce(loadClinicsData, 300));
+  document.getElementById('clinicPlanFilter').addEventListener('change', loadClinicsData);
+
+  function renderClinicsTable(clinics) {
+    const tbody = document.getElementById('clinicsTableBody');
+    if (clinics.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: var(--text-dim); padding: 2rem;">No clinics found matching criteria.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = clinics.map(c => {
+      const plan = c.subscription_plan || 'free';
+      const isSuspended = c.settings?.is_suspended;
+      return `
+        <tr>
+          <td>
+            <strong>${c.name}</strong><br>
+            <span style="font-size: 0.75rem; color: var(--text-dim); font-family: monospace;">slug: /book.html?c=${c.booking_slug || c.id}</span>
+          </td>
+          <td>
+            ${c.owner_name}<br>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">${c.email}</span>
+          </td>
+          <td>
+            <span class="badge badge-${plan}">${plan.toUpperCase()}</span>
+            ${isSuspended ? '<span class="badge badge-suspended" style="margin-left: 4px;">SUSPENDED</span>' : ''}
+          </td>
+          <td>${c.patient_count || 0}</td>
+          <td>${c.appointment_count || 0}</td>
+          <td>₹${(c.revenue_total || 0).toLocaleString()}</td>
+          <td>${c.ai_interactions_count || 0}</td>
+          <td>
+            <div style="display: flex; gap: 0.4rem;">
+              <button class="btn btn-outline btn-sm" onclick="viewClinicDossier('${c.id}')" title="View Details">👁️</button>
+              <button class="btn btn-outline btn-sm" onclick="openChangePlanModal('${c.id}', '${c.name}', '${plan}')" title="Change Tier">⭐</button>
+              <button class="btn btn-primary btn-sm" onclick="impersonateClinic('${c.id}')" title="Impersonate & Open Dashboard">🚀</button>
+              <button class="btn ${isSuspended ? 'btn-outline' : 'btn-danger'} btn-sm" onclick="toggleClinicStatus('${c.id}', ${!isSuspended})" title="${isSuspended ? 'Activate' : 'Suspend'}">
+                ${isSuspended ? '🔓' : '🔒'}
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // Clinic Actions
+  async function viewClinicDossier(id) {
+    openModal('clinicDetailsModal');
+    const body = document.getElementById('dossierModalBody');
+    body.innerHTML = 'Loading dossier…';
+
+    try {
+      const data = await window.api.getSuperAdminClinic(id);
+      const c = data.clinic;
+      const stats = data.stats;
+
+      document.getElementById('dossierClinicName').textContent = c.name;
+      body.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+          <div style="background: rgba(255,255,255,0.03); padding: 0.85rem; border-radius: 8px;">
+            <div style="font-size: 0.75rem; color: var(--text-muted);">TOTAL PATIENTS</div>
+            <div style="font-size: 1.4rem; font-weight: 700;">${stats.patients_count}</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.03); padding: 0.85rem; border-radius: 8px;">
+            <div style="font-size: 0.75rem; color: var(--text-muted);">TOTAL APPOINTMENTS</div>
+            <div style="font-size: 1.4rem; font-weight: 700;">${stats.appointments_count}</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.03); padding: 0.85rem; border-radius: 8px;">
+            <div style="font-size: 0.75rem; color: var(--text-muted);">AI INTERACTIONS</div>
+            <div style="font-size: 1.4rem; font-weight: 700;">${stats.ai_interactions_count}</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1.25rem;">
+          <h4 style="font-size: 0.9rem; margin-bottom: 0.5rem; color: #fff;">Clinic Staff (${(data.staff || []).length})</h4>
+          <div style="font-size: 0.82rem; color: var(--text-muted);">
+            ${(data.staff || []).map(s => `• <strong>${s.name}</strong> (${s.role}) - ${s.email || 'No email'}`).join('<br>') || 'No staff members registered.'}
+          </div>
+        </div>
+
+        <div>
+          <h4 style="font-size: 0.9rem; margin-bottom: 0.5rem; color: #fff;">Recent Bookings</h4>
+          <div style="font-size: 0.82rem; color: var(--text-muted);">
+            ${(data.recent_appointments || []).map(a => `• ${a.date} ${a.time} - ${a.service} (${a.status})`).join('<br>') || 'No appointments yet.'}
+          </div>
+        </div>
+      `;
+    } catch (err) {
+      body.innerHTML = `<span style="color: var(--accent-rose);">${err.message || 'Failed to load clinic dossier'}</span>`;
+    }
+  }
+
+  function openChangePlanModal(id, name, currentPlan) {
+    document.getElementById('targetPlanClinicId').value = id;
+    document.getElementById('targetPlanClinicName').textContent = name;
+    document.getElementById('newPlanSelect').value = currentPlan;
+    openModal('changePlanModal');
+  }
+
+  async function submitPlanChange() {
+    const id = document.getElementById('targetPlanClinicId').value;
+    const plan = document.getElementById('newPlanSelect').value;
+
+    try {
+      const res = await window.api.updateClinicPlan(id, plan);
+      showToast(res.message);
+      closeModal('changePlanModal');
+      loadClinicsData();
+    } catch (err) {
+      showToast(err.message || 'Plan update failed', true);
+    }
+  }
+
+  async function toggleClinicStatus(id, isActive) {
+    if (!confirm(`Are you sure you want to ${isActive ? 'ACTIVATE' : 'SUSPEND'} this clinic?`)) return;
+    try {
+      const res = await window.api.updateClinicStatus(id, isActive);
+      showToast(res.message);
+      loadClinicsData();
+    } catch (err) {
+      showToast(err.message || 'Status update failed', true);
+    }
+  }
+
+  async function impersonateClinic(id) {
+    try {
+      const res = await window.api.impersonateClinic(id);
+      localStorage.setItem('sdd_clinic', JSON.stringify(res.clinic));
+      localStorage.setItem('sdd_impersonation', 'true');
+      showToast(`Switched session to ${res.clinic.name}. Opening dashboard…`);
+      setTimeout(() => {
+        window.open('./dashboard.html', '_blank');
+      }, 500);
+    } catch (err) {
+      showToast(err.message || 'Impersonation failed', true);
+    }
+  }
+
+  // ── 3. LOAD GLOBAL STAFF ───────────────────────────────────────────────────
+  async function loadStaffData() {
+    const q = document.getElementById('staffSearchInput').value.trim();
+    const role = document.getElementById('staffRoleFilter').value;
+
+    try {
+      const res = await window.api.getGlobalStaff({ q, role });
+      cachedStaff = res.staff || [];
+      renderStaffTable(cachedStaff);
+    } catch (err) {
+      showToast(err.message || 'Failed to load staff directory', true);
+    }
+  }
+
+  document.getElementById('staffSearchInput').addEventListener('input', debounce(loadStaffData, 300));
+  document.getElementById('staffRoleFilter').addEventListener('change', loadStaffData);
+
+  function renderStaffTable(staffList) {
+    const tbody = document.getElementById('staffTableBody');
+    if (staffList.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 2rem;">No staff found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = staffList.map(s => `
+      <tr>
+        <td><strong>${s.name}</strong></td>
+        <td><span class="badge badge-starter">${(s.role || 'Staff').toUpperCase()}</span></td>
+        <td>${s.clinics?.name || 'Clinic'}</td>
+        <td>${s.email || '-'}<br><span style="font-size: 0.75rem; color: var(--text-dim);">${s.phone || ''}</span></td>
+        <td>${s.auth_id ? '<span class="badge badge-active">Login Enabled</span>' : '<span style="color: var(--text-dim); font-size: 0.78rem;">Profile Only</span>'}</td>
+        <td>${s.is_active ? '<span class="badge badge-active">ACTIVE</span>' : '<span class="badge badge-suspended">INACTIVE</span>'}</td>
+        <td>
+          <button class="btn ${s.is_active ? 'btn-danger' : 'btn-primary'} btn-sm" onclick="toggleStaffActive('${s.id}', ${!s.is_active})">
+            ${s.is_active ? 'Deactivate' : 'Activate'}
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function toggleStaffActive(id, isActive) {
+    try {
+      const res = await window.api.toggleStaffActive(id, isActive);
+      showToast(res.message);
+      loadStaffData();
+    } catch (err) {
+      showToast(err.message || 'Action failed', true);
+    }
+  }
+
+  // ── 4. LOAD AI TELEMETRY ───────────────────────────────────────────────────
+  async function loadAiTelemetry() {
+    try {
+      const data = await window.api.getSuperAdminAIAnalytics();
+      document.getElementById('aiTotalRequests').textContent = (data.total_ai_requests || 0).toLocaleString();
+      document.getElementById('aiAutomationCount').textContent = (data.mode_breakdown?.automation || 0).toLocaleString();
+
+      const topModel = Object.entries(data.model_breakdown || {}).sort((a, b) => b[1] - a[1])[0];
+      if (topModel) {
+        document.getElementById('aiTopModel').textContent = topModel[0].replace('google/', '').replace(':free', '');
+      }
+
+      const tbody = document.getElementById('aiLeaderboardBody');
+      if (data.leaderboard && data.leaderboard.length > 0) {
+        tbody.innerHTML = data.leaderboard.map((item, idx) => `
+          <tr>
+            <td><strong>#${idx + 1}</strong></td>
+            <td><strong>${item.clinic_name}</strong></td>
+            <td><span class="badge badge-${item.plan}">${item.plan.toUpperCase()}</span></td>
+            <td><strong>${item.total_requests}</strong></td>
+            <td>${item.modes.thinking || 0}</td>
+            <td>${item.modes.data || 0}</td>
+            <td>${item.modes.automation || 0}</td>
+          </tr>
+        `).join('');
+      } else {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 2rem;">No AI requests logged yet.</td></tr>';
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to load AI analytics', true);
+    }
+  }
+
+  // ── 5. LOAD SYSTEM HEALTH & BROADCAST ──────────────────────────────────────
+  async function loadSystemHealth() {
+    try {
+      const res = await window.api.getSystemHealth();
+      const box = document.getElementById('systemDiagnosticsBox');
+      box.textContent = JSON.stringify(res, null, 2);
+    } catch (err) {
+      document.getElementById('systemDiagnosticsBox').textContent = 'Error connecting to system health probe: ' + err.message;
+    }
+  }
+
+  async function saveBroadcast(isActive) {
+    const message = document.getElementById('broadcastMsgInput').value.trim();
+    const type = document.getElementById('broadcastTypeInput').value;
+
+    if (isActive && !message) {
+      showToast('Please enter an announcement message to publish.', true);
+      return;
+    }
+
+    try {
+      const res = await window.api.publishBroadcast({ message, type, is_active: isActive });
+      showToast(res.message);
+    } catch (err) {
+      showToast(err.message || 'Failed to update broadcast', true);
+    }
+  }
+
+  // Sign out
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    window.api.logout();
+  });
+
+  // Utility Debounce
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+</script>
+</body>
+</html>

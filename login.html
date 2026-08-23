@@ -625,7 +625,14 @@
     try {
       const handled = await window.api.handleOAuthCallback();
       if (handled) {
-        window.location.href = './dashboard.html';
+        const storedRole = localStorage.getItem('sdd_role');
+        if (storedRole === 'super_admin') {
+          window.location.href = './super-admin.html';
+        } else if (storedRole === 'receptionist') {
+          window.location.href = './receptionist-dashboard.html';
+        } else {
+          window.location.href = './dashboard.html';
+        }
       } else {
         document.body.removeChild(overlay);
       }
@@ -687,7 +694,9 @@
       }
 
       // Redirect to correct dashboard based on role
-      if (res.role === 'receptionist') {
+      if (res.role === 'super_admin') {
+        window.location.href = './super-admin.html';
+      } else if (res.role === 'receptionist') {
         window.location.href = './receptionist-dashboard.html';
       } else {
         window.location.href = './dashboard.html';

@@ -23,6 +23,7 @@ const clinicRoutes      = require('./routes/clinics');
 const publicRoutes      = require('./routes/public');
 const aiRoutes          = require('./routes/ai');
 const emailRoutes       = require('./routes/email');
+const superAdminRoutes  = require('./routes/superAdmin');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -81,6 +82,7 @@ app.use('/api/clinics',      clinicRoutes);
 app.use('/api/public',       publicRoutes);
 app.use('/api/ai',           aiRoutes);
 app.use('/api/email',        emailRoutes);
+app.use('/api/super-admin',  superAdminRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {

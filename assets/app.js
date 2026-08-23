@@ -125,6 +125,7 @@ window.api = (function() {
     localStorage.setItem('sdd_token',         data.access_token);
     localStorage.setItem('sdd_refresh_token', data.refresh_token);
     localStorage.setItem('sdd_user',   JSON.stringify(data.user));
+    localStorage.setItem('sdd_role',   data.role || 'admin');
     if (data.clinic) localStorage.setItem('sdd_clinic', JSON.stringify(data.clinic));
 
     return true; // caller should redirect to dashboard
@@ -258,12 +259,43 @@ window.api = (function() {
     updateStaff: (id, data) => request(`/staff/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     deleteStaff: (id) => request(`/staff/${id}`, { method: 'DELETE' }),
 
+    // ── Super Admin / Platform Owner Methods ──────────────────────────────
+    getSuperAdminOverview: () => request('/super-admin/overview'),
+    getSuperAdminClinics: (params = {}) => {
+      const qs = new URLSearchParams();
+      if (params.q) qs.set('q', params.q);
+      if (params.plan && params.plan !== 'all') qs.set('plan', params.plan);
+      if (params.page) qs.set('page', params.page);
+      if (params.limit) qs.set('limit', params.limit);
+      const str = qs.toString();
+      return request(`/super-admin/clinics${str ? '?' + str : ''}`);
+    },
+    getSuperAdminClinic: (id) => request(`/super-admin/clinics/${id}`),
+    updateClinicPlan: (id, plan) => request(`/super-admin/clinics/${id}/plan`, { method: 'PATCH', body: JSON.stringify({ plan }) }),
+    updateClinicStatus: (id, is_active) => request(`/super-admin/clinics/${id}/status`, { method: 'PATCH', body: JSON.stringify({ is_active }) }),
+    impersonateClinic: (id) => request(`/super-admin/clinics/${id}/impersonate`, { method: 'POST' }),
+    deleteClinic: (id) => request(`/super-admin/clinics/${id}`, { method: 'DELETE' }),
+    getGlobalStaff: (params = {}) => {
+      const qs = new URLSearchParams();
+      if (params.q) qs.set('q', params.q);
+      if (params.role && params.role !== 'all') qs.set('role', params.role);
+      if (params.clinic_id) qs.set('clinic_id', params.clinic_id);
+      const str = qs.toString();
+      return request(`/super-admin/staff${str ? '?' + str : ''}`);
+    },
+    toggleStaffActive: (id, is_active) => request(`/super-admin/staff/${id}/toggle-active`, { method: 'PATCH', body: JSON.stringify({ is_active }) }),
+    getSuperAdminAIAnalytics: () => request('/super-admin/ai-analytics'),
+    getSystemHealth: () => request('/super-admin/system-health'),
+    getBroadcast: () => request('/super-admin/broadcast'),
+    publishBroadcast: (payload) => request('/super-admin/broadcast', { method: 'POST', body: JSON.stringify(payload) }),
+
     logout: () => {
       localStorage.removeItem('sdd_token');
       localStorage.removeItem('sdd_refresh_token');
       localStorage.removeItem('sdd_user');
       localStorage.removeItem('sdd_role');
       localStorage.removeItem('sdd_clinic');
+      localStorage.removeItem('sdd_impersonation');
       window.location.href = './login.html';
     },
     isAuthenticated: () => !!getToken()

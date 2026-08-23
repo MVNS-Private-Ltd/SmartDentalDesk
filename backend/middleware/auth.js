@@ -3,6 +3,7 @@
 //  Attaches req.user (Supabase auth user) and req.clinicId to the request
 // ─────────────────────────────────────────────────────────────────────────────
 const supabase = require('../lib/supabase');
+const { isSuperAdminUser } = require('./superAdmin');
 
 module.exports = async function requireAuth(req, res, next) {
   try {
@@ -29,28 +30,39 @@ module.exports = async function requireAuth(req, res, next) {
 
     let userRole = 'admin';
 
-    // If not found in clinics, check if user is a staff member
+    const isSuperAdmin = isSuperAdminUser(user);
+
+    // If not found in clinics, check if user is a staff member or super admin
     if (!clinic) {
-      const { data: staff, error: staffErr } = await supabase
-        .from('staff')
-        .select('*, clinics(id, name, owner_name, subscription_plan)')
-        .eq('auth_id', user.id)
-        .eq('is_active', true)
-        .maybeSingle();
-      
-      if (staffErr || !staff || !staff.clinics) {
-        return res.status(403).json({ error: 'No active clinic or staff profile associated with this account.' });
+      if (isSuperAdmin) {
+        // Super admin might not have a personal clinic record, or manages all
+        userRole = 'super_admin';
+        clinic = { id: null, name: 'SaaS Platform Control', owner_name: 'Platform Owner' };
+      } else {
+        const { data: staff, error: staffErr } = await supabase
+          .from('staff')
+          .select('*, clinics(id, name, owner_name, subscription_plan)')
+          .eq('auth_id', user.id)
+          .eq('is_active', true)
+          .maybeSingle();
+        
+        if (staffErr || !staff || !staff.clinics) {
+          return res.status(403).json({ error: 'No active clinic or staff profile associated with this account.' });
+        }
+        clinic = staff.clinics;
+        userRole = staff.role; // e.g., 'receptionist'
       }
-      clinic = staff.clinics;
-      userRole = staff.role; // e.g., 'receptionist'
+    } else if (isSuperAdmin) {
+      userRole = 'super_admin';
     }
 
     // Attach to request for use in route handlers
-    req.user     = user;
-    req.userRole = userRole;
-    req.clinicId = clinic.id;
-    req.clinic   = clinic;
-    req.staff    = (userRole !== 'admin' && staff) ? staff : null;
+    req.user         = user;
+    req.userRole     = userRole;
+    req.isSuperAdmin = isSuperAdmin;
+    req.clinicId     = clinic?.id || null;
+    req.clinic       = clinic;
+    req.staff        = (userRole !== 'admin' && userRole !== 'super_admin' && typeof staff !== 'undefined') ? staff : null;
 
     next();
   } catch (err) {

@@ -9,6 +9,7 @@ const express   = require('express');
 const { body, validationResult } = require('express-validator');
 const supabase  = require('../lib/supabase');
 const requireAuth = require('../middleware/auth');
+const { isSuperAdminUser } = require('../middleware/superAdmin');
 
 const router = express.Router();
 
@@ -126,17 +127,22 @@ router.post('/login', loginRules, async (req, res, next) => {
       throw error;
     }
 
-    // Fetch clinic info (Admin/Owner)
     let userRole = 'admin';
+    const isSuperAdmin = isSuperAdminUser(data.user);
+    if (isSuperAdmin) {
+      userRole = 'super_admin';
+    }
+
+    // Fetch clinic info (Admin/Owner)
     let { data: clinic } = await supabase
       .from('clinics')
       .select('id, name, owner_name, subscription_plan')
       .eq('owner_id', data.user.id)
       .maybeSingle();
 
-    // If not admin, check if they are staff
+    // If not clinic owner and not super admin, check if they are staff
     let staff = null;
-    if (!clinic) {
+    if (!clinic && !isSuperAdmin) {
       const { data: staffData } = await supabase
         .from('staff')
         .select('*, clinics(id, name, owner_name, subscription_plan)')
@@ -157,10 +163,11 @@ router.post('/login', loginRules, async (req, res, next) => {
       access_token : data.session.access_token,
       refresh_token: data.session.refresh_token,
       role         : userRole,
+      is_super_admin: isSuperAdmin,
       user: {
         id   : data.user.id,
         email: data.user.email,
-        name : userRole === 'admin' ? (clinic?.owner_name || data.user.email) : (staff?.name || data.user.email)
+        name : isSuperAdmin ? (clinic?.owner_name || 'Platform Super Admin') : (userRole === 'admin' ? (clinic?.owner_name || data.user.email) : (staff?.name || data.user.email))
       },
       clinic: clinic || null
     });
@@ -227,16 +234,20 @@ router.post('/oauth-session', async (req, res, next) => {
       clinic = newClinic;
     }
 
+    const isSuperAdmin = isSuperAdminUser(user);
+    const role = isSuperAdmin ? 'super_admin' : 'admin';
+
     // 4. Return session payload
     res.json({
       message      : 'Signed in with Google!',
       access_token,
       refresh_token: refresh_token || null,
-      role         : 'admin',
+      role,
+      is_super_admin: isSuperAdmin,
       user: {
         id   : user.id,
         email: user.email,
-        name : clinic.owner_name || user.email
+        name : isSuperAdmin ? (clinic?.owner_name || 'Platform Super Admin') : (clinic?.owner_name || user.email)
       },
       clinic
     });

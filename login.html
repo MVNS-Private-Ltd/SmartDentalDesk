@@ -684,13 +684,21 @@
       // Call real API
       const res = await window.api.login(email, pass);
       
-      // Store token and user data
-      localStorage.setItem('sdd_token',         res.access_token);
-      localStorage.setItem('sdd_refresh_token', res.refresh_token);
-      localStorage.setItem('sdd_user', JSON.stringify(res.user));
-      localStorage.setItem('sdd_role', res.role || 'admin');
+      // "Remember me" — persist to localStorage if checked, sessionStorage if not.
+      // localStorage survives browser restarts; sessionStorage is cleared when tab closes.
+      const remember = document.getElementById('rememberMe').checked;
+      const store = remember ? localStorage : sessionStorage;
+
+      // Clear the opposite storage so there are never two conflicting sessions.
+      const otherStore = remember ? sessionStorage : localStorage;
+      ['sdd_token','sdd_refresh_token','sdd_user','sdd_role','sdd_clinic'].forEach(k => otherStore.removeItem(k));
+
+      store.setItem('sdd_token',         res.access_token);
+      store.setItem('sdd_refresh_token', res.refresh_token);
+      store.setItem('sdd_user',  JSON.stringify(res.user));
+      store.setItem('sdd_role',  res.role || 'admin');
       if (res.clinic) {
-        localStorage.setItem('sdd_clinic', JSON.stringify(res.clinic));
+        store.setItem('sdd_clinic', JSON.stringify(res.clinic));
       }
 
       // Redirect to correct dashboard based on role

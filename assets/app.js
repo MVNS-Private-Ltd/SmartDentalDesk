@@ -8,8 +8,9 @@ window.api = (function() {
 
   let activeChatController = null;
 
-  function getToken()        { return localStorage.getItem('sdd_token'); }
-  function getRefreshToken() { return localStorage.getItem('sdd_refresh_token'); }
+  // Check localStorage first (Remember Me), fall back to sessionStorage (session-only)
+  function getToken()        { return localStorage.getItem('sdd_token')         || sessionStorage.getItem('sdd_token'); }
+  function getRefreshToken() { return localStorage.getItem('sdd_refresh_token') || sessionStorage.getItem('sdd_refresh_token'); }
 
   // Silently refresh the Supabase access token using the stored refresh_token
   async function refreshAccessToken() {
@@ -323,12 +324,11 @@ window.api = (function() {
     publishBroadcast: (payload) => request('/super-admin/broadcast', { method: 'POST', body: JSON.stringify(payload) }),
 
     logout: () => {
-      localStorage.removeItem('sdd_token');
-      localStorage.removeItem('sdd_refresh_token');
-      localStorage.removeItem('sdd_user');
-      localStorage.removeItem('sdd_role');
-      localStorage.removeItem('sdd_clinic');
-      localStorage.removeItem('sdd_impersonation');
+      // Clear both storages so session-only and remember-me tokens are both removed
+      ['sdd_token','sdd_refresh_token','sdd_user','sdd_role','sdd_clinic','sdd_impersonation'].forEach(k => {
+        localStorage.removeItem(k);
+        sessionStorage.removeItem(k);
+      });
       window.location.href = './login.html';
     },
     isAuthenticated: () => !!getToken()

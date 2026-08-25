@@ -43,6 +43,8 @@ router.post('/register', registerRules, async (req, res, next) => {
 
     const { name, email, password, clinic_name, phone } = req.body;
 
+    let userId;
+
     // 1. Create Supabase auth user
     const { data: authData, error: signUpError } = await supabase.auth.admin.createUser({
       email,
@@ -52,12 +54,37 @@ router.post('/register', registerRules, async (req, res, next) => {
 
     if (signUpError) {
       if (signUpError.message.includes('already registered')) {
-        return res.status(409).json({ error: 'An account with this email already exists.' });
+        // Attempt to self-heal orphaned accounts
+        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (signInErr) {
+           return res.status(409).json({ error: 'An account with this email already exists. Please sign in.' });
+        }
+        
+        userId = signInData.user.id;
+        
+        // Check if they already have a clinic
+        const { data: existingClinic } = await supabase.from('clinics').select('id').eq('owner_id', userId).maybeSingle();
+        if (existingClinic) {
+           return res.status(409).json({ error: 'A clinic for this account already exists. Please sign in.' });
+        }
+        // Check if they are active staff
+        const { data: existingStaff } = await supabase.from('staff').select('id').eq('auth_id', userId).eq('is_active', true).maybeSingle();
+        if (existingStaff) {
+           return res.status(409).json({ error: 'You are registered as staff. Please sign in.' });
+        }
+        
+        // If they reach here, they have no clinic and no staff profile. 
+        // We will proceed to create a clinic for this orphaned user.
+      } else {
+        throw signUpError;
       }
-      throw signUpError;
+    } else {
+      userId = authData.user.id;
     }
-
-    const userId = authData.user.id;
 
     // 2. Create clinic record linked to the auth user
     const crypto = require('crypto');
@@ -78,18 +105,20 @@ router.post('/register', registerRules, async (req, res, next) => {
       .single();
 
     if (clinicError) {
-      // Rollback: delete the auth user we just created
-      await supabase.auth.admin.deleteUser(userId);
+      // Rollback: delete the auth user we just created (only if we created it just now)
+      if (!signUpError) {
+        await supabase.auth.admin.deleteUser(userId);
+      }
       throw clinicError;
     }
 
-    // 3. Sign in to get the session token
-    const { data: session, error: signInError } = await supabase.auth.signInWithPassword({
+    // 3. Sign in to get the session token (or just use the one we might have obtained)
+    const { data: session, error: signInError2 } = await supabase.auth.signInWithPassword({
       email,
       password
     });
 
-    if (signInError) throw signInError;
+    if (signInError2) throw signInError2;
 
     res.status(201).json({
       message      : 'Account created successfully!',

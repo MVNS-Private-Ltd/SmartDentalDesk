@@ -430,11 +430,11 @@
               Hygiene, Safety &amp; Amenities
             </h2>
             <div class="amenities-wrap" id="amenitiesList">
-              <span class="amenity-pill">✨ Class-B Autoclave Sterilization</span>
-              <span class="amenity-pill">📸 Digital OPG &amp; Intraoral 3D Camera</span>
-              <span class="amenity-pill">💉 Painless Wand Anesthesia</span>
-              <span class="amenity-pill">🚗 Valet Parking Available</span>
-              <span class="amenity-pill">💳 All Cards &amp; UPI Accepted</span>
+              <span class="amenity-pill">Class-B Autoclave Sterilization</span>
+              <span class="amenity-pill">Digital OPG &amp; Intraoral 3D Camera</span>
+              <span class="amenity-pill">Painless Wand Anesthesia</span>
+              <span class="amenity-pill">Valet Parking Available</span>
+              <span class="amenity-pill">All Cards &amp; UPI Accepted</span>
             </div>
           </div>
 
@@ -448,7 +448,7 @@
                 <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Online Consultation / Visit</span>
                 <div style="font-size:1.4rem; font-weight:700; color:#0f172a;" id="cardPriceFrom">From ₹500</div>
               </div>
-              <span class="instant-confirm-badge">⚡ Instant Slot</span>
+              <span class="instant-confirm-badge">Instant Slot</span>
             </div>
 
             <div style="margin-bottom:1rem;">
@@ -460,11 +460,11 @@
 
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem; font-size:0.82rem; color:#475569; margin-bottom:1.25rem;">
               <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;">
-                <span>📅 Next Available Slot:</span>
+                <span>Next Available Slot:</span>
                 <strong style="color:#16a34a;">Today</strong>
               </div>
               <div style="display:flex; justify-content:space-between;">
-                <span>⏱️ Confirmation:</span>
+                <span>Confirmation:</span>
                 <strong>Instant via Email/SMS</strong>
               </div>
             </div>
@@ -581,7 +581,7 @@
 
         // Amenities
         if (Array.isArray(clinic.amenities) && clinic.amenities.length > 0) {
-          document.getElementById('amenitiesList').innerHTML = clinic.amenities.map(a => `<span class="amenity-pill">✓ ${a}</span>`).join('');
+          document.getElementById('amenitiesList').innerHTML = clinic.amenities.map(a => `<span class="amenity-pill">${a}</span>`).join('');
         }
 
         // Show Content

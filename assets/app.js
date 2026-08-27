@@ -141,9 +141,20 @@ window.api = (function() {
     loginWithGoogle,
     handleOAuthCallback,
     getDashboardStats: () => request('/dashboard/stats'),
-    stopChatStream: () => { if (activeChatController) { activeChatController.abort(); activeChatController = null; } },
+    // Marketplace & Clinic Directory Endpoints
+    getPublicClinics: (params = {}) => {
+      const qs = new URLSearchParams();
+      Object.keys(params).forEach(k => {
+        if (params[k] !== undefined && params[k] !== null && params[k] !== '' && params[k] !== 'all') {
+          qs.set(k, params[k]);
+        }
+      });
+      const str = qs.toString();
+      return request(`/public/clinics${str ? '?' + str : ''}`);
+    },
+    getPublicClinic: (slugOrId) => request(`/public/clinics/${encodeURIComponent(slugOrId)}`),
+    getMarketplaceMeta: () => request('/public/marketplace/meta'),
 
-    // Endpoints
     getPatients: (type = 'all') => request(`/patients?type=${type}`),
     togglePatientStar: (id, is_starred) => request(`/patients/${id}/star`, { method: 'PATCH', body: JSON.stringify({ is_starred }) }),
     deletePatient: (id) => request(`/patients/${id}`, { method: 'DELETE' }),

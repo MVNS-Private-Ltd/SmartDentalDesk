@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clinic Details &amp; Treatments | Smart Dental Desk</title>
+  <meta name="description" content="View clinic profile, transparent treatment pricing, doctor team, sterilisation standards, and book instant appointment online.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=General+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/style.css">
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+
+  <style>
+    :root {
+      --font-body: 'General Sans', 'Inter', -apple-system, sans-serif;
+      --font-display: 'Fraunces', Georgia, serif;
+    }
+
+    body {
+      background-color: #f8fafc;
+      color: #0f172a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .detail-container {
+      max-width: var(--content-wide);
+      margin: 1.5rem auto 3rem;
+      padding: 0 var(--space-6);
+      width: 100%;
+    }
+
+    /* Back breadcrumb */
+    .breadcrumb-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-bottom: 1.25rem;
+    }
+    .breadcrumb-nav a {
+      color: #2563eb;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .breadcrumb-nav a:hover { text-decoration: underline; }
+
+    /* Hero Header */
+    .clinic-showcase-header {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 1.75rem 2rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    }
+    .showcase-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .showcase-title {
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.2;
+      margin-bottom: 0.4rem;
+    }
+    .showcase-doctor {
+      font-size: 1.05rem;
+      color: #334155;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .showcase-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      font-size: 0.9rem;
+      color: #64748b;
+    }
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .rating-badge-large {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #15803d;
+      padding: 0.4rem 0.8rem;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    /* Photo Gallery */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      grid-template-rows: 190px 190px;
+      gap: 0.75rem;
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 768px) {
+      .gallery-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: 240px 140px;
+      }
+    }
+    .gallery-item {
+      position: relative;
+      overflow: hidden;
+      background: #e2e8f0;
+      cursor: pointer;
+    }
+    .gallery-item-main {
+      grid-row: span 2;
+    }
+    .gallery-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+    .gallery-item:hover .gallery-img {
+      transform: scale(1.03);
+    }
+
+    /* 2-Column Main Section */
+    .detail-two-col {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 2rem;
+      align-items: flex-start;
+    }
+    @media (max-width: 960px) {
+      .detail-two-col {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Content Cards */
+    .content-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    }
+    .card-heading {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Treatments Table */
+    .treatment-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+      border-bottom: 1px solid #f1f5f9;
+      gap: 1rem;
+    }
+    .treatment-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .treatment-info h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #0f172a;
+      margin-bottom: 0.2rem;
+    }
+    .treatment-info span {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+    .treatment-price-action {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .treatment-price {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0f172a;
+      white-space: nowrap;
+    }
+    .btn-book-service {
+      background: #eff6ff;
+      color: #2563eb;
+      border: 1px solid #bfdbfe;
+      padding: 0.4rem 0.85rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-book-service:hover {
+      background: #2563eb;
+      color: white;
+    }
+
+    /* Sticky Booking Widget */
+    .sticky-booking-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 1.75rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+      position: sticky;
+      top: 90px;
+    }
+    .booking-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .instant-confirm-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #16a34a;
+      background: #f0fdf4;
+      padding: 0.3rem 0.6rem;
+      border-radius: 9999px;
+      border: 1px solid #bbf7d0;
+    }
+    .btn-proceed-booking {
+      background: #2563eb;
+      color: white;
+      width: 100%;
+      padding: 0.9rem;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.1s;
+      margin-top: 1.25rem;
+    }
+    .btn-proceed-booking:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    /* Amenities Pills */
+    .amenities-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+    .amenity-pill {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.45rem 0.8rem;
+      font-size: 0.85rem;
+      color: #334155;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="container nav">
+      <a href="./index.html" class="brand" aria-label="Smart Dental Clinic home">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="#2563eb"/>
+          <path d="M16 8c-2.8 0-5 1.9-5 4.6 0 1.7.6 2.7 1.2 3.9.7 1.4 1.4 3 1.6 6.1.1 1.4 1 2.4 2.2 2.4s2.1-1 2.2-2.4c.2-3.1.9-4.7 1.6-6.1.6-1.2 1.2-2.2 1.2-3.9C21 9.9 18.8 8 16 8Z" fill="#fff"/>
+          <circle cx="16" cy="13" r="1.6" fill="#2563eb"/>
+        </svg>
+        <span class="brand-name">Smart Dental Desk</span>
+      </a>
+      <nav class="nav-links" id="navLinks" aria-label="Primary">
+        <a href="./index.html">Home</a>
+        <a href="./clinics.html" style="font-weight: 700; color: #2563eb;">Find Clinics</a>
+        <a href="./index.html#how-it-works">For Dentists</a>
+        <div class="mobile-actions gap-3 mt-6">
+          <a href="./login.html" class="btn btn-secondary btn-sm">Clinic Login</a>
+          <a href="./register.html" class="btn btn-primary btn-sm">List Your Clinic</a>
+        </div>
+      </nav>
+      <div class="nav-actions">
+        <a href="./login.html" class="btn btn-secondary btn-sm">Clinic Login</a>
+        <a href="./register.html" class="btn btn-primary btn-sm">List Your Clinic</a>
+      </div>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="detail-container" id="detailContainer">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb-nav">
+      <a href="./index.html">Home</a>
+      <span>&rsaquo;</span>
+      <a href="./clinics.html">Clinics Directory</a>
+      <span>&rsaquo;</span>
+      <span id="bcClinicName" style="color:#0f172a; font-weight:600;">Clinic Profile</span>
+    </div>
+
+    <div id="loadingPlaceholder" style="text-align:center; padding: 5rem 0;">
+      <p style="color:#64748b; font-size:1.1rem;">Loading clinic details...</p>
+    </div>
+
+    <div id="mainClinicContent" style="display:none;">
+      <!-- Hero Header Card -->
+      <section class="clinic-showcase-header">
+        <div class="showcase-top">
+          <div>
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
+              <span class="instant-confirm-badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Verified Dental Center
+              </span>
+              <span id="planBadge" style="font-size:0.75rem; font-weight:700; background:#f1f5f9; padding:0.25rem 0.55rem; border-radius:6px; color:#475569;">14+ Years Experience</span>
+            </div>
+            <h1 class="showcase-title" id="cName">Clinic Name</h1>
+            <div class="showcase-doctor" id="cDoctor">Dr. Mayank Sharma</div>
+            <div class="showcase-meta-row">
+              <div class="meta-item">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span id="cAddress">Connaught Place, New Delhi</span>
+              </div>
+              <div class="meta-item">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span id="cTimings">Mon - Sat: 09:00 AM - 08:00 PM</span>
+              </div>
+              <div class="meta-item">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                <span id="cPhone">+91 98101 23456</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Large Rating Score -->
+          <div class="rating-badge-large">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#eab308" stroke="#eab308"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span id="cRating">4.9</span>
+            <span style="font-size:0.8rem; color:#15803d; font-weight:500;" id="cReviewCount">(342 Reviews)</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Photos Gallery Grid -->
+      <section class="gallery-grid" id="galleryGrid">
+        <div class="gallery-item gallery-item-main">
+          <img src="" alt="Clinic Main" class="gallery-img" id="imgMain">
+        </div>
+        <div class="gallery-item">
+          <img src="" alt="Operatory" class="gallery-img" id="img2">
+        </div>
+        <div class="gallery-item">
+          <img src="" alt="Equipment" class="gallery-img" id="img3">
+        </div>
+      </section>
+
+      <!-- 2-Column Section -->
+      <div class="detail-two-col">
+        
+        <!-- Left Details Column -->
+        <div class="detail-left-content">
+          
+          <!-- About Section -->
+          <div class="content-card">
+            <h2 class="card-heading">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              About the Clinic
+            </h2>
+            <p id="cAbout" style="color:#475569; line-height:1.7; font-size:0.95rem;">
+              Premier multispeciality dental clinic with comprehensive diagnostics and advanced treatments.
+            </p>
+          </div>
+
+          <!-- Services & Transparent Pricing Section -->
+          <div class="content-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+              <h2 class="card-heading" style="margin:0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Treatments &amp; Transparent Pricing
+              </h2>
+              <span style="font-size:0.8rem; color:#64748b;">No Hidden Fees</span>
+            </div>
+            <div id="treatmentsList">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Amenities & Standards -->
+          <div class="content-card">
+            <h2 class="card-heading">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              Hygiene, Safety &amp; Amenities
+            </h2>
+            <div class="amenities-wrap" id="amenitiesList">
+              <span class="amenity-pill">✨ Class-B Autoclave Sterilization</span>
+              <span class="amenity-pill">📸 Digital OPG &amp; Intraoral 3D Camera</span>
+              <span class="amenity-pill">💉 Painless Wand Anesthesia</span>
+              <span class="amenity-pill">🚗 Valet Parking Available</span>
+              <span class="amenity-pill">💳 All Cards &amp; UPI Accepted</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Sticky Booking Card -->
+        <aside class="detail-right-sidebar">
+          <div class="sticky-booking-card">
+            <div class="booking-card-header">
+              <div>
+                <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Online Consultation / Visit</span>
+                <div style="font-size:1.4rem; font-weight:700; color:#0f172a;" id="cardPriceFrom">From ₹500</div>
+              </div>
+              <span class="instant-confirm-badge">⚡ Instant Slot</span>
+            </div>
+
+            <div style="margin-bottom:1rem;">
+              <label style="display:block; font-size:0.82rem; font-weight:600; color:#334155; margin-bottom:0.4rem;">Select Treatment</label>
+              <select id="quickServiceSelect" style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid #cbd5e1; font-size:0.9rem; font-weight:500; outline:none; background:white;">
+                <option value="Comprehensive Dental Checkup & Digital X-Ray">Comprehensive Dental Checkup (₹500)</option>
+              </select>
+            </div>
+
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem; font-size:0.82rem; color:#475569; margin-bottom:1.25rem;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;">
+                <span>📅 Next Available Slot:</span>
+                <strong style="color:#16a34a;">Today</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span>⏱️ Confirmation:</span>
+                <strong>Instant via Email/SMS</strong>
+              </div>
+            </div>
+
+            <a href="#" id="btnBookNowDirect" class="btn-proceed-booking">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Book Appointment Now
+            </a>
+
+            <div style="text-align:center; font-size:0.75rem; color:#94a3b8; margin-top:0.75rem;">
+              Free rescheduling &bull; Zero cancellation fee
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer style="background: white; border-top: 1px solid #e2e8f0; padding: 2.5rem var(--space-6); margin-top: auto;">
+    <div style="max-width: var(--content-wide); margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span style="font-weight: 700; font-size: 1.05rem; color: #0f172a;">Smart Dental Desk</span>
+        <span style="font-size: 0.85rem; color: #64748b;">— India's premier dental clinic network</span>
+      </div>
+      <div style="font-size: 0.85rem; color: #94a3b8;">
+        &copy; 2026 SmartDentalDesk. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <script src="./assets/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const params = new URLSearchParams(window.location.search);
+      const slug = params.get('c');
+
+      if (!slug) {
+        document.getElementById('loadingPlaceholder').innerHTML = `
+          <h3>No clinic specified</h3>
+          <p style="color:#64748b; margin-bottom:1rem;">Please return to the directory to find a clinic.</p>
+          <a href="./clinics.html" class="btn btn-primary">Browse Clinics</a>
+        `;
+        return;
+      }
+
+      try {
+        const res = await window.api.getPublicClinic(slug);
+        const clinic = res.clinic;
+
+        if (!clinic) throw new Error('Clinic not found');
+
+        // Populate fields
+        document.title = `${clinic.name} - Treatments & Book Online | Smart Dental Desk`;
+        document.getElementById('bcClinicName').textContent = clinic.name;
+        document.getElementById('cName').textContent = clinic.name;
+        document.getElementById('cDoctor').textContent = `${clinic.owner_name || 'Chief Dental Surgeon'} • ${clinic.experience_years || 10}+ Years Experience`;
+        document.getElementById('cAddress').textContent = `${clinic.address || ''}, ${clinic.city || ''}`;
+        document.getElementById('cTimings').textContent = clinic.timings || 'Mon - Sat: 09:00 AM - 08:00 PM';
+        document.getElementById('cPhone').textContent = clinic.phone || '+91 98101 23456';
+        document.getElementById('cRating').textContent = (clinic.rating || 4.8).toFixed(1);
+        document.getElementById('cReviewCount').textContent = `(${clinic.review_count || 120} Reviews)`;
+        document.getElementById('cAbout').textContent = clinic.about || 'Specialized dental care clinic equipped with the latest modern diagnostics, digital dentistry tools, and gentle pain-free treatment procedures.';
+
+        // Gallery Images
+        const cover = clinic.cover_image || 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80';
+        const imgList = Array.isArray(clinic.images) && clinic.images.length > 0 ? clinic.images : [cover];
+        document.getElementById('imgMain').src = imgList[0] || cover;
+        document.getElementById('img2').src = imgList[1] || 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800&q=80';
+        document.getElementById('img3').src = imgList[2] || 'https://images.unsplash.com/photo-1598256989800-fe5f95da9787?auto=format&fit=crop&w=800&q=80';
+
+        // Treatments List
+        const services = Array.isArray(clinic.services_offered) && clinic.services_offered.length > 0 
+          ? clinic.services_offered 
+          : [
+              { name: "Comprehensive Dental Checkup & Digital X-Ray", price: 500, duration: "20 min", category: "General" },
+              { name: "Single-Sitting Root Canal (Rotary RCT)", price: 3500, duration: "45 min", category: "Root Canal" },
+              { name: "Laser Teeth Whitening (Zoom)", price: 4999, duration: "45 min", category: "Cosmetic" },
+              { name: "Ultrasonic Scaling & Deep Polishing", price: 1200, duration: "30 min", category: "General" }
+            ];
+
+        const treatmentsHtml = services.map(s => `
+          <div class="treatment-item">
+            <div class="treatment-info">
+              <h4>${s.name}</h4>
+              <span>${s.category || 'Specialized'} &bull; Approx. ${s.duration || '30 min'}</span>
+            </div>
+            <div class="treatment-price-action">
+              <div class="treatment-price">₹${(s.price || 500).toLocaleString('en-IN')}</div>
+              <a href="./book.html?c=${encodeURIComponent(clinic.booking_slug || clinic.id)}&service=${encodeURIComponent(s.name)}" class="btn-book-service">
+                Book Slot
+              </a>
+            </div>
+          </div>
+        `).join('');
+        document.getElementById('treatmentsList').innerHTML = treatmentsHtml;
+
+        // Quick Select in Sticky Card
+        const selectEl = document.getElementById('quickServiceSelect');
+        selectEl.innerHTML = services.map(s => `<option value="${s.name}">${s.name} (₹${s.price || 500})</option>`).join('');
+
+        const minPrice = Math.min(...services.map(s => s.price || 500));
+        document.getElementById('cardPriceFrom').textContent = `From ₹${minPrice.toLocaleString('en-IN')}`;
+
+        // Link button in Sticky Card
+        const directBtn = document.getElementById('btnBookNowDirect');
+        function updateDirectLink() {
+          const selectedService = selectEl.value;
+          directBtn.href = `./book.html?c=${encodeURIComponent(clinic.booking_slug || clinic.id)}&service=${encodeURIComponent(selectedService)}`;
+        }
+        selectEl.addEventListener('change', updateDirectLink);
+        updateDirectLink();
+
+        // Amenities
+        if (Array.isArray(clinic.amenities) && clinic.amenities.length > 0) {
+          document.getElementById('amenitiesList').innerHTML = clinic.amenities.map(a => `<span class="amenity-pill">✓ ${a}</span>`).join('');
+        }
+
+        // Show Content
+        document.getElementById('loadingPlaceholder').style.display = 'none';
+        document.getElementById('mainClinicContent').style.display = 'block';
+
+      } catch (err) {
+        console.error('Error loading clinic detail:', err);
+        document.getElementById('loadingPlaceholder').innerHTML = `
+          <h3>Unable to load clinic details</h3>
+          <p style="color:#64748b; margin-bottom:1.5rem;">${err.message || 'The link may be invalid or expired.'}</p>
+          <a href="./clinics.html" class="btn btn-primary">Browse All Clinics</a>
+        `;
+      }
+    });
+  </script>
+</body>
+</html>

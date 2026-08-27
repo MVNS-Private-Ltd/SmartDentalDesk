@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Find & Book Top Dental Clinics Near You | Smart Dental Desk</title>
+  <meta name="description" content="Discover verified dental clinics, compare transparent treatment prices, check real patient ratings, and book instant dental appointments.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=General+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/style.css">
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+
+  <style>
+    /* ── MARKETPLACE STYLING ── */
+    :root {
+      --font-body: 'General Sans', 'Inter', -apple-system, sans-serif;
+      --font-display: 'Fraunces', Georgia, serif;
+    }
+
+    body {
+      background-color: #f8fafc;
+      color: #0f172a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Search Banner */
+    .marketplace-hero {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%);
+      color: white;
+      padding: clamp(2rem, 5vw, 3.5rem) var(--space-6);
+      position: relative;
+      overflow: hidden;
+    }
+    .marketplace-hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, rgba(255,255,255,0.15), transparent 70%);
+      pointer-events: none;
+    }
+    .hero-inner {
+      max-width: var(--content-wide);
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-title {
+      font-size: clamp(1.8rem, 3.5vw, 2.75rem);
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 0.5rem;
+      color: #ffffff;
+    }
+    .hero-subtitle {
+      font-size: clamp(0.95rem, 1.3vw, 1.15rem);
+      color: rgba(255,255,255,0.88);
+      max-width: 58ch;
+      margin-bottom: 1.75rem;
+    }
+
+    /* Omni Search Bar */
+    .omni-search-card {
+      background: white;
+      border-radius: 16px;
+      padding: 0.6rem;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.25);
+      display: grid;
+      grid-template-columns: 1.2fr 1.3fr 1.8fr auto;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    @media (max-width: 900px) {
+      .omni-search-card {
+        grid-template-columns: 1fr 1fr;
+        padding: 0.75rem;
+        gap: 0.75rem;
+      }
+      .omni-btn-col {
+        grid-column: span 2;
+      }
+    }
+    @media (max-width: 600px) {
+      .omni-search-card {
+        grid-template-columns: 1fr;
+      }
+      .omni-btn-col {
+        grid-column: span 1;
+      }
+    }
+
+    .omni-field {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.65rem 0.9rem;
+      background: #f8fafc;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      transition: all 0.2s ease;
+    }
+    .omni-field:focus-within {
+      border-color: #2563eb;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+    .omni-field svg {
+      color: #64748b;
+      flex-shrink: 0;
+    }
+    .omni-input-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+    }
+    .omni-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      line-height: 1;
+      margin-bottom: 0.2rem;
+    }
+    .omni-select, .omni-input {
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #0f172a;
+      width: 100%;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .omni-search-btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 0.9rem 1.6rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      height: 100%;
+    }
+    .omni-search-btn:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    /* Quick Filter Pills Strip */
+    .filter-pills-bar {
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 0.75rem var(--space-6);
+      position: sticky;
+      top: 64px;
+      z-index: 30;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    }
+    .filter-pills-inner {
+      max-width: var(--content-wide);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+    .filter-pills-inner::-webkit-scrollbar { display: none; }
+    .pill-btn {
+      white-space: nowrap;
+      padding: 0.4rem 0.9rem;
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .pill-btn:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .pill-btn.active {
+      background: #2563eb;
+      color: white;
+      border-color: #2563eb;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+    }
+
+    /* Main Directory Layout */
+    .directory-layout {
+      max-width: var(--content-wide);
+      margin: 1.5rem auto;
+      padding: 0 var(--space-6);
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 1.75rem;
+      align-items: flex-start;
+      flex: 1;
+      width: 100%;
+    }
+    @media (max-width: 900px) {
+      .directory-layout {
+        grid-template-columns: 1fr;
+      }
+      .sidebar-filters {
+        display: none; /* hidden on mobile, opened via modal */
+      }
+    }
+
+    /* Filter Sidebar */
+    .sidebar-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 1.25rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .filter-group {
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 1.1rem;
+      margin-bottom: 1.1rem;
+    }
+    .filter-group:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+      margin-bottom: 0;
+    }
+    .filter-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .filter-reset-link {
+      font-size: 0.75rem;
+      color: #2563eb;
+      cursor: pointer;
+      font-weight: 600;
+      text-decoration: underline;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: #334155;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .checkbox-label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #2563eb;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* Results Header */
+    .results-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .results-count {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .results-count span {
+      color: #64748b;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    .sort-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+    .sort-select {
+      background: white;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #0f172a;
+      cursor: pointer;
+      outline: none;
+    }
+
+    /* Clinic Cards Grid */
+    .clinics-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+
+    /* OYO / Airbnb Style Clinic Card */
+    .clinic-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+    @media (max-width: 700px) {
+      .clinic-card {
+        grid-template-columns: 1fr;
+      }
+    }
+    .clinic-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.08);
+      transform: translateY(-2px);
+    }
+
+    /* Card Image */
+    .clinic-card-image-wrap {
+      position: relative;
+      height: 100%;
+      min-height: 220px;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+    .clinic-card-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+    .clinic-card:hover .clinic-card-image {
+      transform: scale(1.04);
+    }
+    .card-badge-top-left {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(6px);
+      color: white;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.3rem 0.65rem;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      letter-spacing: 0.02em;
+    }
+    .card-badge-verified {
+      background: #16a34a;
+      color: white;
+    }
+
+    /* Card Body */
+    .clinic-card-body {
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .clinic-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin-bottom: 0.4rem;
+    }
+    .clinic-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.25;
+      text-decoration: none;
+    }
+    .clinic-name:hover {
+      color: #2563eb;
+    }
+    .clinic-doctor {
+      font-size: 0.85rem;
+      color: #475569;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+    .clinic-location {
+      font-size: 0.82rem;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-bottom: 0.75rem;
+    }
+    .clinic-rating-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #15803d;
+      padding: 0.25rem 0.55rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      flex-shrink: 0;
+    }
+
+    /* Service Tags */
+    .services-tags-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+    }
+    .service-tag {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 500;
+    }
+    .service-tag strong {
+      color: #0f172a;
+    }
+
+    /* Card Footer Details */
+    .clinic-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid #f1f5f9;
+      padding-top: 0.9rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .price-starting {
+      display: flex;
+      flex-direction: column;
+    }
+    .price-label {
+      font-size: 0.7rem;
+      color: #64748b;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .price-value {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .card-actions {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+    }
+    .btn-view-profile {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      padding: 0.55rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.18s;
+    }
+    .btn-view-profile:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .btn-book-instant {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 0.55rem 1.15rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.18s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .btn-book-instant:hover {
+      background: #1d4ed8;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: white;
+      border-radius: 16px;
+      border: 1px dashed #cbd5e1;
+    }
+    .empty-state svg {
+      color: #94a3b8;
+      margin-bottom: 1rem;
+    }
+    .empty-state h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #0f172a;
+    }
+    .empty-state p {
+      color: #64748b;
+      max-width: 42ch;
+      margin: 0 auto 1.5rem;
+      font-size: 0.95rem;
+    }
+
+    /* Shimmer Skeleton */
+    .skeleton-card {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      height: 230px;
+      animation: pulse 1.5s infinite ease-in-out;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="container nav">
+      <a href="./index.html" class="brand" aria-label="Smart Dental Clinic home">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="#2563eb"/>
+          <path d="M16 8c-2.8 0-5 1.9-5 4.6 0 1.7.6 2.7 1.2 3.9.7 1.4 1.4 3 1.6 6.1.1 1.4 1 2.4 2.2 2.4s2.1-1 2.2-2.4c.2-3.1.9-4.7 1.6-6.1.6-1.2 1.2-2.2 1.2-3.9C21 9.9 18.8 8 16 8Z" fill="#fff"/>
+          <circle cx="16" cy="13" r="1.6" fill="#2563eb"/>
+        </svg>
+        <span class="brand-name">Smart Dental Desk</span>
+      </a>
+      <nav class="nav-links" id="navLinks" aria-label="Primary">
+        <a href="./index.html">Home</a>
+        <a href="./clinics.html" aria-current="page" style="font-weight: 700; color: #2563eb;">Find Clinics</a>
+        <a href="./index.html#how-it-works">For Dentists</a>
+        <div class="mobile-actions gap-3 mt-6">
+          <a href="./login.html" class="btn btn-secondary btn-sm">Clinic Login</a>
+          <a href="./register.html" class="btn btn-primary btn-sm">List Your Clinic</a>
+        </div>
+      </nav>
+      <div class="nav-actions">
+        <a href="./login.html" class="btn btn-secondary btn-sm">Clinic Login</a>
+        <a href="./register.html" class="btn btn-primary btn-sm">List Your Clinic</a>
+      </div>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- HERO & SEARCH COMPONENT -->
+  <section class="marketplace-hero">
+    <div class="hero-inner">
+      <h1 class="hero-title">Book Top Dental Clinics Near You</h1>
+      <p class="hero-subtitle">Transparent pricing, verified specialists, sterilized operatories, and instant online appointment confirmation.</p>
+
+      <!-- Omni Search Box -->
+      <div class="omni-search-card" id="searchCard">
+        <!-- City Selector -->
+        <div class="omni-field">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <div class="omni-input-group">
+            <span class="omni-label">City</span>
+            <select class="omni-select" id="citySelect">
+              <option value="all">All Cities</option>
+              <option value="Delhi NCR">Delhi NCR</option>
+              <option value="Mumbai">Mumbai</option>
+              <option value="Bangalore">Bangalore</option>
+              <option value="Pune">Pune</option>
+              <option value="Hyderabad">Hyderabad</option>
+              <option value="Chandigarh">Chandigarh</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Treatment / Specialty -->
+        <div class="omni-field">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <div class="omni-input-group">
+            <span class="omni-label">Treatment / Specialty</span>
+            <select class="omni-select" id="serviceSelect">
+              <option value="all">All Treatments</option>
+              <option value="Root Canal">Root Canal Treatment (RCT)</option>
+              <option value="Dental Implants">Dental Implants</option>
+              <option value="Teeth Whitening">Teeth Whitening</option>
+              <option value="Invisible Aligners">Clear Aligners / Invisalign</option>
+              <option value="Cosmetic Dentistry">Smile Makeover & Veneers</option>
+              <option value="General">Checkup & Scaling</option>
+              <option value="Wisdom Tooth">Wisdom Tooth Extraction</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Keyword Input -->
+        <div class="omni-field">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <div class="omni-input-group">
+            <span class="omni-label">Search</span>
+            <input type="text" class="omni-input" id="keywordInput" placeholder="Search clinic name, doctor, or locality...">
+          </div>
+        </div>
+
+        <!-- Search Submit -->
+        <div class="omni-btn-col">
+          <button class="omni-search-btn" id="btnSearch">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span>Search Clinics</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUICK FILTER PILLS -->
+  <div class="filter-pills-bar">
+    <div class="filter-pills-inner" id="filterPills">
+      <button class="pill-btn active" data-pill="all">All Clinics</button>
+      <button class="pill-btn" data-pill="featured">✨ Featured &amp; Recommended</button>
+      <button class="pill-btn" data-pill="top-rated">⭐ Top Rated (4.8+)</button>
+      <button class="pill-btn" data-service="Root Canal">🦷 Root Canal Specialists</button>
+      <button class="pill-btn" data-service="Teeth Whitening">💎 Teeth Whitening</button>
+      <button class="pill-btn" data-service="Dental Implants">🔩 Dental Implants</button>
+      <button class="pill-btn" data-service="Invisible Aligners">✨ Invisible Braces</button>
+    </div>
+  </div>
+
+  <!-- MAIN DIRECTORY -->
+  <main class="directory-layout">
+    
+    <!-- LEFT SIDEBAR FILTERS -->
+    <aside class="sidebar-filters">
+      <div class="sidebar-card">
+        
+        <!-- Filter Header -->
+        <div class="filter-group" style="display:flex; justify-content:space-between; align-items:center;">
+          <h2 style="font-size:1rem; font-weight:700; margin:0;">Filters</h2>
+          <span class="filter-reset-link" id="btnResetFilters">Reset All</span>
+        </div>
+
+        <!-- Locality / Area -->
+        <div class="filter-group">
+          <div class="filter-title">Popular Localities</div>
+          <div id="localityCheckboxes">
+            <label class="checkbox-label"><input type="checkbox" name="area" value="Connaught Place"> Connaught Place</label>
+            <label class="checkbox-label"><input type="checkbox" name="area" value="Bandra West"> Bandra West</label>
+            <label class="checkbox-label"><input type="checkbox" name="area" value="Indiranagar"> Indiranagar</label>
+            <label class="checkbox-label"><input type="checkbox" name="area" value="Koregaon Park"> Koregaon Park</label>
+            <label class="checkbox-label"><input type="checkbox" name="area" value="Jubilee Hills"> Jubilee Hills</label>
+          </div>
+        </div>
+
+        <!-- Rating Filter -->
+        <div class="filter-group">
+          <div class="filter-title">Patient Rating</div>
+          <label class="checkbox-label"><input type="radio" name="rating" value="4.8" accent-color="#2563eb"> 4.8★ &amp; above (Superb)</label>
+          <label class="checkbox-label"><input type="radio" name="rating" value="4.5"> 4.5★ &amp; above (Very Good)</label>
+          <label class="checkbox-label"><input type="radio" name="rating" value="4.0"> 4.0★ &amp; above (Good)</label>
+          <label class="checkbox-label"><input type="radio" name="rating" value="0" checked> Any Rating</label>
+        </div>
+
+        <!-- Price Tier -->
+        <div class="filter-group">
+          <div class="filter-title">Price Range</div>
+          <label class="checkbox-label"><input type="checkbox" name="price_range" value="₹"> ₹ Budget Friendly (Under ₹1,000)</label>
+          <label class="checkbox-label"><input type="checkbox" name="price_range" value="₹₹"> ₹₹ Moderate Standard</label>
+          <label class="checkbox-label"><input type="checkbox" name="price_range" value="₹₹₹"> ₹₹₹ Premium Aesthetic</label>
+        </div>
+
+        <!-- Clinic Badges -->
+        <div class="filter-group">
+          <div class="filter-title">Trust &amp; Amenities</div>
+          <label class="checkbox-label"><input type="checkbox" id="chkVerified" checked> 100% Verified Specialists</label>
+          <label class="checkbox-label"><input type="checkbox" id="chkInstant"> Instant Online Confirmation</label>
+          <label class="checkbox-label"><input type="checkbox" id="chkFeatured"> Featured Clinics</label>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- RIGHT CLINICS CONTENT -->
+    <section class="results-content">
+      
+      <!-- Results Controls -->
+      <div class="results-topbar">
+        <div class="results-count" id="resultsCount">
+          Showing Dental Clinics <span>(Loading...)</span>
+        </div>
+        <div class="sort-control">
+          <span>Sort by:</span>
+          <select class="sort-select" id="sortSelect">
+            <option value="featured">Recommended &amp; Featured</option>
+            <option value="rating">Highest Rated (★ 5.0)</option>
+            <option value="reviews">Most Reviewed</option>
+            <option value="experience">Doctor Experience</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Clinics Grid List -->
+      <div class="clinics-grid" id="clinicsGrid">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer style="background: white; border-top: 1px solid #e2e8f0; padding: 2.5rem var(--space-6); margin-top: auto;">
+    <div style="max-width: var(--content-wide); margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span style="font-weight: 700; font-size: 1.05rem; color: #0f172a;">Smart Dental Desk</span>
+        <span style="font-size: 0.85rem; color: #64748b;">— India's premier dental clinic network</span>
+      </div>
+      <div style="font-size: 0.85rem; color: #94a3b8;">
+        &copy; 2026 SmartDentalDesk. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <script src="./assets/app.js"></script>
+  <script>
+    // State
+    const state = {
+      q: '',
+      city: 'all',
+      service: 'all',
+      area: 'all',
+      min_rating: 0,
+      price_range: 'all',
+      featured: false,
+      sort: 'featured',
+      page: 1
+    };
+
+    // DOM Elements
+    const citySelect = document.getElementById('citySelect');
+    const serviceSelect = document.getElementById('serviceSelect');
+    const keywordInput = document.getElementById('keywordInput');
+    const btnSearch = document.getElementById('btnSearch');
+    const sortSelect = document.getElementById('sortSelect');
+    const clinicsGrid = document.getElementById('clinicsGrid');
+    const resultsCount = document.getElementById('resultsCount');
+    const btnResetFilters = document.getElementById('btnResetFilters');
+
+    // Parse URL params on initial load
+    document.addEventListener('DOMContentLoaded', async () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('city')) {
+        state.city = params.get('city');
+        citySelect.value = state.city;
+      }
+      if (params.get('service')) {
+        state.service = params.get('service');
+        serviceSelect.value = state.service;
+      }
+      if (params.get('q')) {
+        state.q = params.get('q');
+        keywordInput.value = state.q;
+      }
+
+      // Load Metadata for dynamic filter population
+      loadMeta();
+
+      // Initial Fetch
+      fetchClinics();
+    });
+
+    async function loadMeta() {
+      try {
+        const meta = await window.api.getMarketplaceMeta();
+        if (meta && meta.cities) {
+          // Populate city dropdown
+          const currentVal = citySelect.value;
+          citySelect.innerHTML = '<option value="all">All Cities</option>' + 
+            meta.cities.map(c => `<option value="${c}">${c}</option>`).join('');
+          if (meta.cities.includes(currentVal)) citySelect.value = currentVal;
+        }
+      } catch (e) {
+        console.warn('Meta fetch warning:', e);
+      }
+    }
+
+    // Search Actions
+    btnSearch.addEventListener('click', () => {
+      state.city = citySelect.value;
+      state.service = serviceSelect.value;
+      state.q = keywordInput.value.trim();
+      fetchClinics();
+    });
+
+    keywordInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        state.q = keywordInput.value.trim();
+        fetchClinics();
+      }
+    });
+
+    citySelect.addEventListener('change', () => {
+      state.city = citySelect.value;
+      fetchClinics();
+    });
+
+    serviceSelect.addEventListener('change', () => {
+      state.service = serviceSelect.value;
+      fetchClinics();
+    });
+
+    sortSelect.addEventListener('change', () => {
+      state.sort = sortSelect.value;
+      fetchClinics();
+    });
+
+    // Quick Pill Buttons
+    document.querySelectorAll('#filterPills .pill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#filterPills .pill-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const pill = btn.dataset.pill;
+        const srv = btn.dataset.service;
+
+        if (pill === 'all') {
+          state.featured = false;
+          state.min_rating = 0;
+          state.service = 'all';
+          serviceSelect.value = 'all';
+        } else if (pill === 'featured') {
+          state.featured = true;
+          state.min_rating = 0;
+        } else if (pill === 'top-rated') {
+          state.min_rating = 4.8;
+          state.featured = false;
+        } else if (srv) {
+          state.service = srv;
+          serviceSelect.value = srv;
+          state.featured = false;
+          state.min_rating = 0;
+        }
+
+        fetchClinics();
+      });
+    });
+
+    // Rating Radio filter
+    document.querySelectorAll('input[name="rating"]').forEach(r => {
+      r.addEventListener('change', () => {
+        state.min_rating = parseFloat(r.value);
+        fetchClinics();
+      });
+    });
+
+    // Reset filters
+    btnResetFilters.addEventListener('click', () => {
+      state.q = '';
+      state.city = 'all';
+      state.service = 'all';
+      state.area = 'all';
+      state.min_rating = 0;
+      state.price_range = 'all';
+      state.featured = false;
+      state.sort = 'featured';
+
+      citySelect.value = 'all';
+      serviceSelect.value = 'all';
+      keywordInput.value = '';
+      sortSelect.value = 'featured';
+      document.querySelector('input[name="rating"][value="0"]').checked = true;
+      document.querySelectorAll('#localityCheckboxes input').forEach(c => c.checked = false);
+
+      document.querySelectorAll('#filterPills .pill-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector('#filterPills .pill-btn[data-pill="all"]').classList.add('active');
+
+      fetchClinics();
+    });
+
+    // Main fetch function
+    async function fetchClinics() {
+      clinicsGrid.innerHTML = `
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+      `;
+      resultsCount.innerHTML = `Searching clinics...`;
+
+      try {
+        const queryParams = {
+          q: state.q,
+          city: state.city,
+          service: state.service,
+          area: state.area,
+          min_rating: state.min_rating > 0 ? state.min_rating : undefined,
+          price_range: state.price_range !== 'all' ? state.price_range : undefined,
+          featured: state.featured ? true : undefined,
+          sort: state.sort
+        };
+
+        const res = await window.api.getPublicClinics(queryParams);
+        const clinics = res.clinics || [];
+        const total = res.total || clinics.length;
+
+        resultsCount.innerHTML = `${total} Dental ${total === 1 ? 'Clinic' : 'Clinics'} Found <span>in ${state.city === 'all' ? 'All Locations' : state.city}</span>`;
+
+        if (clinics.length === 0) {
+          clinicsGrid.innerHTML = `
+            <div class="empty-state">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <h3>No dental clinics match your criteria</h3>
+              <p>Try widening your search location, clearing filters, or searching for general dentistry.</p>
+              <button class="btn btn-primary" onclick="document.getElementById('btnResetFilters').click()">Reset Filters</button>
+            </div>
+          `;
+          return;
+        }
+
+        clinicsGrid.innerHTML = clinics.map(c => renderClinicCard(c)).join('');
+
+      } catch (err) {
+        console.error('Error fetching clinics:', err);
+        clinicsGrid.innerHTML = `
+          <div class="empty-state">
+            <h3>Unable to load clinics</h3>
+            <p>${err.message || 'Please check your connection and try again.'}</p>
+            <button class="btn btn-primary" onclick="fetchClinics()">Try Again</button>
+          </div>
+        `;
+      }
+    }
+
+    function renderClinicCard(clinic) {
+      const cover = clinic.cover_image || 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80';
+      const services = clinic.services_offered || [];
+      const specialties = clinic.specialties || [];
+      const displayedTags = services.slice(0, 3);
+      
+      const minPriceDisplay = clinic.min_price 
+        ? `₹${clinic.min_price.toLocaleString('en-IN')}` 
+        : '₹500';
+
+      const bookingSlug = clinic.booking_slug || clinic.id;
+
+      return `
+        <article class="clinic-card">
+          <!-- Image Column -->
+          <div class="clinic-card-image-wrap">
+            <img src="${cover}" alt="${clinic.name}" class="clinic-card-image" loading="lazy">
+            <div class="card-badge-top-left ${clinic.is_verified ? 'card-badge-verified' : ''}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              ${clinic.is_featured ? 'Verified Partner' : 'Verified Clinic'}
+            </div>
+          </div>
+
+          <!-- Body Column -->
+          <div class="clinic-card-body">
+            <div>
+              <div class="clinic-top-row">
+                <div>
+                  <a href="./clinic-detail.html?c=${encodeURIComponent(bookingSlug)}" class="clinic-name">${clinic.name}</a>
+                  <div class="clinic-doctor">${clinic.owner_name} &bull; <span style="color:#2563eb; font-weight:600;">${clinic.experience_years}+ Yrs Exp</span></div>
+                </div>
+                <div class="clinic-rating-box">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#eab308" stroke="#eab308"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <span>${clinic.rating.toFixed(1)}</span>
+                  <span style="font-size:0.75rem; color:#64748b; font-weight:500;">(${clinic.review_count})</span>
+                </div>
+              </div>
+
+              <div class="clinic-location">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>${clinic.area}, ${clinic.city}</span>
+                <span style="color:#cbd5e1;">&bull;</span>
+                <span style="color:#16a34a; font-weight:600;">Open Today</span>
+              </div>
+
+              <!-- Services / Specialties Tags -->
+              <div class="services-tags-row">
+                ${displayedTags.map(s => `<span class="service-tag">${s.name} <strong>₹${s.price || 500}</strong></span>`).join('')}
+                ${specialties.length > 0 && displayedTags.length < 2 ? `<span class="service-tag">${specialties[0]}</span>` : ''}
+              </div>
+            </div>
+
+            <!-- Footer & Actions -->
+            <div class="clinic-card-footer">
+              <div class="price-starting">
+                <span class="price-label">Treatments from</span>
+                <span class="price-value">${minPriceDisplay}</span>
+              </div>
+              <div class="card-actions">
+                <a href="./clinic-detail.html?c=${encodeURIComponent(bookingSlug)}" class="btn-view-profile">View Profile</a>
+                <a href="./book.html?c=${encodeURIComponent(bookingSlug)}" class="btn-book-instant">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  Book Instant
+                </a>
+              </div>
+            </div>
+
+          </div>
+        </article>
+      `;
+    }
+  </script>
+</body>
+</html>

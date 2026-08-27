@@ -344,9 +344,10 @@ const bookingData = {
 document.addEventListener('DOMContentLoaded', async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const slug = urlParams.get('c');
+  const preSelectedService = urlParams.get('service');
   
   if (!slug) {
-    document.getElementById('initialLoader').innerHTML = 'Invalid booking link. Please request a new link from the clinic.';
+    document.getElementById('initialLoader').innerHTML = 'Invalid booking link. <a href="./clinics.html" style="color:#2563eb; font-weight:600; margin-top:0.5rem; display:block;">Browse All Clinics</a>';
     return;
   }
 
@@ -358,8 +359,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     clinicId = data.clinic.id;
     clinicData = data.clinic;
     document.getElementById('clinicName').textContent = data.clinic.name;
-    document.getElementById('clinicAddress').textContent = data.clinic.address || '';
+    document.getElementById('clinicAddress').textContent = `${data.clinic.address || ''}${data.clinic.city ? ', ' + data.clinic.city : ''}`;
     
+    // Dynamically populate services if available
+    const serviceSelect = document.getElementById('pService');
+    if (data.clinic.services_offered && Array.isArray(data.clinic.services_offered) && data.clinic.services_offered.length > 0) {
+      serviceSelect.innerHTML = data.clinic.services_offered.map(s => 
+        `<option value="${s.name}">${s.name} (₹${s.price || 500})</option>`
+      ).join('') + '<option value="Other Consultation">Other Consultation</option>';
+    }
+
+    if (preSelectedService) {
+      // Find if matches an option or create one
+      const exists = Array.from(serviceSelect.options).some(o => o.value.toLowerCase() === preSelectedService.toLowerCase());
+      if (!exists) {
+        const newOpt = document.createElement('option');
+        newOpt.value = preSelectedService;
+        newOpt.textContent = preSelectedService;
+        serviceSelect.prepend(newOpt);
+      }
+      serviceSelect.value = preSelectedService;
+    }
+
     // Setup date picker
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('pDate').min = today;
@@ -369,7 +390,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('initialLoader').style.display = 'none';
     document.getElementById('bookingCard').style.display = 'flex';
   } catch (err) {
-    document.getElementById('initialLoader').innerHTML = 'Clinic not found. The link may have expired.';
+    document.getElementById('initialLoader').innerHTML = 'Clinic not found. <a href="./clinics.html" style="color:#2563eb; font-weight:600; margin-top:0.5rem; display:block;">Browse All Clinics</a>';
   }
 });
 

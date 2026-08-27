@@ -43,29 +43,250 @@ function validate(req, res) {
   return true;
 }
 
-// ── GET /api/public/clinic/:slug ──────────────────────────────────────────────
-router.get('/clinic/:slug', [
-  param('slug').trim().isLength({ min: 1, max: 64 }).withMessage('Invalid slug')
-], async (req, res, next) => {
+// ── GET /api/public/marketplace/meta ─────────────────────────────────────────
+// Returns list of distinct cities, areas, specialties, and price ranges
+router.get('/marketplace/meta', async (req, res, next) => {
   try {
-    if (!validate(req, res)) return;
-    const { slug } = req.params;
-
-    const { data, error } = await supabase
+    const { data: clinics, error } = await supabase
       .from('clinics')
-      .select('id, name, address, phone, appointment_settings')
-      .eq('booking_slug', slug)
-      .single();
+      .select('city, area, specialties, services_offered')
+      .eq('is_active', true);
 
-    if (error || !data) {
-      return res.status(404).json({ error: 'Clinic not found or invalid booking link.' });
-    }
+    if (error) throw error;
 
-    res.json({ clinic: data });
+    const citiesSet = new Set();
+    const areasByCity = {};
+    const specialtiesSet = new Set();
+    const serviceCategoriesSet = new Set();
+
+    (clinics || []).forEach(c => {
+      if (c.city) {
+        citiesSet.add(c.city);
+        if (!areasByCity[c.city]) areasByCity[c.city] = new Set();
+        if (c.area) areasByCity[c.city].add(c.area);
+      }
+      if (Array.isArray(c.specialties)) {
+        c.specialties.forEach(s => specialtiesSet.add(s));
+      }
+      if (Array.isArray(c.services_offered)) {
+        c.services_offered.forEach(srv => {
+          if (srv.category) serviceCategoriesSet.add(srv.category);
+          if (srv.name) specialtiesSet.add(srv.name);
+        });
+      }
+    });
+
+    const formattedAreas = {};
+    Object.keys(areasByCity).forEach(k => {
+      formattedAreas[k] = Array.from(areasByCity[k]);
+    });
+
+    res.json({
+      cities: Array.from(citiesSet),
+      areas_by_city: formattedAreas,
+      specialties: Array.from(specialtiesSet),
+      categories: Array.from(serviceCategoriesSet),
+      total_clinics: (clinics || []).length
+    });
   } catch (err) {
     next(err);
   }
 });
+
+// ── GET /api/public/clinics ───────────────────────────────────────────────────
+// Marketplace listing with search, multi-faceted filtering, and sorting
+router.get('/clinics', [
+  query('q').optional().trim(),
+  query('city').optional().trim(),
+  query('area').optional().trim(),
+  query('service').optional().trim(),
+  query('specialty').optional().trim(),
+  query('min_rating').optional().isFloat({ min: 0, max: 5 }),
+  query('price_range').optional().trim(),
+  query('featured').optional().isBoolean(),
+  query('sort').optional().trim(),
+  query('page').optional().isInt({ min: 1 }),
+  query('limit').optional().isInt({ min: 1, max: 100 })
+], async (req, res, next) => {
+  try {
+    if (!validate(req, res)) return;
+
+    const {
+      q,
+      city,
+      area,
+      service,
+      specialty,
+      min_rating,
+      price_range,
+      featured,
+      sort = 'featured',
+      page = 1,
+      limit = 20
+    } = req.query;
+
+    let queryBuilder = supabase
+      .from('clinics')
+      .select('*', { count: 'exact' })
+      .eq('is_active', true);
+
+    if (city && city !== 'all') {
+      queryBuilder = queryBuilder.ilike('city', `%${city}%`);
+    }
+
+    if (area && area !== 'all') {
+      queryBuilder = queryBuilder.ilike('area', `%${area}%`);
+    }
+
+    if (min_rating) {
+      queryBuilder = queryBuilder.gte('rating', Number(min_rating));
+    }
+
+    if (price_range && price_range !== 'all') {
+      queryBuilder = queryBuilder.eq('price_range', price_range);
+    }
+
+    if (featured === 'true' || featured === true) {
+      queryBuilder = queryBuilder.eq('is_featured', true);
+    }
+
+    if (q) {
+      queryBuilder = queryBuilder.or(
+        `name.ilike.%${q}%,owner_name.ilike.%${q}%,city.ilike.%${q}%,area.ilike.%${q}%,about.ilike.%${q}%`
+      );
+    }
+
+    // Apply sorting
+    if (sort === 'rating') {
+      queryBuilder = queryBuilder.order('rating', { ascending: false });
+    } else if (sort === 'reviews') {
+      queryBuilder = queryBuilder.order('review_count', { ascending: false });
+    } else if (sort === 'experience') {
+      queryBuilder = queryBuilder.order('experience_years', { ascending: false });
+    } else {
+      // Default: featured first, then highest rating
+      queryBuilder = queryBuilder.order('is_featured', { ascending: false }).order('rating', { ascending: false });
+    }
+
+    const offset = (Number(page) - 1) * Number(limit);
+    queryBuilder = queryBuilder.range(offset, offset + Number(limit) - 1);
+
+    let { data: clinics, error, count } = await queryBuilder;
+    if (error) throw error;
+
+    clinics = clinics || [];
+
+    // Filter in-memory for JSON array fields if service / specialty is supplied
+    if (service && service !== 'all') {
+      const sLower = service.toLowerCase();
+      clinics = clinics.filter(c => {
+        const hasService = Array.isArray(c.services_offered) && c.services_offered.some(srv =>
+          (srv.name && srv.name.toLowerCase().includes(sLower)) ||
+          (srv.category && srv.category.toLowerCase().includes(sLower))
+        );
+        const hasSpec = Array.isArray(c.specialties) && c.specialties.some(sp =>
+          sp.toLowerCase().includes(sLower)
+        );
+        return hasService || hasSpec;
+      });
+    }
+
+    if (specialty && specialty !== 'all') {
+      const spLower = specialty.toLowerCase();
+      clinics = clinics.filter(c =>
+        Array.isArray(c.specialties) && c.specialties.some(sp => sp.toLowerCase().includes(spLower))
+      );
+    }
+
+    // Format clinic cards with next available slot hint and starting price
+    const enriched = clinics.map(c => {
+      const services = Array.isArray(c.services_offered) ? c.services_offered : [];
+      const minPrice = services.length > 0
+        ? Math.min(...services.filter(s => s.price).map(s => Number(s.price)))
+        : null;
+
+      return {
+        id: c.id,
+        name: c.name,
+        owner_name: c.owner_name,
+        email: c.email,
+        phone: c.phone,
+        address: c.address,
+        city: c.city || 'Delhi NCR',
+        area: c.area || 'Central',
+        pincode: c.pincode,
+        rating: Number(c.rating || 4.8),
+        review_count: Number(c.review_count || 0),
+        booking_slug: c.booking_slug,
+        about: c.about,
+        cover_image: c.cover_image || 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80',
+        images: c.images || [],
+        specialties: c.specialties || [],
+        services_offered: services,
+        min_price: minPrice,
+        timings: c.timings || 'Mon - Sat: 09:00 AM - 08:00 PM',
+        experience_years: c.experience_years || 8,
+        price_range: c.price_range || '₹₹',
+        is_verified: c.is_verified !== false,
+        is_featured: c.is_featured === true,
+        amenities: c.amenities || []
+      };
+    });
+
+    res.json({
+      clinics: enriched,
+      total: count || enriched.length,
+      page: Number(page),
+      limit: Number(limit)
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── GET /api/public/clinics/:slugOrId (and legacy /clinic/:slug) ───────────────
+// Detailed clinic profile for public view and booking page
+async function handleSingleClinic(req, res, next) {
+  try {
+    const paramVal = req.params.slug || req.params.id;
+    if (!paramVal) return res.status(400).json({ error: 'Clinic slug or ID required' });
+
+    let query = supabase.from('clinics').select('*');
+    
+    // Check if UUID or slug
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(paramVal);
+    if (isUUID) {
+      query = query.eq('id', paramVal);
+    } else {
+      query = query.eq('booking_slug', paramVal);
+    }
+
+    const { data: clinic, error } = await query.single();
+
+    if (error || !clinic) {
+      return res.status(404).json({ error: 'Clinic not found or invalid booking link.' });
+    }
+
+    // Fetch doctors/staff associated with this clinic
+    const { data: staff } = await supabase
+      .from('staff')
+      .select('id, name, role, specialization, joining_date')
+      .eq('clinic_id', clinic.id)
+      .eq('is_active', true);
+
+    res.json({
+      clinic: {
+        ...clinic,
+        staff: staff || []
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+router.get('/clinics/:slug', handleSingleClinic);
+router.get('/clinic/:slug', handleSingleClinic);
 
 // ── POST /api/public/send-otp ─────────────────────────────────────────────────
 router.post('/send-otp', otpLimiter, [

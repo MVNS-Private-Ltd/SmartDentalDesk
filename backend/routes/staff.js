@@ -14,9 +14,9 @@ const requireAuth = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
-// Only clinic admins/owners may modify staff — receptionists can only read
+// Only clinic admins/owners (and super admins) may modify staff
 function adminOnly(req, res, next) {
-  if (req.userRole !== 'admin') {
+  if (req.userRole !== 'admin' && req.userRole !== 'super_admin') {
     return res.status(403).json({ error: 'Only clinic administrators can manage staff.' });
   }
   next();

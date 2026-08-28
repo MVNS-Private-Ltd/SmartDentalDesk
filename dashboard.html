@@ -1690,8 +1690,11 @@
 
     links.forEach(link => {
       link.addEventListener('click', (e) => {
-        e.preventDefault();
-        showSection(link.getAttribute('data-target'));
+        const target = link.getAttribute('data-target');
+        if (target) {
+          e.preventDefault();
+          showSection(target);
+        }
       });
     });
 

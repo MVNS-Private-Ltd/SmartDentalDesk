@@ -2076,7 +2076,7 @@
     // ── Staff & Team Management Logic ────────────────────────────────────────
     window.currentStaffList = [];
 
-    async function loadStaff() {
+    window.loadStaff = async function loadStaff() {
       const tbody = document.getElementById('staffTableBody');
       if (!tbody) return;
       tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:var(--space-6);">Loading staff members...</td></tr>`;
@@ -2230,168 +2230,15 @@
       }).join('');
     }
 
-    // ── Staff Modal Functions ─────────────────────────────────────────────────
-    window.openAddStaffModal = function() {
-      const modal = document.getElementById('staffModal');
-      const form = document.getElementById('staffModalForm');
-      const errBox = document.getElementById('staffModalError');
-      if (!modal || !form) return;
+    // ── Staff Modal Functions (defined as globals at bottom of page) ──────────
+    // openAddStaffModal, openEditStaffModal, closeStaffModal, deleteStaff,
+    // toggleStaffPasswordGroup, toggleStaffPasswordVisibility
+    // Form submit is also wired at the bottom of the page.
 
-      form.reset();
-      document.getElementById('staffId').value = '';
-      document.getElementById('staffModalTitle').textContent = 'Add New Staff Member';
-      document.getElementById('staffModalSubtitle').textContent = 'Enter staff details & set up login credentials';
-      document.getElementById('saveStaffBtnText').textContent = 'Save Staff Member';
-      document.getElementById('staffPasswordLabel').textContent = 'Set Password';
-      document.getElementById('staffPasswordEditHint').style.display = 'none';
-      document.getElementById('staffPassword').required = false;
-      document.getElementById('staffLoginEnableToggle').checked = true;
-      document.getElementById('staffPasswordWrapper').style.display = 'block';
-
-      if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; }
-      modal.style.display = 'flex';
-    };
-
-    window.openEditStaffModal = function(id) {
-      const staff = (window.currentStaffList || []).find(s => s.id === id);
-      if (!staff) return;
-
-      const modal = document.getElementById('staffModal');
-      const form = document.getElementById('staffModalForm');
-      const errBox = document.getElementById('staffModalError');
-      if (!modal || !form) return;
-
-      form.reset();
-      document.getElementById('staffId').value = staff.id;
-      document.getElementById('staffName').value = staff.name || '';
-      document.getElementById('staffRole').value = staff.role || 'receptionist';
-      document.getElementById('staffEmail').value = staff.email || '';
-      document.getElementById('staffPhone').value = staff.phone || '';
-      document.getElementById('staffSpecialization').value = staff.specialization || '';
-      document.getElementById('staffSchedule').value = staff.schedule || '';
-      document.getElementById('staffJoiningDate').value = staff.joining_date ? staff.joining_date.substring(0, 10) : '';
-
-      document.getElementById('staffModalTitle').textContent = 'Edit Staff Member';
-      document.getElementById('staffModalSubtitle').textContent = 'Update profile details, role, or dashboard password';
-      document.getElementById('saveStaffBtnText').textContent = 'Update Staff Member';
-      document.getElementById('staffPasswordLabel').textContent = staff.auth_id ? 'Change Password' : 'Set Password';
-      document.getElementById('staffPasswordEditHint').style.display = staff.auth_id ? 'block' : 'none';
-      document.getElementById('staffLoginEnableToggle').checked = !!staff.auth_id;
-      document.getElementById('staffPasswordWrapper').style.display = staff.auth_id ? 'block' : 'none';
-
-      if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; }
-      modal.style.display = 'flex';
-    };
-
-    window.closeStaffModal = function() {
-      const modal = document.getElementById('staffModal');
-      if (modal) modal.style.display = 'none';
-    };
-
-    window.toggleStaffPasswordGroup = function(enable) {
-      const pwWrapper = document.getElementById('staffPasswordWrapper');
-      if (pwWrapper) pwWrapper.style.display = enable ? 'block' : 'none';
-    };
-
-    window.toggleStaffPasswordVisibility = function() {
-      const pw = document.getElementById('staffPassword');
-      if (pw) pw.type = pw.type === 'password' ? 'text' : 'password';
-    };
-
-    window.deleteStaff = async function(id) {
-      const staff = (window.currentStaffList || []).find(s => s.id === id);
-      const name = staff ? staff.name : 'this staff member';
-      if (!confirm(`Are you sure you want to remove ${name}? This will permanently revoke their dashboard access.`)) return;
-
-      try {
-        await window.api.deleteStaff(id);
-        showToast(`Staff member "${name}" removed successfully.`);
-        loadStaff();
-      } catch (err) {
-        alert(err.message || 'Failed to remove staff member.');
-      }
-    };
-
-    // Filter event listeners
+    // Filter event listeners (need DOMContentLoaded context for applyStaffFiltersAndRender)
     document.getElementById('staffSearchInput')?.addEventListener('input', applyStaffFiltersAndRender);
     document.getElementById('staffRoleFilter')?.addEventListener('change', applyStaffFiltersAndRender);
     document.getElementById('staffLoginFilter')?.addEventListener('change', applyStaffFiltersAndRender);
-
-    // Form submit listener
-    const staffFormEl = document.getElementById('staffModalForm');
-    if (staffFormEl) {
-      staffFormEl.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const errBox = document.getElementById('staffModalError');
-        const btn = document.getElementById('saveStaffBtn');
-        const btnText = document.getElementById('saveStaffBtnText');
-        const id = document.getElementById('staffId').value;
-        const enableLogin = document.getElementById('staffLoginEnableToggle').checked;
-
-        const name = document.getElementById('staffName').value.trim();
-        const role = document.getElementById('staffRole').value;
-        const email = document.getElementById('staffEmail').value.trim();
-        const phone = document.getElementById('staffPhone').value.trim();
-        const specialization = document.getElementById('staffSpecialization').value.trim();
-        const schedule = document.getElementById('staffSchedule').value.trim();
-        const joining_date = document.getElementById('staffJoiningDate').value;
-        const password = document.getElementById('staffPassword').value;
-
-        if (enableLogin && !email) {
-          if (errBox) {
-            errBox.textContent = 'An email address is required when Dashboard Login is enabled.';
-            errBox.style.display = 'block';
-          }
-          return;
-        }
-
-        if (enableLogin && !id && (!password || password.length < 6)) {
-          if (errBox) {
-            errBox.textContent = 'Please enter a password with at least 6 characters for login access.';
-            errBox.style.display = 'block';
-          }
-          return;
-        }
-
-        if (errBox) errBox.style.display = 'none';
-        btn.disabled = true;
-        if (btnText) btnText.textContent = id ? 'Updating...' : 'Saving...';
-
-        const payload = {
-          name,
-          role,
-          email: email || undefined,
-          phone: phone || undefined,
-          specialization: specialization || undefined,
-          schedule: schedule || undefined,
-          joining_date: joining_date || undefined,
-          password: (enableLogin && password) ? password : undefined
-        };
-
-        try {
-          if (id) {
-            await window.api.updateStaff(id, payload);
-            showToast('Staff member updated successfully!');
-          } else {
-            await window.api.createStaff(payload);
-            showToast('Staff member added successfully!');
-          }
-
-          closeStaffModal();
-          loadStaff();
-        } catch (err) {
-          if (errBox) {
-            errBox.textContent = err.message || 'Failed to save staff member.';
-            errBox.style.display = 'block';
-          } else {
-            alert(err.message || 'Failed to save staff member.');
-          }
-        } finally {
-          btn.disabled = false;
-          if (btnText) btnText.textContent = id ? 'Update Staff Member' : 'Save Staff Member';
-        }
-      });
-    }
 
     // ── Helper to switch to appointments tab directly with specific filter ───
     window.showAppointmentsWithTab = function(tabName) {
@@ -4168,6 +4015,184 @@
   } catch (e) {
     // Silently skip if backend unreachable or user is not authenticated yet
   }
+})();
+</script>
+
+<script>
+// ── Staff Management Global Functions (always available, no DOMContentLoaded dependency) ──
+// These are defined as true globals so onclick= attributes always find them.
+
+function _getStaffModal() { return document.getElementById('staffModal'); }
+function _getStaffForm()  { return document.getElementById('staffModalForm'); }
+
+function openAddStaffModal() {
+  var modal = _getStaffModal();
+  var form  = _getStaffForm();
+  var errBox = document.getElementById('staffModalError');
+  if (!modal || !form) {
+    console.error('[Staff] Modal or form element not found in DOM!');
+    return;
+  }
+  form.reset();
+  document.getElementById('staffId').value = '';
+  var title = document.getElementById('staffModalTitle');
+  var sub   = document.getElementById('staffModalSubtitle');
+  var btnTxt = document.getElementById('saveStaffBtnText');
+  var pwLabel = document.getElementById('staffPasswordLabel');
+  var pwHint  = document.getElementById('staffPasswordEditHint');
+  var pwInput = document.getElementById('staffPassword');
+  var pwToggle = document.getElementById('staffLoginEnableToggle');
+  var pwWrapper = document.getElementById('staffPasswordWrapper');
+  if (title)   title.textContent = 'Add New Staff Member';
+  if (sub)     sub.textContent   = 'Enter staff details & set up login credentials';
+  if (btnTxt)  btnTxt.textContent = 'Save Staff Member';
+  if (pwLabel) pwLabel.textContent = 'Set Password';
+  if (pwHint)  pwHint.style.display = 'none';
+  if (pwInput) pwInput.required = false;
+  if (pwToggle) pwToggle.checked = true;
+  if (pwWrapper) pwWrapper.style.display = 'block';
+  if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; }
+  modal.style.display = 'flex';
+}
+
+function openEditStaffModal(id) {
+  var staffList = window.currentStaffList || [];
+  var staff = staffList.find(function(s) { return s.id === id; });
+  if (!staff) { console.warn('[Staff] Staff member not found:', id); return; }
+  var modal = _getStaffModal();
+  var form  = _getStaffForm();
+  var errBox = document.getElementById('staffModalError');
+  if (!modal || !form) return;
+  form.reset();
+  var fldId    = document.getElementById('staffId');
+  var fldName  = document.getElementById('staffName');
+  var fldRole  = document.getElementById('staffRole');
+  var fldEmail = document.getElementById('staffEmail');
+  var fldPhone = document.getElementById('staffPhone');
+  var fldSpec  = document.getElementById('staffSpecialization');
+  var fldSched = document.getElementById('staffSchedule');
+  var fldDate  = document.getElementById('staffJoiningDate');
+  if (fldId)    fldId.value    = staff.id;
+  if (fldName)  fldName.value  = staff.name || '';
+  if (fldRole)  fldRole.value  = staff.role || 'receptionist';
+  if (fldEmail) fldEmail.value = staff.email || '';
+  if (fldPhone) fldPhone.value = staff.phone || '';
+  if (fldSpec)  fldSpec.value  = staff.specialization || '';
+  if (fldSched) fldSched.value = staff.schedule || '';
+  if (fldDate)  fldDate.value  = staff.joining_date ? staff.joining_date.substring(0, 10) : '';
+  var title    = document.getElementById('staffModalTitle');
+  var sub      = document.getElementById('staffModalSubtitle');
+  var btnTxt   = document.getElementById('saveStaffBtnText');
+  var pwLabel  = document.getElementById('staffPasswordLabel');
+  var pwHint   = document.getElementById('staffPasswordEditHint');
+  var pwToggle = document.getElementById('staffLoginEnableToggle');
+  var pwWrapper= document.getElementById('staffPasswordWrapper');
+  if (title)    title.textContent  = 'Edit Staff Member';
+  if (sub)      sub.textContent    = 'Update profile details, role, or dashboard password';
+  if (btnTxt)   btnTxt.textContent = 'Update Staff Member';
+  if (pwLabel)  pwLabel.textContent = staff.auth_id ? 'Change Password' : 'Set Password';
+  if (pwHint)   pwHint.style.display = staff.auth_id ? 'block' : 'none';
+  if (pwToggle) pwToggle.checked    = !!staff.auth_id;
+  if (pwWrapper) pwWrapper.style.display = staff.auth_id ? 'block' : 'none';
+  if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; }
+  modal.style.display = 'flex';
+}
+
+function closeStaffModal() {
+  var modal = _getStaffModal();
+  if (modal) modal.style.display = 'none';
+}
+
+function toggleStaffPasswordGroup(enable) {
+  var pw = document.getElementById('staffPasswordWrapper');
+  if (pw) pw.style.display = enable ? 'block' : 'none';
+}
+
+function toggleStaffPasswordVisibility() {
+  var pw = document.getElementById('staffPassword');
+  if (pw) pw.type = pw.type === 'password' ? 'text' : 'password';
+}
+
+async function deleteStaff(id) {
+  var staffList = window.currentStaffList || [];
+  var staff = staffList.find(function(s) { return s.id === id; });
+  var name = staff ? staff.name : 'this staff member';
+  if (!confirm('Are you sure you want to remove ' + name + '? This will permanently revoke their dashboard access.')) return;
+  try {
+    await window.api.deleteStaff(id);
+    if (window.showToast) window.showToast('Staff member "' + name + '" removed successfully.');
+    if (typeof loadStaff === 'function') loadStaff();
+  } catch (err) {
+    alert(err.message || 'Failed to remove staff member.');
+  }
+}
+
+// Close modal when clicking backdrop
+document.getElementById('staffModal').addEventListener('click', function(e) {
+  if (e.target === this) closeStaffModal();
+});
+
+// Staff form submit
+(function() {
+  var form = document.getElementById('staffModalForm');
+  if (!form) return;
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var errBox  = document.getElementById('staffModalError');
+    var btn     = document.getElementById('saveStaffBtn');
+    var btnText = document.getElementById('saveStaffBtnText');
+    var id      = document.getElementById('staffId').value;
+    var enableLogin = document.getElementById('staffLoginEnableToggle').checked;
+    var name     = document.getElementById('staffName').value.trim();
+    var role     = document.getElementById('staffRole').value;
+    var email    = document.getElementById('staffEmail').value.trim();
+    var phone    = document.getElementById('staffPhone').value.trim();
+    var spec     = document.getElementById('staffSpecialization').value.trim();
+    var schedule = document.getElementById('staffSchedule').value.trim();
+    var joinDate = document.getElementById('staffJoiningDate').value;
+    var password = document.getElementById('staffPassword').value;
+
+    if (enableLogin && !email) {
+      if (errBox) { errBox.textContent = 'An email address is required when Dashboard Login is enabled.'; errBox.style.display = 'block'; }
+      return;
+    }
+    if (enableLogin && !id && (!password || password.length < 6)) {
+      if (errBox) { errBox.textContent = 'Please enter a password with at least 6 characters for login access.'; errBox.style.display = 'block'; }
+      return;
+    }
+    if (errBox) errBox.style.display = 'none';
+    if (btn) btn.disabled = true;
+    if (btnText) btnText.textContent = id ? 'Updating...' : 'Saving...';
+
+    var payload = {
+      name: name,
+      role: role,
+      email: email || undefined,
+      phone: phone || undefined,
+      specialization: spec || undefined,
+      schedule: schedule || undefined,
+      joining_date: joinDate || undefined,
+      password: (enableLogin && password) ? password : undefined
+    };
+
+    try {
+      if (id) {
+        await window.api.updateStaff(id, payload);
+        if (window.showToast) window.showToast('Staff member updated successfully!');
+      } else {
+        await window.api.createStaff(payload);
+        if (window.showToast) window.showToast('Staff member added successfully!');
+      }
+      closeStaffModal();
+      if (typeof loadStaff === 'function') loadStaff();
+    } catch (err) {
+      if (errBox) { errBox.textContent = err.message || 'Failed to save staff member.'; errBox.style.display = 'block'; }
+      else { alert(err.message || 'Failed to save staff member.'); }
+    } finally {
+      if (btn) btn.disabled = false;
+      if (btnText) btnText.textContent = id ? 'Update Staff Member' : 'Save Staff Member';
+    }
+  });
 })();
 </script>
 

@@ -242,7 +242,7 @@ router.post('/oauth-session', async (req, res, next) => {
           owner_name       : googleName,
           email            : user.email,
           subscription_plan: 'free',
-          settings         : {
+          appointment_settings: {
             slot_duration_minutes: 30,
             auto_approve         : false,
             time_slots           : [

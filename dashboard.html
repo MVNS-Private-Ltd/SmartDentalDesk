@@ -4121,7 +4121,7 @@ async function deleteStaff(id) {
   try {
     await window.api.deleteStaff(id);
     if (window.showToast) window.showToast('Staff member "' + name + '" removed successfully.');
-    if (typeof loadStaff === 'function') loadStaff();
+    if (window.loadStaff) window.loadStaff();
   } catch (err) {
     alert(err.message || 'Failed to remove staff member.');
   }
@@ -4184,7 +4184,7 @@ document.getElementById('staffModal').addEventListener('click', function(e) {
         if (window.showToast) window.showToast('Staff member added successfully!');
       }
       closeStaffModal();
-      if (typeof loadStaff === 'function') loadStaff();
+      if (window.loadStaff) window.loadStaff();
     } catch (err) {
       if (errBox) { errBox.textContent = err.message || 'Failed to save staff member.'; errBox.style.display = 'block'; }
       else { alert(err.message || 'Failed to save staff member.'); }

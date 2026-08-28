@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clinic Profile (Marketplace) · Smart Dental Clinic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=General+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/style-v3.css">
+
+<style>
+  .profile-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 100vh;
+  }
+  @media (max-width: 800px) {
+    .profile-layout { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+  }
+  .sidebar {
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-divider);
+    padding: var(--space-6) var(--space-4);
+  }
+  .profile-content {
+    padding: var(--space-8);
+    background: var(--color-bg);
+    overflow-y: auto;
+  }
+  .form-section {
+    background: var(--color-surface);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  }
+  .form-section h3 {
+    margin-top: 0;
+    margin-bottom: var(--space-4);
+    font-size: var(--text-lg);
+    color: var(--color-text);
+    border-bottom: 1px solid var(--color-divider);
+    padding-bottom: var(--space-3);
+  }
+  
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+  }
+  @media(max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Tags / Amenities */
+  .checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--space-3);
+  }
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  /* Services Table */
+  .services-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: var(--space-2);
+  }
+  .services-table th, .services-table td {
+    padding: 8px;
+    border-bottom: 1px solid var(--color-divider);
+    text-align: left;
+    font-size: var(--text-sm);
+  }
+  .services-table input {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  .cover-preview {
+    width: 100%;
+    height: 200px;
+    border-radius: var(--radius-md);
+    background: var(--color-divider);
+    margin-bottom: var(--space-3);
+    object-fit: cover;
+  }
+</style>
+</head>
+<body>
+
+<div class="profile-layout">
+  <aside class="sidebar">
+    <a href="./dashboard.html" class="brand" aria-label="Smart Dental Clinic home">
+      <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="#2563eb"/>
+        <path d="M16 8c-2.8 0-5 1.9-5 4.6 0 1.7.6 2.7 1.2 3.9.7 1.4 1.4 3 1.6 6.1.1 1.4 1 2.4 2.2 2.4s2.1-1 2.2-2.4c.2-3.1.9-4.7 1.6-6.1.6-1.2 1.2-2.2 1.2-3.9C21 9.9 18.8 8 16 8Z" fill="#fff"/>
+      </svg>
+      <span class="brand-name">Smart Dental Clinic</span>
+    </a>
+    
+    <nav class="sidebar-nav" style="display:flex; flex-direction:column; gap:8px; margin-top:24px;">
+      <a href="./dashboard.html" style="padding:12px 16px; color:var(--color-text-muted); text-decoration:none; border-radius:8px; display:flex; align-items:center; gap:8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to Dashboard
+      </a>
+    </nav>
+  </aside>
+
+  <main class="profile-content">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-6);">
+      <div>
+        <h1 style="margin:0; font-size:var(--text-xl);">Marketplace Profile</h1>
+        <p class="text-muted" style="margin-top:4px; font-size:var(--text-sm);">Manage how your clinic appears to patients on the public directory.</p>
+      </div>
+      <button class="btn btn-primary" id="btnSaveProfile" onclick="saveProfile()">Save Profile</button>
+    </div>
+
+    <div id="loadingIndicator" style="padding:40px; text-align:center; color:var(--color-text-muted);">Loading profile data...</div>
+    
+    <div id="profileForm" style="display:none;">
+      
+      <!-- General Identity -->
+      <section class="form-section">
+        <h3>General Identity</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Clinic Name</label>
+            <input type="text" id="f_name" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Doctor / Owner Name (Read-only)</label>
+            <input type="text" id="f_owner_name" class="form-control" disabled style="opacity:0.6;">
+          </div>
+          <div class="form-group">
+            <label>Public Phone Number</label>
+            <input type="text" id="f_phone" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Email (Read-only)</label>
+            <input type="text" id="f_email" class="form-control" disabled style="opacity:0.6;">
+          </div>
+        </div>
+      </section>
+
+      <!-- Media & Bio -->
+      <section class="form-section">
+        <h3>Media &amp; Bio</h3>
+        <div class="form-group">
+          <label>Cover Image URL (16:9 ratio recommended)</label>
+          <img id="coverPreview" class="cover-preview" src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80" alt="Cover Preview">
+          <input type="url" id="f_cover_image" class="form-control" placeholder="https://..." oninput="document.getElementById('coverPreview').src = this.value || 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80'">
+        </div>
+        <div class="form-group" style="margin-top:var(--space-4);">
+          <label>About / Bio</label>
+          <textarea id="f_about" class="form-control" rows="4" placeholder="Tell patients about your clinic..."></textarea>
+        </div>
+      </section>
+
+      <!-- Location -->
+      <section class="form-section">
+        <h3>Location</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>City</label>
+            <input type="text" id="f_city" class="form-control" placeholder="e.g. Delhi">
+          </div>
+          <div class="form-group">
+            <label>Area / Locality</label>
+            <input type="text" id="f_area" class="form-control" placeholder="e.g. Connaught Place">
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label>Full Address</label>
+            <input type="text" id="f_address" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Pincode</label>
+            <input type="text" id="f_pincode" class="form-control">
+          </div>
+        </div>
+      </section>
+
+      <!-- Clinical Details -->
+      <section class="form-section">
+        <h3>Clinical Details</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Experience (Years)</label>
+            <input type="number" id="f_experience" class="form-control" min="0" max="100">
+          </div>
+          <div class="form-group">
+            <label>Price Range Tier</label>
+            <select id="f_price_range" class="form-control">
+              <option value="₹">₹ (Affordable)</option>
+              <option value="₹₹">₹₹ (Standard)</option>
+              <option value="₹₹₹">₹₹₹ (Premium)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Timings</label>
+            <input type="text" id="f_timings" class="form-control" placeholder="e.g. Mon-Sat: 09:00 AM - 08:00 PM">
+          </div>
+          <div class="form-group">
+            <label>Specialties (Comma separated)</label>
+            <input type="text" id="f_specialties" class="form-control" placeholder="e.g. General Dentistry, Root Canal, Orthodontics">
+          </div>
+        </div>
+      </section>
+
+      <!-- Services Offered -->
+      <section class="form-section">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3>Services &amp; Pricing</h3>
+          <button class="btn btn-secondary btn-sm" onclick="addServiceRow()">+ Add Service</button>
+        </div>
+        <table class="services-table">
+          <thead>
+            <tr>
+              <th style="width:50%;">Service Name</th>
+              <th style="width:30%;">Price (₹)</th>
+              <th style="width:20%; text-align:right;">Remove</th>
+            </tr>
+          </thead>
+          <tbody id="servicesTbody">
+            <!-- Rows injected via JS -->
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Amenities -->
+      <section class="form-section">
+        <h3>Amenities</h3>
+        <div class="checkbox-grid" id="amenitiesGrid">
+          <!-- standard amenities -->
+          <label class="checkbox-label"><input type="checkbox" value="Digital X-Ray"> Digital X-Ray</label>
+          <label class="checkbox-label"><input type="checkbox" value="Sterilization Certified"> Sterilization Certified</label>
+          <label class="checkbox-label"><input type="checkbox" value="Wheelchair Accessible"> Wheelchair Accessible</label>
+          <label class="checkbox-label"><input type="checkbox" value="Wi-Fi"> Wi-Fi</label>
+          <label class="checkbox-label"><input type="checkbox" value="Parking Available"> Parking Available</label>
+          <label class="checkbox-label"><input type="checkbox" value="AC Waiting Room"> AC Waiting Room</label>
+          <label class="checkbox-label"><input type="checkbox" value="Card Payment"> Card Payment Accepted</label>
+          <label class="checkbox-label"><input type="checkbox" value="EMI Available"> EMI Available</label>
+          <label class="checkbox-label"><input type="checkbox" value="Instant Booking"> Instant Booking</label>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="./assets/app.js"></script>
+<script>
+  let currentSettings = null;
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (!window.api.isAuthenticated()) {
+      window.location.href = './login.html';
+      return;
+    }
+    await loadProfileData();
+  });
+
+  async function loadProfileData() {
+    try {
+      const res = await window.api.getSettings();
+      currentSettings = res.settings;
+      populateForm(currentSettings);
+      document.getElementById('loadingIndicator').style.display = 'none';
+      document.getElementById('profileForm').style.display = 'block';
+    } catch (e) {
+      alert('Failed to load profile data: ' + e.message);
+    }
+  }
+
+  function populateForm(data) {
+    document.getElementById('f_name').value = data.name || '';
+    document.getElementById('f_owner_name').value = data.owner_name || '';
+    document.getElementById('f_phone').value = data.phone || '';
+    document.getElementById('f_email').value = data.email || '';
+    
+    document.getElementById('f_cover_image').value = data.cover_image || '';
+    if (data.cover_image) document.getElementById('coverPreview').src = data.cover_image;
+    
+    document.getElementById('f_about').value = data.about || '';
+    document.getElementById('f_city').value = data.city || '';
+    document.getElementById('f_area').value = data.area || '';
+    document.getElementById('f_address').value = data.address || '';
+    document.getElementById('f_pincode').value = data.pincode || '';
+    
+    document.getElementById('f_experience').value = data.experience_years || 0;
+    if (data.price_range) document.getElementById('f_price_range').value = data.price_range;
+    document.getElementById('f_timings').value = data.timings || '';
+    
+    document.getElementById('f_specialties').value = Array.isArray(data.specialties) ? data.specialties.join(', ') : '';
+
+    // Amenities
+    const amenities = Array.isArray(data.amenities) ? data.amenities : [];
+    document.querySelectorAll('#amenitiesGrid input[type="checkbox"]').forEach(cb => {
+      cb.checked = amenities.includes(cb.value);
+    });
+
+    // Services
+    const tbody = document.getElementById('servicesTbody');
+    tbody.innerHTML = '';
+    const services = Array.isArray(data.services_offered) ? data.services_offered : [];
+    if (services.length === 0) {
+      addServiceRow('General Consultation', 500);
+    } else {
+      services.forEach(s => addServiceRow(s.name, s.price));
+    }
+  }
+
+  function addServiceRow(name = '', price = '') {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" class="srv-name" placeholder="Service name" value="${name}"></td>
+      <td><input type="number" class="srv-price" placeholder="Amount" value="${price}"></td>
+      <td style="text-align:right;">
+        <button type="button" class="btn btn-secondary btn-sm" style="color:#dc2626; border-color:#fca5a5;" onclick="this.closest('tr').remove()">Remove</button>
+      </td>
+    `;
+    document.getElementById('servicesTbody').appendChild(tr);
+  }
+
+  async function saveProfile() {
+    const btn = document.getElementById('btnSaveProfile');
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+
+    // Collect amenities
+    const amenities = [];
+    document.querySelectorAll('#amenitiesGrid input[type="checkbox"]:checked').forEach(cb => {
+      amenities.push(cb.value);
+    });
+
+    // Collect services
+    const services = [];
+    document.querySelectorAll('#servicesTbody tr').forEach(tr => {
+      const name = tr.querySelector('.srv-name').value.trim();
+      const price = parseInt(tr.querySelector('.srv-price').value.trim()) || 0;
+      if (name) services.push({ name, price });
+    });
+
+    // Collect specialties
+    const specRaw = document.getElementById('f_specialties').value;
+    const specialties = specRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+    const payload = {
+      name: document.getElementById('f_name').value.trim(),
+      phone: document.getElementById('f_phone').value.trim(),
+      address: document.getElementById('f_address').value.trim(),
+      about: document.getElementById('f_about').value.trim(),
+      city: document.getElementById('f_city').value.trim(),
+      area: document.getElementById('f_area').value.trim(),
+      pincode: document.getElementById('f_pincode').value.trim(),
+      cover_image: document.getElementById('f_cover_image').value.trim(),
+      timings: document.getElementById('f_timings').value.trim(),
+      experience_years: parseInt(document.getElementById('f_experience').value) || 0,
+      price_range: document.getElementById('f_price_range').value,
+      specialties,
+      services_offered: services,
+      amenities
+    };
+
+    try {
+      await window.api.updateSettings(payload);
+      alert('Profile updated successfully!');
+    } catch (e) {
+      alert('Failed to save: ' + e.message);
+    } finally {
+      btn.textContent = 'Save Profile';
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>

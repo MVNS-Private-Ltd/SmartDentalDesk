@@ -766,194 +766,258 @@
 
   <script src="./assets/app.js"></script>
   <script>
-    // State
+    /* ───────────────────────────── State ───────────────────────────── */
     const state = {
       q: '',
       city: 'all',
       service: 'all',
-      area: 'all',
+      areas: [],          // array — client-side area filtering
       min_rating: 0,
-      price_range: 'all',
+      price_range: [],    // array — client-side price tier filtering
       featured: false,
+      verified_only: false,
+      instant_only: false,
       sort: 'featured',
       page: 1
     };
 
-    // DOM Elements
-    const citySelect = document.getElementById('citySelect');
-    const serviceSelect = document.getElementById('serviceSelect');
-    const keywordInput = document.getElementById('keywordInput');
-    const btnSearch = document.getElementById('btnSearch');
-    const sortSelect = document.getElementById('sortSelect');
-    const clinicsGrid = document.getElementById('clinicsGrid');
-    const resultsCount = document.getElementById('resultsCount');
+    /* ───────────────────────── DOM references ───────────────────────── */
+    const citySelect      = document.getElementById('citySelect');
+    const serviceSelect   = document.getElementById('serviceSelect');
+    const keywordInput    = document.getElementById('keywordInput');
+    const btnSearch       = document.getElementById('btnSearch');
+    const sortSelect      = document.getElementById('sortSelect');
+    const clinicsGrid     = document.getElementById('clinicsGrid');
+    const resultsCount    = document.getElementById('resultsCount');
     const btnResetFilters = document.getElementById('btnResetFilters');
+    const chkVerified     = document.getElementById('chkVerified');
+    const chkInstant      = document.getElementById('chkInstant');
+    const chkFeatured     = document.getElementById('chkFeatured');
 
-    // Parse URL params on initial load
+    /* ─────────────────────── Initialise on load ─────────────────────── */
     document.addEventListener('DOMContentLoaded', async () => {
       const params = new URLSearchParams(window.location.search);
-      if (params.get('city')) {
-        state.city = params.get('city');
-        citySelect.value = state.city;
-      }
-      if (params.get('service')) {
-        state.service = params.get('service');
-        serviceSelect.value = state.service;
-      }
-      if (params.get('q')) {
-        state.q = params.get('q');
-        keywordInput.value = state.q;
-      }
+      if (params.get('city'))    { state.city    = params.get('city');    citySelect.value    = state.city; }
+      if (params.get('service')) { state.service  = params.get('service'); serviceSelect.value = state.service; }
+      if (params.get('q'))       { state.q        = params.get('q');       keywordInput.value  = state.q; }
 
-      // Load Metadata for dynamic filter population
-      loadMeta();
-
-      // Initial Fetch
+      await loadMeta();
       fetchClinics();
+      attachSidebarListeners();
     });
 
+    /* ───────────────────── Meta: dynamic dropdowns ───────────────────── */
     async function loadMeta() {
       try {
         const meta = await window.api.getMarketplaceMeta();
-        if (meta && meta.cities) {
-          // Populate city dropdown
+        window._meta = meta;
+
+        if (meta?.cities?.length) {
           const currentVal = citySelect.value;
-          citySelect.innerHTML = '<option value="all">All Cities</option>' + 
+          citySelect.innerHTML = '<option value="all">All Cities</option>' +
             meta.cities.map(c => `<option value="${c}">${c}</option>`).join('');
           if (meta.cities.includes(currentVal)) citySelect.value = currentVal;
         }
-      } catch (e) {
-        console.warn('Meta fetch warning:', e);
-      }
+        refreshLocalityCheckboxes();
+      } catch (e) { console.warn('Meta fetch:', e); }
     }
 
-    // Search Actions
+    function refreshLocalityCheckboxes() {
+      const meta = window._meta;
+      const box  = document.getElementById('localityCheckboxes');
+      if (!meta || !box) return;
+
+      const city  = state.city;
+      const areas = (city !== 'all' && meta.areas_by_city?.[city])
+        ? meta.areas_by_city[city]
+        : [];
+
+      if (!areas.length) {
+        box.innerHTML = '<p style="font-size:.8rem;color:#94a3b8;margin:.25rem 0 0;">Select a city to see areas.</p>';
+        return;
+      }
+
+      box.innerHTML = areas.slice(0, 10).map(a => `
+        <label class="checkbox-label">
+          <input type="checkbox" name="area" value="${a}" ${state.areas.includes(a) ? 'checked' : ''}> ${a}
+        </label>
+      `).join('');
+
+      box.querySelectorAll('input[name="area"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+          state.areas = [...document.querySelectorAll('input[name="area"]:checked')].map(c => c.value);
+          fetchClinics();
+        });
+      });
+    }
+
+    /* ───────────────────── Top search bar events ─────────────────────── */
     btnSearch.addEventListener('click', () => {
-      state.city = citySelect.value;
+      state.city    = citySelect.value;
       state.service = serviceSelect.value;
-      state.q = keywordInput.value.trim();
+      state.q       = keywordInput.value.trim();
       fetchClinics();
     });
 
-    keywordInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        state.q = keywordInput.value.trim();
-        fetchClinics();
-      }
+    keywordInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { state.q = keywordInput.value.trim(); fetchClinics(); }
     });
 
     citySelect.addEventListener('change', () => {
-      state.city = citySelect.value;
+      state.city  = citySelect.value;
+      state.areas = [];           // clear area selection when city changes
+      refreshLocalityCheckboxes();
       fetchClinics();
     });
 
-    serviceSelect.addEventListener('change', () => {
-      state.service = serviceSelect.value;
-      fetchClinics();
-    });
+    serviceSelect.addEventListener('change', () => { state.service = serviceSelect.value; fetchClinics(); });
+    sortSelect.addEventListener('change',    () => { state.sort    = sortSelect.value;    fetchClinics(); });
 
-    sortSelect.addEventListener('change', () => {
-      state.sort = sortSelect.value;
-      fetchClinics();
-    });
+    /* ──────────────────── Sidebar filter listeners ───────────────────── */
+    function attachSidebarListeners() {
+      // Price range checkboxes
+      document.querySelectorAll('input[name="price_range"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+          state.price_range = [...document.querySelectorAll('input[name="price_range"]:checked')].map(c => c.value);
+          fetchClinics();
+        });
+      });
 
-    // Quick Pill Buttons
+      // Rating radios
+      document.querySelectorAll('input[name="rating"]').forEach(r => {
+        r.addEventListener('change', () => { state.min_rating = parseFloat(r.value); fetchClinics(); });
+      });
+
+      // Trust badges
+      chkVerified.addEventListener('change', function() { state.verified_only = this.checked; fetchClinics(); });
+      chkInstant.addEventListener('change',  function() { state.instant_only  = this.checked; fetchClinics(); });
+      chkFeatured.addEventListener('change', function() {
+        state.featured = this.checked;
+        // Sync pill highlight
+        document.querySelectorAll('#filterPills .pill-btn').forEach(b => b.classList.remove('active'));
+        const target = this.checked ? '[data-pill="featured"]' : '[data-pill="all"]';
+        document.querySelector(`#filterPills .pill-btn${target}`)?.classList.add('active');
+        fetchClinics();
+      });
+    }
+
+    /* ──────────────────────── Quick pill buttons ─────────────────────── */
     document.querySelectorAll('#filterPills .pill-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('#filterPills .pill-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
         const pill = btn.dataset.pill;
-        const srv = btn.dataset.service;
+        const srv  = btn.dataset.service;
 
         if (pill === 'all') {
-          state.featured = false;
-          state.min_rating = 0;
-          state.service = 'all';
-          serviceSelect.value = 'all';
+          state.featured = false; state.min_rating = 0; state.service = 'all';
+          serviceSelect.value = 'all'; chkFeatured.checked = false;
         } else if (pill === 'featured') {
-          state.featured = true;
-          state.min_rating = 0;
+          state.featured = true; state.min_rating = 0;
+          chkFeatured.checked = true;
         } else if (pill === 'top-rated') {
-          state.min_rating = 4.8;
-          state.featured = false;
+          state.min_rating = 4.8; state.featured = false; chkFeatured.checked = false;
         } else if (srv) {
-          state.service = srv;
-          serviceSelect.value = srv;
-          state.featured = false;
-          state.min_rating = 0;
+          state.service = srv; serviceSelect.value = srv;
+          state.featured = false; state.min_rating = 0; chkFeatured.checked = false;
         }
-
         fetchClinics();
       });
     });
 
-    // Rating Radio filter
-    document.querySelectorAll('input[name="rating"]').forEach(r => {
-      r.addEventListener('change', () => {
-        state.min_rating = parseFloat(r.value);
-        fetchClinics();
-      });
-    });
-
-    // Reset filters
+    /* ────────────────────────── Reset all filters ────────────────────── */
     btnResetFilters.addEventListener('click', () => {
-      state.q = '';
-      state.city = 'all';
-      state.service = 'all';
-      state.area = 'all';
-      state.min_rating = 0;
-      state.price_range = 'all';
-      state.featured = false;
-      state.sort = 'featured';
+      state.q = ''; state.city = 'all'; state.service = 'all'; state.areas = [];
+      state.min_rating = 0; state.price_range = []; state.featured = false;
+      state.verified_only = false; state.instant_only = false; state.sort = 'featured';
 
-      citySelect.value = 'all';
-      serviceSelect.value = 'all';
-      keywordInput.value = '';
-      sortSelect.value = 'featured';
-      document.querySelector('input[name="rating"][value="0"]').checked = true;
-      document.querySelectorAll('#localityCheckboxes input').forEach(c => c.checked = false);
+      citySelect.value = 'all'; serviceSelect.value = 'all';
+      keywordInput.value = ''; sortSelect.value = 'featured';
+
+      const anyRating = document.querySelector('input[name="rating"][value="0"]');
+      if (anyRating) anyRating.checked = true;
+
+      document.querySelectorAll('input[name="price_range"]').forEach(c => c.checked = false);
+      chkVerified.checked = true;
+      chkInstant.checked  = false;
+      chkFeatured.checked = false;
+
+      refreshLocalityCheckboxes();
 
       document.querySelectorAll('#filterPills .pill-btn').forEach(b => b.classList.remove('active'));
-      document.querySelector('#filterPills .pill-btn[data-pill="all"]').classList.add('active');
+      document.querySelector('#filterPills .pill-btn[data-pill="all"]')?.classList.add('active');
 
       fetchClinics();
     });
 
-    // Main fetch function
+    /* ────────────────────────── Main fetch function ──────────────────── */
     async function fetchClinics() {
       clinicsGrid.innerHTML = `
         <div class="skeleton-card"></div>
         <div class="skeleton-card"></div>
         <div class="skeleton-card"></div>
       `;
-      resultsCount.innerHTML = `Searching clinics...`;
+      resultsCount.innerHTML = 'Searching clinics&hellip;';
 
       try {
-        const queryParams = {
-          q: state.q,
-          city: state.city,
-          service: state.service,
-          area: state.area,
+        const res = await window.api.getPublicClinics({
+          q:          state.q,
+          city:       state.city,
+          service:    state.service,
           min_rating: state.min_rating > 0 ? state.min_rating : undefined,
-          price_range: state.price_range !== 'all' ? state.price_range : undefined,
-          featured: state.featured ? true : undefined,
-          sort: state.sort
-        };
+          featured:   state.featured ? true : undefined,
+          sort:       state.sort,
+          limit:      60
+        });
 
-        const res = await window.api.getPublicClinics(queryParams);
-        const clinics = res.clinics || [];
-        const total = res.total || clinics.length;
+        let clinics = res.clinics || [];
 
-        resultsCount.innerHTML = `${total} Dental ${total === 1 ? 'Clinic' : 'Clinics'} Found <span>in ${state.city === 'all' ? 'All Locations' : state.city}</span>`;
+        /* ── Client-side post-filters ── */
 
-        if (clinics.length === 0) {
+        // Area (multiple selection)
+        if (state.areas.length) {
+          clinics = clinics.filter(c =>
+            state.areas.some(a => (c.area || '').toLowerCase().includes(a.toLowerCase()))
+          );
+        }
+
+        // Price range (multiple selection)
+        if (state.price_range.length) {
+          clinics = clinics.filter(c => state.price_range.includes(c.price_range));
+        }
+
+        // Verified only
+        if (state.verified_only) {
+          clinics = clinics.filter(c => c.is_verified !== false);
+        }
+
+        // Instant booking (check amenities/settings for online booking)
+        if (state.instant_only) {
+          clinics = clinics.filter(c =>
+            Array.isArray(c.amenities) &&
+            c.amenities.some(a => /online|instant|booking/i.test(a))
+          );
+        }
+
+        /* ── Render results ── */
+        const total = clinics.length;
+        resultsCount.innerHTML = `
+          <strong>${total}</strong> Dental ${total === 1 ? 'Clinic' : 'Clinics'} Found
+          <span>in ${state.city === 'all' ? 'All Locations' : state.city}</span>
+        `;
+
+        if (!clinics.length) {
           clinicsGrid.innerHTML = `
             <div class="empty-state">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
               <h3>No dental clinics match your criteria</h3>
               <p>Try widening your search location, clearing filters, or searching for general dentistry.</p>
-              <button class="btn btn-primary" onclick="document.getElementById('btnResetFilters').click()">Reset Filters</button>
+              <button class="btn btn-primary" onclick="document.getElementById('btnResetFilters').click()">
+                Reset All Filters
+              </button>
             </div>
           `;
           return;
@@ -973,73 +1037,136 @@
       }
     }
 
+    /* ─────────────────────── Clinic card renderer ────────────────────── */
     function renderClinicCard(clinic) {
-      const cover = clinic.cover_image || 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80';
-      const services = clinic.services_offered || [];
+      const cover = clinic.cover_image ||
+        'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80';
+
+      const services    = clinic.services_offered || [];
       const specialties = clinic.specialties || [];
       const displayedTags = services.slice(0, 3);
-      
-      const minPriceDisplay = clinic.min_price 
-        ? `₹${clinic.min_price.toLocaleString('en-IN')}` 
-        : '₹500';
+
+      const minPriceDisplay = clinic.min_price
+        ? `\u20B9${clinic.min_price.toLocaleString('en-IN')}`
+        : '\u20B9500';
 
       const bookingSlug = clinic.booking_slug || clinic.id;
+
+      // About snippet (max ~88 chars)
+      const aboutSnippet = clinic.about
+        ? (clinic.about.length > 88 ? clinic.about.slice(0, 88) + '\u2026' : clinic.about)
+        : '';
+
+      // Amenity chips (top 3)
+      const amenities = Array.isArray(clinic.amenities) ? clinic.amenities.slice(0, 3) : [];
+
+      // Price tier badge colour
+      const tierColors = { '\u20B9': '#16a34a', '\u20B9\u20B9': '#d97706', '\u20B9\u20B9\u20B9': '#7c3aed' };
+      const tierBg     = clinic.price_range ? (tierColors[clinic.price_range] || '#475569') : null;
 
       return `
         <article class="clinic-card">
           <!-- Image Column -->
           <div class="clinic-card-image-wrap">
-            <img src="${cover}" alt="${clinic.name}" class="clinic-card-image" loading="lazy">
-            <div class="card-badge-top-left ${clinic.is_verified ? 'card-badge-verified' : ''}">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <img
+              src="${cover}"
+              alt="${clinic.name}"
+              class="clinic-card-image"
+              loading="lazy"
+              onerror="this.src='https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80'"
+            >
+            <div class="card-badge-top-left ${clinic.is_featured ? 'card-badge-verified' : ''}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
               ${clinic.is_featured ? 'Verified Partner' : 'Verified Clinic'}
             </div>
+            ${tierBg ? `
+              <div style="position:absolute;bottom:10px;left:10px;background:${tierBg};color:#fff;font-size:.72rem;font-weight:700;padding:.22rem .6rem;border-radius:8px;letter-spacing:.02em;">
+                ${clinic.price_range}
+              </div>` : ''}
           </div>
 
           <!-- Body Column -->
           <div class="clinic-card-body">
             <div>
+              <!-- Name + Rating row -->
               <div class="clinic-top-row">
                 <div>
                   <a href="./clinic-detail.html?c=${encodeURIComponent(bookingSlug)}" class="clinic-name">${clinic.name}</a>
-                  <div class="clinic-doctor">${clinic.owner_name} &bull; <span style="color:#2563eb; font-weight:600;">${clinic.experience_years}+ Yrs Exp</span></div>
+                  <div class="clinic-doctor">
+                    ${clinic.owner_name}
+                    &bull;
+                    <span style="color:#2563eb;font-weight:600;">${clinic.experience_years}+ Yrs Exp</span>
+                  </div>
                 </div>
                 <div class="clinic-rating-box">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#eab308" stroke="#eab308"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  <span>${clinic.rating.toFixed(1)}</span>
-                  <span style="font-size:0.75rem; color:#64748b; font-weight:500;">(${clinic.review_count})</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#eab308" stroke="#eab308">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                  <span>${Number(clinic.rating).toFixed(1)}</span>
+                  <span style="font-size:.75rem;color:#64748b;font-weight:500;">(${clinic.review_count})</span>
                 </div>
               </div>
 
+              <!-- Location -->
               <div class="clinic-location">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                </svg>
                 <span>${clinic.area}, ${clinic.city}</span>
                 <span style="color:#cbd5e1;">&bull;</span>
-                <span style="color:#16a34a; font-weight:600;">Open Today</span>
+                <span style="color:#16a34a;font-weight:600;">Open Today</span>
               </div>
 
-              <!-- Services / Specialties Tags -->
+              ${aboutSnippet ? `
+                <p style="font-size:.82rem;color:#64748b;margin-bottom:.7rem;line-height:1.5;">${aboutSnippet}</p>
+              ` : ''}
+
+              <!-- Services Tags -->
               <div class="services-tags-row">
-                ${displayedTags.map(s => `<span class="service-tag">${s.name} <strong>₹${s.price || 500}</strong></span>`).join('')}
-                ${specialties.length > 0 && displayedTags.length < 2 ? `<span class="service-tag">${specialties[0]}</span>` : ''}
+                ${displayedTags.map(s => `
+                  <span class="service-tag">${s.name} <strong>\u20B9${Number(s.price || 500).toLocaleString('en-IN')}</strong></span>
+                `).join('')}
+                ${specialties.length > 0 && displayedTags.length < 2
+                  ? `<span class="service-tag">${specialties[0]}</span>`
+                  : ''}
               </div>
+
+              <!-- Amenity chips -->
+              ${amenities.length ? `
+                <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.2rem;">
+                  ${amenities.map(a => `
+                    <span style="font-size:.71rem;padding:.2rem .55rem;border-radius:9999px;
+                                 background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;font-weight:500;">
+                      ${a}
+                    </span>
+                  `).join('')}
+                </div>
+              ` : ''}
             </div>
 
-            <!-- Footer & Actions -->
+            <!-- Footer & CTA buttons -->
             <div class="clinic-card-footer">
               <div class="price-starting">
                 <span class="price-label">Treatments from</span>
                 <span class="price-value">${minPriceDisplay}</span>
               </div>
               <div class="card-actions">
-                <a href="./clinic-detail.html?c=${encodeURIComponent(bookingSlug)}" class="btn-view-profile">View Profile</a>
+                <a href="./clinic-detail.html?c=${encodeURIComponent(bookingSlug)}" class="btn-view-profile">
+                  View Profile
+                </a>
                 <a href="./book.html?c=${encodeURIComponent(bookingSlug)}" class="btn-book-instant">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  Book Instant
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  Book Now
                 </a>
               </div>
             </div>
-
           </div>
         </article>
       `;
@@ -1047,3 +1174,5 @@
   </script>
 </body>
 </html>
+
+

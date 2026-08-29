@@ -5,9 +5,11 @@
 const express     = require('express');
 const supabase    = require('../lib/supabase');
 const requireAuth = require('../middleware/auth');
+const requireActiveSubscription = require('../middleware/subscription');
 
 const router = express.Router();
 router.use(requireAuth);
+router.use(requireActiveSubscription);
 
 // ── GET /api/dashboard/stats ──────────────────────────────────────────────────
 router.get('/stats', async (req, res, next) => {

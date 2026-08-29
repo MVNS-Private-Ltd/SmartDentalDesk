@@ -17,6 +17,8 @@ const { body, validationResult } = require('express-validator');
 const { CLINIC_INTELLIGENCE } = require('../lib/clinic_intelligence');
 const supabase    = require('../lib/supabase');
 const requireAuth = require('../middleware/auth');
+const { trackAiUsage } = require('../lib/credits');
+const { CREDIT_COSTS } = require('../lib/plans');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -708,6 +710,9 @@ router.post('/chat', chatRules, async (req, res, next) => {
 
     if (!replyText) throw new Error('Empty response from AI model.');
 
+    // Phase 1 soft tracking
+    const txnId = await trackAiUsage(req.clinicId, mode);
+
     // 7. Save assistant reply to DB
     const { data: aiMsg, error: saveErr } = await supabase.from('ai_chats').insert({
       clinic_id:    req.clinicId,
@@ -717,6 +722,8 @@ router.post('/chat', chatRules, async (req, res, next) => {
       model_used:   model,
       session_id:   activeSessionId,
       session_name: activeSessionName,
+      credits_cost: CREDIT_COSTS[mode] || 1,
+      credit_txn_id: txnId,
     }).select().single();
 
     if (saveErr) throw saveErr;
@@ -878,6 +885,7 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
 
     // Save full reply to DB
     try {
+      const txnId = await trackAiUsage(req.clinicId, mode);
       await supabase.from('ai_chats').insert({
         clinic_id:    req.clinicId,
         role:         'assistant',
@@ -886,6 +894,8 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
         model_used:   usedModel,
         session_id:   activeSessionId,
         session_name: activeSessionName,
+        credits_cost: CREDIT_COSTS[mode] || 1,
+        credit_txn_id: txnId,
       });
     } catch (saveErr) {
       console.error('[AI Stream] Failed to save reply:', saveErr);

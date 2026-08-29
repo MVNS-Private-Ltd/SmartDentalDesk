@@ -24,6 +24,9 @@ const publicRoutes      = require('./routes/public');
 const aiRoutes          = require('./routes/ai');
 const emailRoutes       = require('./routes/email');
 const superAdminRoutes  = require('./routes/superAdmin');
+const billingRoutes     = require('./routes/billing');
+const creditsRoutes     = require('./routes/credits');
+const webhookRoutes     = require('./routes/webhooks');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -56,6 +59,9 @@ app.use(cors({
   credentials: true
 }));
 
+// Webhook must use raw body — mount BEFORE express.json()
+app.use('/api/webhooks/razorpay', express.raw({ type: 'application/json', limit: '10mb' }), webhookRoutes);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
@@ -83,6 +89,8 @@ app.use('/api/public',       publicRoutes);
 app.use('/api/ai',           aiRoutes);
 app.use('/api/email',        emailRoutes);
 app.use('/api/super-admin',  superAdminRoutes);
+app.use('/api/billing',      billingRoutes);
+app.use('/api/credits',      creditsRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {

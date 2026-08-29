@@ -67,6 +67,11 @@ window.api = (function() {
       }
 
       if (!response.ok) {
+        if (data.redirect) {
+          window.location.href = data.redirect;
+          // prevent further execution
+          await new Promise(() => {});
+        }
         throw new Error(data.error || 'API Request Failed');
       }
 

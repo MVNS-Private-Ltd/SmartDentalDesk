@@ -27,6 +27,7 @@ const superAdminRoutes  = require('./routes/superAdmin');
 const billingRoutes     = require('./routes/billing');
 const creditsRoutes     = require('./routes/credits');
 const webhookRoutes     = require('./routes/webhooks');
+const cronRoutes        = require('./routes/cron');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -91,6 +92,7 @@ app.use('/api/email',        emailRoutes);
 app.use('/api/super-admin',  superAdminRoutes);
 app.use('/api/billing',      billingRoutes);
 app.use('/api/credits',      creditsRoutes);
+app.use('/api/cron',         cronRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {

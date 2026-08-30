@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Billing & Credits - Smart Dental Desk</title>
+  <!-- Main CSS -->
+  <style>
+    /* Minimal inline CSS for top-up page leveraging existing vars */
+    :root {
+      --bg: #ffffff; --text: #1e293b; --text-light: #64748b; 
+      --primary: #2563eb; --primary-hover: #1d4ed8;
+      --surface: #f8fafc; --border: #e2e8f0; --radius: 12px;
+    }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; }
+    .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
+    h1 { font-size: 2rem; margin-bottom: 8px; }
+    .subtitle { color: var(--text-light); margin-bottom: 32px; }
+    
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 24px; }
+    
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-box { background: #fff; padding: 16px; border-radius: 8px; border: 1px solid var(--border); }
+    .stat-box label { font-size: 0.85rem; color: var(--text-light); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-box .value { font-size: 1.5rem; font-weight: 700; margin-top: 8px; color: var(--primary); }
+
+    .packs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 16px; }
+    .pack-card { background: #fff; border: 2px solid var(--border); border-radius: var(--radius); padding: 24px; text-align: center; transition: all 0.2s; cursor: pointer; }
+    .pack-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+    .pack-title { font-weight: 700; font-size: 1.1rem; margin-bottom: 8px; }
+    .pack-credits { font-size: 2rem; font-weight: 800; color: var(--text); }
+    .pack-price { color: var(--text-light); margin-bottom: 16px; }
+    .btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; }
+    .btn:hover { background: var(--primary-hover); }
+
+    .history-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 0.9rem; }
+    .history-table th, .history-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    .history-table th { color: var(--text-light); font-weight: 600; }
+    .amt-positive { color: #16a34a; font-weight: 600; }
+    .amt-negative { color: #dc2626; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <a href="./dashboard.html" style="color:var(--primary); text-decoration:none; display:inline-block; margin-bottom:20px;">&larr; Back to Dashboard</a>
+    <h1>Billing & AI Credits</h1>
+    <p class="subtitle">Manage your subscription and top up your AI credits.</p>
+
+    <!-- Balances -->
+    <div class="card">
+      <h2 style="margin-top:0;">Current Balance</h2>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <label>Total Available</label>
+          <div class="value" id="valTotal">...</div>
+        </div>
+        <div class="stat-box">
+          <label>Monthly Allocation</label>
+          <div class="value" style="color:var(--text);" id="valMonthly">...</div>
+        </div>
+        <div class="stat-box">
+          <label>Top-up Balance</label>
+          <div class="value" style="color:var(--text);" id="valTopup">...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top up packs -->
+    <div class="card">
+      <h2 style="margin-top:0;">Purchase Top-up Credits</h2>
+      <p style="color:var(--text-light); font-size:0.9rem; margin-top:0;">Top-up credits never expire for 12 months and are used only after your monthly allocation runs out.</p>
+      <div class="packs-grid">
+        
+        <div class="pack-card" onclick="buyPack('starter_pack')">
+          <div class="pack-title">Starter Pack</div>
+          <div class="pack-credits">500</div>
+          <div class="pack-price">₹99</div>
+          <button class="btn">Buy Now</button>
+        </div>
+
+        <div class="pack-card" onclick="buyPack('value_pack')" style="border-color:var(--primary); position:relative;">
+          <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--primary); color:white; font-size:0.75rem; font-weight:700; padding:4px 12px; border-radius:12px;">BEST VALUE</div>
+          <div class="pack-title">Value Pack</div>
+          <div class="pack-credits">2,000</div>
+          <div class="pack-price">₹299</div>
+          <button class="btn">Buy Now</button>
+        </div>
+
+        <div class="pack-card" onclick="buyPack('power_pack')">
+          <div class="pack-title">Power Pack</div>
+          <div class="pack-credits">5,000</div>
+          <div class="pack-price">₹599</div>
+          <button class="btn">Buy Now</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+      <h2 style="margin-top:0;">Transaction History</h2>
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="4" style="text-align:center; color:var(--text-light);">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="./assets/app.js"></script>
+  <script>
+    if (!window.api.isAuthenticated()) {
+      window.location.href = './login.html';
+    }
+
+    async function loadData() {
+      try {
+        const bal = await window.api.getCreditsBalance();
+        document.getElementById('valTotal').textContent = bal.total_remaining.toLocaleString();
+        document.getElementById('valMonthly').textContent = Math.max(0, bal.monthly.credits_allocated - bal.monthly.credits_used).toLocaleString();
+        document.getElementById('valTopup').textContent = bal.topup.toLocaleString();
+
+        const history = await window.api.getCreditsHistory();
+        const tbody = document.getElementById('historyBody');
+        tbody.innerHTML = '';
+        if (history.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-light);">No transactions found</td></tr>';
+        } else {
+          history.forEach(tx => {
+            const tr = document.createElement('tr');
+            const amtClass = tx.amount > 0 ? 'amt-positive' : 'amt-negative';
+            const amtSign = tx.amount > 0 ? '+' : '';
+            tr.innerHTML = `
+              <td>${new Date(tx.created_at).toLocaleDateString()} ${new Date(tx.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td>
+              <td style="text-transform:capitalize;">${tx.type}</td>
+              <td class="${amtClass}">${amtSign}${tx.amount}</td>
+              <td>${tx.ai_mode ? `AI Mode: ${tx.ai_mode}` : '-'}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function buyPack(packId) {
+      try {
+        const res = await window.api.createTopupOrder(packId);
+        
+        const options = {
+          key: "rzp_test_YourKeyHere", // We will replace this dynamically if needed, or pass from backend. For now Razorpay checkout requires the key.
+          // In a real implementation, it's better to fetch the public key from the backend. 
+          // For this exercise, let's assume we fetch it or it's injected. Wait, we can fetch it.
+        };
+        
+        // Wait, since we didn't expose RAZORPAY_KEY_ID via an endpoint, 
+        // I will add it to the /create-order response.
+        
+        const rzp = new Razorpay({
+          key: res.key_id, // We need to update backend to send key_id
+          amount: res.amount,
+          currency: res.currency,
+          order_id: res.order_id,
+          name: "Smart Dental Desk",
+          description: "AI Credits Top-up",
+          handler: async function (response) {
+            try {
+              await window.api.verifyTopup({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              });
+              alert('Payment successful! Credits added.');
+              loadData();
+            } catch (err) {
+              alert(err.message);
+            }
+          },
+          theme: { color: "#2563eb" }
+        });
+        rzp.open();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadData);
+  </script>
+</body>
+</html>

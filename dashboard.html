@@ -1057,13 +1057,22 @@
 
   <main class="dashboard-content">
     <header class="dashboard-header">
-      <div style="display: flex; align-items: center; gap: var(--space-3);">
-        <button class="chat-hamburger" id="globalHamburgerBtn" title="Toggle Sidebar" aria-label="Toggle Sidebar">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 12h18M3 6h18M3 18h18"/>
-          </svg>
-        </button>
-        <h1 style="font-size:var(--text-xl)" id="welcomeMsg">Welcome to your Clinic Dashboard</h1>
+      <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: var(--space-3); flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: var(--space-3);">
+          <button class="chat-hamburger" id="globalHamburgerBtn" title="Toggle Sidebar" aria-label="Toggle Sidebar">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12h18M3 6h18M3 18h18"/>
+            </svg>
+          </button>
+          <h1 style="font-size:var(--text-xl)" id="welcomeMsg">Welcome to your Clinic Dashboard</h1>
+        </div>
+        
+        <div class="credits-widget" style="display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 6px 12px; border-radius: 20px; border: 1px solid #e2e8f0; font-size: 0.85rem; font-weight: 600;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span style="color: #475569;">Credits:</span>
+          <span id="creditBalanceVal" style="color: #0f172a; font-weight: 700;">Loading...</span>
+          <button onclick="window.location.href='./billing.html'" style="margin-left: 4px; background: #eef2ff; color: #4f46e5; border: none; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">Top up</button>
+        </div>
       </div>
       <button id="logoutBtn" class="btn btn-secondary btn-sm">Sign out</button>
     </header>
@@ -1545,6 +1554,42 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="./assets/app.js"></script>
 <script>
+    const user = JSON.parse(localStorage.getItem('sdd_user') || sessionStorage.getItem('sdd_user') || '{}');
+    if (user && user.user_metadata && user.user_metadata.full_name) {
+      document.getElementById('welcomeMsg').textContent = `Welcome back, ${user.user_metadata.full_name.split(' ')[0]}`;
+    }
+
+    // Load credits globally so it can be called elsewhere if needed
+    window.loadCredits = async function() {
+      try {
+        const data = await window.api.getCreditsBalance();
+        const el = document.getElementById('creditBalanceVal');
+        if (el) {
+          el.textContent = data.total_remaining.toLocaleString();
+          if (data.total_remaining < 100) {
+            el.style.color = '#dc2626'; // red warning
+          } else {
+            el.style.color = '#0f172a';
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load credits:', err);
+      }
+    };
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.api.isAuthenticated()) {
+        window.loadCredits();
+      }
+    });
+
+    // Listen for AI chat completions to update credits
+    window.addEventListener('credits-updated', () => {
+      if (window.api.isAuthenticated()) {
+        window.loadCredits();
+      }
+    });
+
   // Auth Guard
   if (!window.api.isAuthenticated()) {
     window.location.href = './login.html';

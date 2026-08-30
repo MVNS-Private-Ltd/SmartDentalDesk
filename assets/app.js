@@ -146,6 +146,13 @@ window.api = (function() {
     loginWithGoogle,
     handleOAuthCallback,
     getDashboardStats: () => request('/dashboard/stats'),
+    
+    // Credits & Billing
+    getCreditsBalance: () => request('/credits/balance'),
+    getCreditsHistory: () => request('/credits/history'),
+    createTopupOrder: (pack_id) => request('/credits/topup/create-order', { method: 'POST', body: JSON.stringify({ pack_id }) }),
+    verifyTopup: (payload) => request('/credits/topup/verify', { method: 'POST', body: JSON.stringify(payload) }),
+    
     // Marketplace & Clinic Directory Endpoints
     getPublicClinics: (params = {}) => {
       const qs = new URLSearchParams();
@@ -171,10 +178,12 @@ window.api = (function() {
     completeAppointmentCheckout: (id, payload) => request(`/appointments/${id}/checkout`, { method: 'POST', body: JSON.stringify(payload) }),
     getSettings: () => request('/clinics/settings'),
     updateSettings: (payload) => request('/clinics/settings', { method: 'PUT', body: JSON.stringify(payload) }),
-    sendChatMessage: (message, mode = 'thinking', context = '', session_id = null) => {
+    sendChatMessage: async (message, mode = 'thinking', context = '', session_id = null) => {
       const payload = { message, mode, context };
       if (session_id) payload.session_id = session_id;
-      return request('/ai/chat', { method: 'POST', body: JSON.stringify(payload) });
+      const res = await request('/ai/chat', { method: 'POST', body: JSON.stringify(payload) });
+      window.dispatchEvent(new Event('credits-updated'));
+      return res;
     },
     streamChatMessage: async (message, mode = 'thinking', context = '', session_id = null, { onDelta, onMeta, onDone, onError } = {}) => {
       const payload = { message, mode, context };
@@ -227,7 +236,10 @@ window.api = (function() {
             const evt = JSON.parse(raw);
             if (evt.type === 'meta'  && onMeta)  onMeta(evt);
             if (evt.type === 'delta' && onDelta)  onDelta(evt.content);
-            if (evt.type === 'done'  && onDone)   onDone(evt);
+            if (evt.type === 'done') {
+              if (onDone) onDone(evt);
+              window.dispatchEvent(new Event('credits-updated'));
+            }
             if (evt.type === 'error' && onError)  onError(new Error(evt.message));
           } catch { /* skip */ }
         }

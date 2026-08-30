@@ -17,6 +17,7 @@ const { body, validationResult } = require('express-validator');
 const { CLINIC_INTELLIGENCE } = require('../lib/clinic_intelligence');
 const supabase    = require('../lib/supabase');
 const requireAuth = require('../middleware/auth');
+const { CREDIT_COSTS } = require('../lib/plans');
 const { trackAiUsage } = require('../lib/credits');
 const { CREDIT_COSTS } = require('../lib/plans');
 
@@ -682,6 +683,19 @@ router.post('/chat', chatRules, async (req, res, next) => {
       { role: 'user', content: context ? `${context}\n\n${message}` : message },
     ];
 
+    // 5.5 Deduct Credits & Reserve
+    const cost = CREDIT_COSTS[mode] || 1;
+    const { data: deductRes, error: deductErr } = await supabase.rpc('deduct_ai_credits', {
+      p_clinic_id: req.clinicId,
+      p_cost: cost,
+      p_ai_mode: mode
+    });
+    if (deductErr) throw deductErr;
+    if (!deductRes.success) {
+      return res.status(402).json({ error: 'Insufficient AI credits. Please purchase a top-up.' });
+    }
+    const txnId = deductRes.out_txn_id;
+
     // 6. Call OpenRouter API
     const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -700,6 +714,9 @@ router.post('/chat', chatRules, async (req, res, next) => {
     });
 
     if (!openRouterRes.ok) {
+      // Release reservation
+      await supabase.rpc('release_reservation', { p_txn_id: txnId });
+      
       const errBody = await openRouterRes.json().catch(() => ({}));
       console.error('[OpenRouter Error]', openRouterRes.status, errBody);
       throw new Error(errBody?.error?.message || `OpenRouter API error: ${openRouterRes.status}`);
@@ -708,10 +725,10 @@ router.post('/chat', chatRules, async (req, res, next) => {
     const aiData    = await openRouterRes.json();
     const replyText = aiData?.choices?.[0]?.message?.content?.trim();
 
-    if (!replyText) throw new Error('Empty response from AI model.');
-
-    // Phase 1 soft tracking
-    const txnId = await trackAiUsage(req.clinicId, mode);
+    if (!replyText) {
+      await supabase.rpc('release_reservation', { p_txn_id: txnId });
+      throw new Error('Empty response from AI model.');
+    }
 
     // 7. Save assistant reply to DB
     const { data: aiMsg, error: saveErr } = await supabase.from('ai_chats').insert({
@@ -726,7 +743,15 @@ router.post('/chat', chatRules, async (req, res, next) => {
       credit_txn_id: txnId,
     }).select().single();
 
-    if (saveErr) throw saveErr;
+    if (saveErr) {
+       // We deducted but failed to save chat. Don't refund as API was consumed, but log.
+       console.error('Failed to save AI chat:', saveErr);
+       // We mark it consumed anyway to clear the active reservation
+       await supabase.rpc('consume_reservation', { p_txn_id: txnId, p_ai_chat_id: null });
+       throw saveErr;
+    }
+
+    await supabase.rpc('consume_reservation', { p_txn_id: txnId, p_ai_chat_id: aiMsg.id });
 
     res.json({
       reply:        aiMsg,
@@ -800,6 +825,19 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
       { role: 'user', content: context ? `${context}\n\n${message}` : message },
     ];
 
+    // Deduct & Reserve for stream
+    const cost = CREDIT_COSTS[mode] || 1;
+    const { data: deductRes, error: deductErr } = await supabase.rpc('deduct_ai_credits', {
+      p_clinic_id: req.clinicId,
+      p_cost: cost,
+      p_ai_mode: mode
+    });
+    if (deductErr) throw deductErr;
+    if (!deductRes.success) {
+      return res.status(402).json({ error: 'Insufficient AI credits. Please purchase a top-up.' });
+    }
+    const txnId = deductRes.out_txn_id;
+
     let openRouterRes;
     let usedModel = model;
     const fallbackModels = [
@@ -836,6 +874,7 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
     }
 
     if (!openRouterRes || !openRouterRes.ok) {
+      await supabase.rpc('release_reservation', { p_txn_id: txnId });
       throw new Error(lastError || 'All models failed to respond.');
     }
 
@@ -885,8 +924,7 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
 
     // Save full reply to DB
     try {
-      const txnId = await trackAiUsage(req.clinicId, mode);
-      await supabase.from('ai_chats').insert({
+      const { data: aiMsg, error: saveErr } = await supabase.from('ai_chats').insert({
         clinic_id:    req.clinicId,
         role:         'assistant',
         content:      fullReply,
@@ -894,11 +932,16 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
         model_used:   usedModel,
         session_id:   activeSessionId,
         session_name: activeSessionName,
-        credits_cost: CREDIT_COSTS[mode] || 1,
+        credits_cost: cost,
         credit_txn_id: txnId,
-      });
+      }).select('id').single();
+
+      if (saveErr) throw saveErr;
+      
+      await supabase.rpc('consume_reservation', { p_txn_id: txnId, p_ai_chat_id: aiMsg.id });
     } catch (saveErr) {
       console.error('[AI Stream] Failed to save reply:', saveErr);
+      await supabase.rpc('consume_reservation', { p_txn_id: txnId, p_ai_chat_id: null });
     }
 
     res.write(`data: ${JSON.stringify({ type: 'done', session_id: activeSessionId, session_name: activeSessionName })}\n\n`);

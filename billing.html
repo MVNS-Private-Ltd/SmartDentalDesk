@@ -1,202 +1,436 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Billing & Credits - Smart Dental Desk</title>
-  <!-- Main CSS -->
-  <style>
-    /* Minimal inline CSS for top-up page leveraging existing vars */
-    :root {
-      --bg: #ffffff; --text: #1e293b; --text-light: #64748b; 
-      --primary: #2563eb; --primary-hover: #1d4ed8;
-      --surface: #f8fafc; --border: #e2e8f0; --radius: 12px;
-    }
-    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; }
-    .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
-    h1 { font-size: 2rem; margin-bottom: 8px; }
-    .subtitle { color: var(--text-light); margin-bottom: 32px; }
-    
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 24px; }
-    
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .stat-box { background: #fff; padding: 16px; border-radius: 8px; border: 1px solid var(--border); }
-    .stat-box label { font-size: 0.85rem; color: var(--text-light); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-    .stat-box .value { font-size: 1.5rem; font-weight: 700; margin-top: 8px; color: var(--primary); }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Billing & Credits · Smart Dental Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/style-v3.css">
+<style>
+  :root {
+    --brand-blue: #2563eb;
+    --brand-dark: #1d4ed8;
+    --brand-light: #eff6ff;
+  }
+  body {
+    background: #f8fafc;
+    color: #0f172a;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  /* ── LAYOUT ── */
+  .billing-layout {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+  
+  @media (max-width: 900px) {
+    .billing-layout { grid-template-columns: 1fr; }
+  }
 
-    .packs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 16px; }
-    .pack-card { background: #fff; border: 2px solid var(--border); border-radius: var(--radius); padding: 24px; text-align: center; transition: all 0.2s; cursor: pointer; }
-    .pack-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-    .pack-title { font-weight: 700; font-size: 1.1rem; margin-bottom: 8px; }
-    .pack-credits { font-size: 2rem; font-weight: 800; color: var(--text); }
-    .pack-price { color: var(--text-light); margin-bottom: 16px; }
-    .btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; }
-    .btn:hover { background: var(--primary-hover); }
+  /* ── SIDEBAR (Overview) ── */
+  .sidebar-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 10px 40px -10px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+    position: sticky;
+    top: 2rem;
+  }
+  .sidebar-header { margin-bottom: 2rem; }
+  .sidebar-header h1 { font-family: 'Fraunces', serif; font-size: 1.8rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.5rem; }
+  .sidebar-header p { color: #64748b; font-size: 0.9rem; }
+  
+  .balance-circle {
+    background: conic-gradient(from 180deg at 50% 50%, #eff6ff 0deg, #dbeafe 176deg, #2563eb 360deg);
+    border-radius: 50%;
+    width: 200px; height: 200px;
+    margin: 0 auto 2rem;
+    display: flex;
+    align-items: center; justify-content: center;
+    position: relative;
+    box-shadow: 0 8px 30px rgba(37,99,235,0.2);
+  }
+  .balance-circle::after {
+    content: '';
+    position: absolute; inset: 10px;
+    background: #fff;
+    border-radius: 50%;
+  }
+  .balance-content {
+    position: relative; z-index: 2;
+    text-align: center;
+  }
+  .balance-content .label { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 0.05em; margin-bottom: 0.2rem; }
+  .balance-content .value { font-size: 2.2rem; font-weight: 800; font-family: 'Fraunces', serif; color: var(--brand-blue); line-height: 1; margin-bottom: 0.25rem; }
+  .balance-content .unit { font-size: 0.85rem; color: #94a3b8; font-weight: 600; }
 
-    .history-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 0.9rem; }
-    .history-table th, .history-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
-    .history-table th { color: var(--text-light); font-weight: 600; }
-    .amt-positive { color: #16a34a; font-weight: 600; }
-    .amt-negative { color: #dc2626; font-weight: 600; }
-  </style>
+  .breakdown-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.8rem 0;
+    border-top: 1px solid #f1f5f9;
+  }
+  .breakdown-row .label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #475569; font-weight: 500; }
+  .breakdown-row .label svg { width: 16px; height: 16px; color: #94a3b8; }
+  .breakdown-row .val { font-weight: 700; color: #0f172a; font-size: 0.95rem; }
+
+  /* ── MAIN CONTENT ── */
+  .main-content {
+    display: flex; flex-direction: column; gap: 2rem;
+  }
+
+  /* Plan Info Box */
+  .plan-banner {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-radius: 20px;
+    padding: 2rem;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 12px 30px rgba(15,23,42,0.2);
+    flex-wrap: wrap; gap: 1.5rem;
+  }
+  .plan-banner-left h2 { font-family: 'Fraunces', serif; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .plan-banner-left p { color: #94a3b8; font-size: 0.9rem; }
+  .plan-banner-right { text-align: right; }
+  .plan-badge { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 0.4rem 1rem; border-radius: 99px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem; backdrop-filter: blur(4px); }
+  .plan-badge.trial { color: #a5f3fc; border-color: rgba(6,182,212,0.3); background: rgba(6,182,212,0.1); }
+  .plan-badge.active { color: #86efac; border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.1); }
+  
+  /* Top-up Store */
+  .section-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    border: 1px solid #e2e8f0;
+  }
+  .section-header { margin-bottom: 1.5rem; }
+  .section-header h3 { font-family: 'Fraunces', serif; font-size: 1.3rem; font-weight: 700; color: #0f172a; }
+  .section-header p { font-size: 0.85rem; color: #64748b; margin-top: 0.2rem; }
+
+  .store-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+  }
+  .pack-card {
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    background: #fff;
+    overflow: hidden;
+  }
+  .pack-card::before {
+    content: ''; position: absolute; inset: 0; background: var(--brand-light); opacity: 0; transition: opacity 0.2s; z-index: 0;
+  }
+  .pack-card:hover { border-color: var(--brand-blue); transform: translateY(-3px); box-shadow: 0 12px 24px rgba(37,99,235,0.15); }
+  .pack-card:hover::before { opacity: 1; }
+  .pack-card > * { position: relative; z-index: 1; }
+  
+  .pack-badge { position: absolute; top: -1px; left: 50%; transform: translateX(-50%); background: var(--brand-blue); color: #fff; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05em; padding: 0.3rem 0.8rem; border-radius: 0 0 8px 8px; text-transform: uppercase; z-index: 2; }
+  .pack-title { font-weight: 700; color: #475569; font-size: 0.95rem; margin-bottom: 0.5rem; }
+  .pack-credits { font-family: 'Fraunces', serif; font-size: 2.2rem; font-weight: 700; color: #0f172a; margin-bottom: 0.25rem; }
+  .pack-price { color: #64748b; font-size: 0.9rem; font-weight: 500; margin-bottom: 1.25rem; }
+  .pack-card .btn-buy {
+    width: 100%; background: #fff; border: 2px solid #e2e8f0; color: #475569; padding: 0.6rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; transition: all 0.2s;
+  }
+  .pack-card:hover .btn-buy { background: var(--brand-blue); border-color: var(--brand-blue); color: #fff; }
+  
+  /* History Table */
+  .history-wrapper { overflow-x: auto; margin-top: 0.5rem; }
+  .history-table { width: 100%; border-collapse: collapse; min-width: 500px; }
+  .history-table th { text-align: left; padding: 1rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+  .history-table th:first-child { border-radius: 12px 0 0 12px; }
+  .history-table th:last-child { border-radius: 0 12px 12px 0; }
+  .history-table td { padding: 1rem; font-size: 0.88rem; color: #334155; border-bottom: 1px solid #f1f5f9; font-weight: 500; }
+  .history-table tr:last-child td { border-bottom: none; }
+  .history-table tr:hover td { background: #f8fafc; }
+  
+  .amt-positive { color: #16a34a; font-weight: 700; background: #dcfce7; padding: 0.2rem 0.6rem; border-radius: 6px; display: inline-block; }
+  .amt-negative { color: #0f172a; font-weight: 700; }
+  
+  .tx-icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; margin-right: 0.75rem; vertical-align: middle; }
+  .tx-icon.deduct { background: #f1f5f9; color: #64748b; }
+  .tx-icon.add { background: #dbeafe; color: #2563eb; }
+
+  /* Loader */
+  #loading-overlay {
+    position: fixed; inset: 0; background: rgba(255,255,255,0.9); backdrop-filter: blur(4px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000;
+    visibility: hidden; opacity: 0; transition: opacity 0.2s;
+  }
+  #loading-overlay.active { visibility: visible; opacity: 1; }
+  .spinner { width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: var(--brand-blue); border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
 </head>
 <body>
 
-  <div class="container">
-    <a href="./dashboard.html" style="color:var(--primary); text-decoration:none; display:inline-block; margin-bottom:20px;">&larr; Back to Dashboard</a>
-    <h1>Billing & AI Credits</h1>
-    <p class="subtitle">Manage your subscription and top up your AI credits.</p>
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <p style="margin-top:1rem;font-weight:600;color:#334155;">Processing...</p>
+</div>
 
-    <!-- Balances -->
-    <div class="card">
-      <h2 style="margin-top:0;">Current Balance</h2>
-      <div class="stats-grid">
-        <div class="stat-box">
-          <label>Total Available</label>
-          <div class="value" id="valTotal">...</div>
+<!-- TOP NAV (Simple) -->
+<header style="background:#fff;border-bottom:1px solid #e2e8f0;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;">
+  <a href="./dashboard.html" style="display:flex;align-items:center;gap:0.5rem;color:#475569;font-weight:600;text-decoration:none;font-size:0.9rem;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    Back to Dashboard
+  </a>
+  <div style="font-family:'Fraunces',serif;font-weight:700;font-size:1.1rem;color:#0f172a;">Smart Dental Desk</div>
+</header>
+
+<div class="billing-layout">
+  
+  <!-- LEFT SIDEBAR: Balances -->
+  <aside class="sidebar-card">
+    <div class="sidebar-header">
+      <h1>Credits</h1>
+      <p>Your AI intelligence balance</p>
+    </div>
+    
+    <div class="balance-circle">
+      <div class="balance-content">
+        <div class="label">Available</div>
+        <div class="value" id="valTotal">...</div>
+        <div class="unit">Credits</div>
+      </div>
+    </div>
+
+    <div class="breakdown">
+      <div class="breakdown-row">
+        <div class="label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          Monthly Allocation
         </div>
-        <div class="stat-box">
-          <label>Monthly Allocation</label>
-          <div class="value" style="color:var(--text);" id="valMonthly">...</div>
+        <div class="val" id="valMonthly">...</div>
+      </div>
+      <div class="breakdown-row">
+        <div class="label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          Top-up Balance
         </div>
-        <div class="stat-box">
-          <label>Top-up Balance</label>
-          <div class="value" style="color:var(--text);" id="valTopup">...</div>
+        <div class="val" id="valTopup">...</div>
+      </div>
+    </div>
+    
+    <div style="margin-top:1.5rem;background:#f8fafc;border:1px solid #e2e8f0;padding:1rem;border-radius:12px;font-size:0.75rem;color:#64748b;line-height:1.5;">
+      <strong>Note:</strong> Monthly credits reset at the start of your billing cycle. Top-up credits never expire for 12 months and are only used after monthly credits run out.
+    </div>
+  </aside>
+
+  <!-- RIGHT MAIN AREA -->
+  <main class="main-content">
+    
+    <!-- PLAN BANNER -->
+    <div class="plan-banner">
+      <div class="plan-banner-left">
+        <h2>Current Plan: <span id="planName" style="color:#93c5fd;text-transform:capitalize;">...</span></h2>
+        <p id="planPeriod">Fetching subscription details...</p>
+      </div>
+      <div class="plan-banner-right">
+        <div id="planBadge" class="plan-badge">...</div>
+        <div style="margin-top:0.75rem;">
+          <a href="./pricing.html" style="color:#cbd5e1;font-size:0.85rem;text-decoration:underline;">Change Plan</a>
         </div>
       </div>
     </div>
 
-    <!-- Top up packs -->
-    <div class="card">
-      <h2 style="margin-top:0;">Purchase Top-up Credits</h2>
-      <p style="color:var(--text-light); font-size:0.9rem; margin-top:0;">Top-up credits never expire for 12 months and are used only after your monthly allocation runs out.</p>
-      <div class="packs-grid">
-        
+    <!-- TOP-UP STORE -->
+    <div class="section-card">
+      <div class="section-header">
+        <h3>Power up your AI</h3>
+        <p>Buy extra credits instantly via UPI, Cards, or Netbanking. No expiry for 12 months.</p>
+      </div>
+      
+      <div class="store-grid">
         <div class="pack-card" onclick="buyPack('starter_pack')">
           <div class="pack-title">Starter Pack</div>
           <div class="pack-credits">500</div>
           <div class="pack-price">₹99</div>
-          <button class="btn">Buy Now</button>
+          <button class="btn-buy">Buy Now</button>
         </div>
 
-        <div class="pack-card" onclick="buyPack('value_pack')" style="border-color:var(--primary); position:relative;">
-          <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--primary); color:white; font-size:0.75rem; font-weight:700; padding:4px 12px; border-radius:12px;">BEST VALUE</div>
+        <div class="pack-card" onclick="buyPack('value_pack')" style="border-color:var(--brand-blue);">
+          <div class="pack-badge">Best Value</div>
           <div class="pack-title">Value Pack</div>
           <div class="pack-credits">2,000</div>
           <div class="pack-price">₹299</div>
-          <button class="btn">Buy Now</button>
+          <button class="btn-buy">Buy Now</button>
         </div>
 
         <div class="pack-card" onclick="buyPack('power_pack')">
           <div class="pack-title">Power Pack</div>
           <div class="pack-credits">5,000</div>
           <div class="pack-price">₹599</div>
-          <button class="btn">Buy Now</button>
+          <button class="btn-buy">Buy Now</button>
         </div>
-
       </div>
     </div>
 
-    <!-- History -->
-    <div class="card">
-      <h2 style="margin-top:0;">Transaction History</h2>
-      <table class="history-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Type</th>
-            <th>Amount</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody id="historyBody">
-          <tr><td colspan="4" style="text-align:center; color:var(--text-light);">Loading...</td></tr>
-        </tbody>
-      </table>
+    <!-- HISTORY -->
+    <div class="section-card">
+      <div class="section-header">
+        <h3>Transaction Ledger</h3>
+        <p>A complete history of your credit usage and purchases.</p>
+      </div>
+      
+      <div class="history-wrapper">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Date & Time</th>
+              <th>Action</th>
+              <th>Mode / Details</th>
+              <th style="text-align:right;">Amount</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody">
+            <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:2rem;">Loading ledger...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
+    
+  </main>
+</div>
 
-  </div>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="./assets/app.js"></script>
+<script>
+  if (!window.api.isAuthenticated()) {
+    window.location.href = './login.html';
+  }
 
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-  <script src="./assets/app.js"></script>
-  <script>
-    if (!window.api.isAuthenticated()) {
-      window.location.href = './login.html';
-    }
-
-    async function loadData() {
-      try {
-        const bal = await window.api.getCreditsBalance();
-        document.getElementById('valTotal').textContent = bal.total_remaining.toLocaleString();
-        document.getElementById('valMonthly').textContent = Math.max(0, bal.monthly.credits_allocated - bal.monthly.credits_used).toLocaleString();
-        document.getElementById('valTopup').textContent = bal.topup.toLocaleString();
-
-        const history = await window.api.getCreditsHistory();
-        const tbody = document.getElementById('historyBody');
-        tbody.innerHTML = '';
-        if (history.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-light);">No transactions found</td></tr>';
+  async function loadData() {
+    try {
+      // 1. Subscription Info
+      const subRes = await window.api.getBillingStatus();
+      const sub = subRes.subscription;
+      if (sub) {
+        document.getElementById('planName').textContent = sub.plan || 'Unknown';
+        
+        const badge = document.getElementById('planBadge');
+        if (sub.status === 'trialing') {
+          badge.className = 'plan-badge trial';
+          badge.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 3-Month Free Trial`;
+          const end = new Date(sub.trial_ends_at).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
+          document.getElementById('planPeriod').textContent = `Trial ends on ${end}. Your saved card will be charged after this date.`;
+        } else if (sub.status === 'active') {
+          badge.className = 'plan-badge active';
+          badge.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Active Subscription`;
+          const end = new Date(sub.current_period_end).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
+          document.getElementById('planPeriod').textContent = `Next billing date: ${end}`;
         } else {
-          history.forEach(tx => {
-            const tr = document.createElement('tr');
-            const amtClass = tx.amount > 0 ? 'amt-positive' : 'amt-negative';
-            const amtSign = tx.amount > 0 ? '+' : '';
-            tr.innerHTML = `
-              <td>${new Date(tx.created_at).toLocaleDateString()} ${new Date(tx.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td>
-              <td style="text-transform:capitalize;">${tx.type}</td>
-              <td class="${amtClass}">${amtSign}${tx.amount}</td>
-              <td>${tx.ai_mode ? `AI Mode: ${tx.ai_mode}` : '-'}</td>
-            `;
-            tbody.appendChild(tr);
-          });
+          badge.className = 'plan-badge';
+          badge.textContent = sub.status;
+          document.getElementById('planPeriod').textContent = 'Please update your subscription.';
         }
-      } catch (err) {
-        console.error(err);
       }
-    }
 
-    async function buyPack(packId) {
-      try {
-        const res = await window.api.createTopupOrder(packId);
-        
-        const options = {
-          key: "rzp_test_YourKeyHere", // We will replace this dynamically if needed, or pass from backend. For now Razorpay checkout requires the key.
-          // In a real implementation, it's better to fetch the public key from the backend. 
-          // For this exercise, let's assume we fetch it or it's injected. Wait, we can fetch it.
-        };
-        
-        // Wait, since we didn't expose RAZORPAY_KEY_ID via an endpoint, 
-        // I will add it to the /create-order response.
-        
-        const rzp = new Razorpay({
-          key: res.key_id, // We need to update backend to send key_id
-          amount: res.amount,
-          currency: res.currency,
-          order_id: res.order_id,
-          name: "Smart Dental Desk",
-          description: "AI Credits Top-up",
-          handler: async function (response) {
-            try {
-              await window.api.verifyTopup({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature
-              });
-              alert('Payment successful! Credits added.');
-              loadData();
-            } catch (err) {
-              alert(err.message);
-            }
-          },
-          theme: { color: "#2563eb" }
+      // 2. Balances
+      const bal = await window.api.getCreditsBalance();
+      document.getElementById('valTotal').textContent = bal.total_remaining.toLocaleString();
+      document.getElementById('valMonthly').textContent = Math.max(0, bal.monthly.credits_allocated - bal.monthly.credits_used).toLocaleString();
+      document.getElementById('valTopup').textContent = bal.topup.toLocaleString();
+
+      // 3. History
+      const history = await window.api.getCreditsHistory();
+      const tbody = document.getElementById('historyBody');
+      tbody.innerHTML = '';
+      if (history.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:2rem;">No transactions found</td></tr>';
+      } else {
+        history.forEach(tx => {
+          const tr = document.createElement('tr');
+          const isPos = tx.amount > 0;
+          const amtClass = isPos ? 'amt-positive' : 'amt-negative';
+          const amtSign = isPos ? '+' : '-';
+          const icon = isPos 
+            ? `<span class="tx-icon add"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>`
+            : `<span class="tx-icon deduct"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>`;
+          
+          let actionText = isPos ? (tx.type==='refund'?'AI Refund':'Credits Added') : 'AI Usage';
+          let detailsText = tx.ai_mode ? `Mode: ${tx.ai_mode}` : (tx.type==='topup' ? 'Top-up Purchase' : '-');
+
+          tr.innerHTML = `
+            <td>
+              <div style="font-weight:600;color:#0f172a;">${new Date(tx.created_at).toLocaleDateString(undefined, {month:'short',day:'numeric'})}</div>
+              <div style="font-size:0.75rem;color:#94a3b8;">${new Date(tx.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+            </td>
+            <td>
+              ${icon} ${actionText}
+            </td>
+            <td style="color:#64748b;text-transform:capitalize;">${detailsText}</td>
+            <td style="text-align:right;" class="${amtClass}">${amtSign} ${Math.abs(tx.amount)}</td>
+          `;
+          tbody.appendChild(tr);
         });
-        rzp.open();
-      } catch (err) {
-        alert(err.message);
       }
+    } catch (err) {
+      console.error(err);
     }
+  }
 
-    document.addEventListener('DOMContentLoaded', loadData);
-  </script>
+  async function buyPack(packId) {
+    const overlay = document.getElementById('loading-overlay');
+    try {
+      overlay.classList.add('active');
+      const res = await window.api.createTopupOrder(packId);
+      overlay.classList.remove('active');
+      
+      const options = {
+        key: res.key_id, // backend now sends RAZORPAY_KEY_ID inside the response
+        amount: res.amount,
+        currency: res.currency,
+        order_id: res.order_id,
+        name: "Smart Dental Desk",
+        description: "AI Credits Top-up",
+        handler: async function (response) {
+          try {
+            overlay.classList.add('active');
+            await window.api.verifyTopup({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            });
+            overlay.classList.remove('active');
+            alert('Payment successful! Credits have been added to your account.');
+            loadData(); // refresh ledger and balances
+          } catch (err) {
+            overlay.classList.remove('active');
+            alert(err.message || 'Payment verification failed.');
+          }
+        },
+        theme: { color: "#2563eb" }
+      };
+      
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response){
+        alert('Payment failed: ' + response.error.description);
+      });
+      rzp.open();
+    } catch (err) {
+      overlay.classList.remove('active');
+      alert(err.message || 'Could not start payment process.');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadData);
+</script>
 </body>
 </html>

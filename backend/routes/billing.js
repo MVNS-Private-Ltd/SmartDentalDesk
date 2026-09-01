@@ -40,18 +40,23 @@ router.post('/create-trial', requireAuth, [
     // 1. Check existing subscription
     const { data: existingSub } = await supabase
       .from('subscriptions')
-      .select('status, provider_customer_id')
+      .select('status, plan, trial_ends_at, provider_customer_id')
       .eq('clinic_id', clinicId)
       .maybeSingle();
-
-    if (existingSub && !['canceled', 'expired'].includes(existingSub.status)) {
-      return res.status(409).json({ error: 'You already have an active subscription or trial.' });
-    }
 
     // 2. Calculate trial end (exactly 3 calendar months)
     const trialEndDate = new Date();
     trialEndDate.setMonth(trialEndDate.getMonth() + 3);
     const allocatedCredits = PLAN_CREDITS[plan] || 10000;
+
+    if (existingSub && ['trialing', 'active'].includes(existingSub.status)) {
+      return res.json({
+        direct_activation: true,
+        trial_ends_at: existingSub.trial_ends_at || trialEndDate.toISOString(),
+        redirect_url: './dashboard.html',
+        message: 'Subscription is already active.'
+      });
+    }
 
     // 3. Map plan to Razorpay Plan ID
     const planIdEnvVarMap = {
@@ -68,37 +73,31 @@ router.post('/create-trial', requireAuth, [
         clinic_id: clinicId,
         plan: plan,
         status: 'trialing',
-        provider: 'manual',
         trial_start_at: new Date().toISOString(),
         trial_ends_at: trialEndDate.toISOString(),
       };
 
-      if (existingSub) {
-        await supabase.from('subscriptions').update(subRecord).eq('clinic_id', clinicId);
-      } else {
-        await supabase.from('subscriptions').insert(subRecord);
+      const { error: subErr } = await supabase
+        .from('subscriptions')
+        .upsert(subRecord, { onConflict: 'clinic_id' });
+
+      if (subErr) {
+        console.error('[Billing] Subscription upsert error:', subErr);
+        throw subErr;
       }
 
       // Initialize credits allocation
-      const { data: creditRow } = await supabase
+      const { error: creditErr } = await supabase
         .from('clinic_credits')
-        .select('id')
-        .eq('clinic_id', clinicId)
-        .maybeSingle();
-
-      if (creditRow) {
-        await supabase.from('clinic_credits').update({
-          credits_allocated: allocatedCredits,
-          credits_used: 0,
-          last_reset_at: new Date().toISOString()
-        }).eq('clinic_id', clinicId);
-      } else {
-        await supabase.from('clinic_credits').insert({
+        .upsert({
           clinic_id: clinicId,
           credits_allocated: allocatedCredits,
           credits_used: 0,
           last_reset_at: new Date().toISOString()
-        });
+        }, { onConflict: 'clinic_id' });
+
+      if (creditErr) {
+        console.error('[Billing] Credits upsert error:', creditErr);
       }
 
       // Enable marketplace if plan allows
@@ -146,7 +145,6 @@ router.post('/create-trial', requireAuth, [
       clinic_id: clinicId,
       plan: plan,
       status: 'trialing',
-      provider: 'razorpay',
       provider_customer_id: rzpCustomerId,
       provider_subscription_id: rzpSub.id,
       provider_plan_id: rzpPlanId,
@@ -154,10 +152,13 @@ router.post('/create-trial', requireAuth, [
       trial_ends_at: trialEndDate.toISOString(),
     };
 
-    if (existingSub) {
-      await supabase.from('subscriptions').update(subRecord).eq('clinic_id', clinicId);
-    } else {
-      await supabase.from('subscriptions').insert(subRecord);
+    const { error: subErr } = await supabase
+      .from('subscriptions')
+      .upsert(subRecord, { onConflict: 'clinic_id' });
+
+    if (subErr) {
+      console.error('[Billing] Subscription upsert error:', subErr);
+      throw subErr;
     }
 
     res.json({

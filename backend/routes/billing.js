@@ -28,20 +28,19 @@ router.get('/plans', (req, res) => {
 // ── POST /api/billing/create-trial ────────────────────────────────────────────
 // Create Razorpay customer + subscription with 3-calendar-month trial
 router.post('/create-trial', requireAuth, [
-  body('plan').isIn(['starter', 'growth', 'premium']).withMessage('Invalid plan')
+  body('plan').optional().isIn(['starter', 'growth', 'premium']).withMessage('Invalid plan')
 ], async (req, res, next) => {
   try {
     if (!validate(req, res)) return;
     if (req.isSuperAdmin) return res.status(403).json({ error: 'Super admin cannot create subscriptions.' });
-    if (!razorpay) return res.status(503).json({ error: 'Billing is currently disabled.' });
 
     const clinicId = req.clinicId;
-    const { plan } = req.body;
+    const plan = req.body.plan || 'premium'; // Default to premium for 3-month free trial
 
     // 1. Check existing subscription
     const { data: existingSub } = await supabase
       .from('subscriptions')
-      .select('status')
+      .select('status, provider_customer_id')
       .eq('clinic_id', clinicId)
       .maybeSingle();
 
@@ -49,16 +48,73 @@ router.post('/create-trial', requireAuth, [
       return res.status(409).json({ error: 'You already have an active subscription or trial.' });
     }
 
-    // 2. Map plan to Razorpay Plan ID
+    // 2. Calculate trial end (exactly 3 calendar months)
+    const trialEndDate = new Date();
+    trialEndDate.setMonth(trialEndDate.getMonth() + 3);
+    const allocatedCredits = PLAN_CREDITS[plan] || 10000;
+
+    // 3. Map plan to Razorpay Plan ID
     const planIdEnvVarMap = {
       starter: process.env.RAZORPAY_PLAN_STARTER,
       growth: process.env.RAZORPAY_PLAN_GROWTH,
       premium: process.env.RAZORPAY_PLAN_PREMIUM
     };
     const rzpPlanId = planIdEnvVarMap[plan];
-    if (!rzpPlanId) return res.status(500).json({ error: `Razorpay plan ID for ${plan} not configured.` });
 
-    // 3. Find or Create Razorpay Customer
+    // If Razorpay is not configured or plan IDs are missing, provide direct trial activation
+    if (!razorpay || !rzpPlanId) {
+      console.warn(`[Billing] Razorpay not configured for ${plan}. Granting direct trial.`);
+      const subRecord = {
+        clinic_id: clinicId,
+        plan: plan,
+        status: 'trialing',
+        provider: 'manual',
+        trial_start_at: new Date().toISOString(),
+        trial_ends_at: trialEndDate.toISOString(),
+      };
+
+      if (existingSub) {
+        await supabase.from('subscriptions').update(subRecord).eq('clinic_id', clinicId);
+      } else {
+        await supabase.from('subscriptions').insert(subRecord);
+      }
+
+      // Initialize credits allocation
+      const { data: creditRow } = await supabase
+        .from('clinic_credits')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .maybeSingle();
+
+      if (creditRow) {
+        await supabase.from('clinic_credits').update({
+          credits_allocated: allocatedCredits,
+          credits_used: 0,
+          last_reset_at: new Date().toISOString()
+        }).eq('clinic_id', clinicId);
+      } else {
+        await supabase.from('clinic_credits').insert({
+          clinic_id: clinicId,
+          credits_allocated: allocatedCredits,
+          credits_used: 0,
+          last_reset_at: new Date().toISOString()
+        });
+      }
+
+      // Enable marketplace if plan allows
+      await supabase.from('clinics').update({
+        is_marketplace_listed: PLAN_FEATURES[plan]?.marketplace || true
+      }).eq('id', clinicId);
+
+      return res.json({
+        direct_activation: true,
+        trial_ends_at: trialEndDate.toISOString(),
+        redirect_url: './dashboard.html',
+        message: '3-Month Free Trial activated successfully.'
+      });
+    }
+
+    // 4. Find or Create Razorpay Customer
     let rzpCustomerId;
     if (existingSub && existingSub.provider_customer_id) {
       rzpCustomerId = existingSub.provider_customer_id;
@@ -72,41 +128,14 @@ router.post('/create-trial', requireAuth, [
       rzpCustomerId = customer.id;
     }
 
-    // 4. Calculate trial end (exactly 3 calendar months)
-    const trialEndDate = new Date();
-    trialEndDate.setMonth(trialEndDate.getMonth() + 3);
-    // Razorpay requires timestamp in seconds
-    const expireBy = Math.floor(trialEndDate.getTime() / 1000);
-
-    // 5. Create Razorpay Subscription (Auth & Capture mandate)
-    const subscription = await razorpay.subscriptions.create({
-      plan_id: rzpPlanId,
-      customer_id: rzpCustomerId,
-      total_count: 120, // 10 years
-      quantity: 1,
-      customer_notify: 1,
-      addons: [],
-      notes: { clinic_id: clinicId, plan: plan },
-      expire_by: expireBy // this sets the trial_end essentially (for upfront auth/capture flows depending on RZP settings)
-    });
-
-    // To properly support a trial where Razorpay does NOT charge immediately, 
-    // Razorpay uses start_at parameter for trials. 
-    // Wait, the Razorpay Subscription API uses `start_at` to delay the first charge.
-    // Let's recreate properly:
-    /*
-      For Razorpay subscriptions with a trial, we set `start_at` to the trial end date.
-      The customer will be charged immediately if auth_and_capture is false, or charged a small auth fee.
-    */
-    
-    // So let's refine step 5:
+    // 5. Create Razorpay Subscription with start_at set to trial end
     const trialStartAt = Math.floor(trialEndDate.getTime() / 1000);
     const subPayload = {
       plan_id: rzpPlanId,
       customer_id: rzpCustomerId,
       total_count: 120,
       customer_notify: 1,
-      start_at: trialStartAt, 
+      start_at: trialStartAt,
       notes: { clinic_id: clinicId, plan: plan }
     };
     

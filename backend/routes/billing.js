@@ -163,12 +163,92 @@ router.post('/create-trial', requireAuth, [
 
     res.json({
       subscription_link: rzpSub.short_url,
-      subscription_id: rzpSub.id,
-      trial_ends_at: trialEndDate.toISOString()
+      subscription_id:   rzpSub.id,
+      trial_ends_at:     trialEndDate.toISOString(),
+      razorpay_key_id:   process.env.RAZORPAY_KEY_ID,
+      clinic_name:       req.clinic?.name        || req.clinic?.owner_name || '',
+      clinic_email:      req.clinic?.email        || '',
+      clinic_phone:      req.clinic?.phone        || '',
     });
   } catch (err) {
     console.error('[Billing] Error creating trial:', err);
     res.status(500).json({ error: 'Failed to create subscription session.' });
+  }
+});
+
+// ── POST /api/billing/verify-trial ────────────────────────────────────────
+router.post('/verify-trial', requireAuth, [
+  body('razorpay_payment_id').notEmpty().withMessage('Payment ID is required'),
+  body('razorpay_subscription_id').notEmpty().withMessage('Subscription ID is required'),
+  body('razorpay_signature').notEmpty().withMessage('Signature is required'),
+], async (req, res, next) => {
+  try {
+    if (!validate(req, res)) return;
+    if (req.isSuperAdmin) return res.status(403).json({ error: 'Super admin cannot verify subscriptions.' });
+
+    const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = req.body;
+    const clinicId = req.clinicId;
+
+    // 1. Verify HMAC-SHA256 signature (prevents payment fraud)
+    const crypto = require('crypto');
+    const body = `${razorpay_payment_id}|${razorpay_subscription_id}`;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
+      .update(body)
+      .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({ error: 'Invalid payment signature. Verification failed.' });
+    }
+
+    // 2. Calculate trial end date (3 months from today)
+    const trialEndDate = new Date();
+    trialEndDate.setMonth(trialEndDate.getMonth() + 3);
+    const plan = 'premium';
+    const { PLAN_CREDITS, PLAN_FEATURES } = require('../lib/plans');
+    const allocatedCredits = PLAN_CREDITS[plan] || 10000;
+
+    // 3. Update subscription to trialing + save Razorpay IDs
+    const { error: subErr } = await supabase
+      .from('subscriptions')
+      .upsert({
+        clinic_id:                clinicId,
+        plan:                     plan,
+        status:                   'trialing',
+        provider_subscription_id: razorpay_subscription_id,
+        trial_start_at:           new Date().toISOString(),
+        trial_ends_at:            trialEndDate.toISOString(),
+      }, { onConflict: 'clinic_id' });
+
+    if (subErr) throw subErr;
+
+    // 4. Allocate trial credits
+    const { error: creditErr } = await supabase
+      .from('clinic_credits')
+      .upsert({
+        clinic_id:         clinicId,
+        credits_allocated: allocatedCredits,
+        credits_used:      0,
+        last_reset_at:     new Date().toISOString(),
+      }, { onConflict: 'clinic_id' });
+
+    if (creditErr) console.error('[Billing] Credits upsert error:', creditErr);
+
+    // 5. Enable marketplace
+    await supabase.from('clinics').update({
+      is_marketplace_listed: PLAN_FEATURES[plan]?.marketplace || true
+    }).eq('id', clinicId);
+
+    return res.json({
+      success:      true,
+      redirect_url: './dashboard.html',
+      message:      '3-Month Free Trial activated successfully.',
+      trial_ends_at: trialEndDate.toISOString(),
+    });
+
+  } catch (err) {
+    console.error('[Billing] verify-trial error:', err);
+    next(err);
   }
 });
 

@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -277,6 +278,110 @@ body{
 .faq-a{display:none;padding:0.75rem 1.5rem 1.25rem;font-size:0.875rem;color:var(--gray-600);line-height:1.6;border-top:1px solid var(--gray-100)}
 .faq-a.open{display:block}
 
+/* ── CARD CAPTURE MODAL ─────────────────────────────────── */
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(15,23,42,0.7);
+  display:flex;align-items:center;justify-content:center;
+  z-index:10000;padding:1rem;
+  opacity:0;visibility:hidden;transition:all .25s ease;
+  backdrop-filter:blur(6px);
+}
+.modal-backdrop.active{opacity:1;visibility:visible}
+.card-modal{
+  background:#fff;border-radius:24px;
+  width:100%;max-width:480px;
+  box-shadow:0 30px 80px -10px rgba(0,0,0,0.4);
+  overflow:hidden;
+  transform:translateY(24px) scale(0.97);
+  transition:transform .3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.modal-backdrop.active .card-modal{transform:translateY(0) scale(1)}
+
+.modal-header{
+  background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%);
+  padding:1.75rem 2rem 1.5rem;
+  color:#fff;position:relative;
+}
+.modal-header-badge{
+  display:inline-flex;align-items:center;gap:.4rem;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  color:#93c5fd;font-size:.72rem;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;padding:.3rem .8rem;border-radius:999px;margin-bottom:.75rem;
+}
+.modal-header h3{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:700;margin-bottom:.35rem}
+.modal-header p{font-size:.85rem;color:rgba(255,255,255,.75);line-height:1.5}
+.modal-close{
+  position:absolute;top:1rem;right:1rem;
+  background:rgba(255,255,255,.12);border:none;color:#fff;
+  width:32px;height:32px;border-radius:50%;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.modal-close:hover{background:rgba(255,255,255,.25)}
+
+.modal-body{padding:1.75rem 2rem}
+
+.trial-timeline{
+  display:flex;gap:0;margin-bottom:1.75rem;
+  background:#f8fafc;border-radius:12px;padding:1rem;
+  position:relative;
+}
+.timeline-step{
+  flex:1;text-align:center;position:relative;
+}
+.timeline-step:not(:last-child)::after{
+  content:'';position:absolute;top:14px;right:-50%;
+  width:100%;height:2px;background:var(--gray-200);z-index:0;
+}
+.step-dot{
+  width:28px;height:28px;border-radius:50%;margin:0 auto .5rem;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.7rem;font-weight:800;position:relative;z-index:1;
+}
+.step-dot.active{background:var(--blue);color:#fff}
+.step-dot.future{background:var(--gray-200);color:var(--gray-500)}
+.step-dot.success{background:#16a34a;color:#fff}
+.timeline-label{font-size:.72rem;font-weight:600;color:var(--gray-600);line-height:1.3}
+.timeline-sub{font-size:.65rem;color:var(--gray-400);margin-top:.1rem}
+
+.no-charge-banner{
+  background:linear-gradient(135deg,#f0fdf4,#dcfce7);
+  border:1.5px solid #86efac;border-radius:12px;
+  padding:.9rem 1.1rem;display:flex;align-items:center;gap:.75rem;
+  margin-bottom:1.5rem;
+}
+.no-charge-icon{color:#16a34a;flex-shrink:0}
+.no-charge-text{font-size:.82rem;color:#15803d;line-height:1.5}
+.no-charge-text strong{font-weight:700}
+
+.security-strip{
+  display:flex;justify-content:center;align-items:center;gap:1.25rem;
+  margin-top:1.25rem;padding:.75rem;
+  background:#f8fafc;border-radius:8px;
+  font-size:.73rem;color:var(--gray-500);
+}
+.security-strip span{display:flex;align-items:center;gap:.3rem}
+.security-strip svg{color:var(--gray-400)}
+
+.btn-capture{
+  width:100%;padding:1rem;background:linear-gradient(135deg,#1d4ed8,#4f46e5);
+  color:#fff;font-weight:800;font-size:1rem;border:none;border-radius:12px;
+  cursor:pointer;transition:all .2s ease;
+  box-shadow:0 6px 20px rgba(37,99,235,.35);
+  display:flex;align-items:center;justify-content:center;gap:.6rem;
+}
+.btn-capture:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(37,99,235,.45)}
+.btn-capture:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.btn-capture .btn-spinner{
+  width:18px;height:18px;border:2px solid rgba(255,255,255,.4);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin 1s linear infinite;display:none;
+}
+.btn-capture.loading .btn-spinner{display:block}
+.btn-capture.loading .btn-text{display:none}
+
+.modal-footnote{text-align:center;font-size:.73rem;color:var(--gray-400);margin-top:.75rem;line-height:1.5}
+
 /* ── OVERLAY LOADER ───────────────────────────────────────── */
 #loading-overlay{
   position:fixed;inset:0;background:rgba(255,255,255,0.9);
@@ -310,6 +415,81 @@ body{
 <div id="loading-overlay">
   <div class="spinner"></div>
   <p id="loaderMsg">Setting up your plan...</p>
+</div>
+
+<!-- CARD CAPTURE MODAL -->
+<div class="modal-backdrop" id="cardModal">
+  <div class="card-modal">
+    <div class="modal-header">
+      <button class="modal-close" id="modalCloseBtn" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div class="modal-header-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Secure Card Verification
+      </div>
+      <h3>Activate Your Free Trial</h3>
+      <p>Your card is saved as a mandate. You will not be charged anything for 90 days.</p>
+    </div>
+
+    <div class="modal-body">
+      <!-- Timeline -->
+      <div class="trial-timeline">
+        <div class="timeline-step">
+          <div class="step-dot active">1</div>
+          <div class="timeline-label">Card Verified</div>
+          <div class="timeline-sub">Today</div>
+        </div>
+        <div class="timeline-step">
+          <div class="step-dot future">2</div>
+          <div class="timeline-label">Free Access</div>
+          <div class="timeline-sub">90 Days</div>
+        </div>
+        <div class="timeline-step">
+          <div class="step-dot future">3</div>
+          <div class="timeline-label">Plan Starts</div>
+          <div class="timeline-sub">Day 91</div>
+        </div>
+      </div>
+
+      <!-- No charge banner -->
+      <div class="no-charge-banner">
+        <div class="no-charge-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="no-charge-text">
+          <strong>No payment today.</strong> Your card is stored securely as a mandate by Razorpay. The first charge of the plan you choose only happens after your 90-day trial ends. Cancel anytime with one click.
+        </div>
+      </div>
+
+      <!-- CTA Button -->
+      <button class="btn-capture" id="proceedPaymentBtn">
+        <div class="btn-spinner"></div>
+        <span class="btn-text">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          Verify Card &amp; Start Free Trial
+        </span>
+      </button>
+
+      <div class="modal-footnote">Secured by Razorpay · 256-bit SSL encryption · Card stored, not charged</div>
+
+      <!-- Security strip -->
+      <div class="security-strip">
+        <span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          PCI DSS Compliant
+        </span>
+        <span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          256-bit Encrypted
+        </span>
+        <span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Cancel Anytime
+        </span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- TOP NAV -->
@@ -741,28 +921,107 @@ window.subscribePlan = async function(plan) {
   }
 };
 
-// 3-Month Free Trial (under the hood gives premium services)
+// 3-Month Free Trial — with card capture via Razorpay
 window.startFreeTrial = async function() {
-  const overlay = document.getElementById('loading-overlay');
-  const msg = document.getElementById('loaderMsg');
-  msg.textContent = 'Activating your 3-Month Free Trial...';
-  overlay.classList.add('active');
+  // Show the card capture modal
+  document.getElementById('cardModal').classList.add('active');
+};
+
+// Close modal
+document.getElementById('modalCloseBtn').addEventListener('click', () => {
+  document.getElementById('cardModal').classList.remove('active');
+});
+document.getElementById('cardModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('cardModal')) {
+    document.getElementById('cardModal').classList.remove('active');
+  }
+});
+
+// Proceed with Razorpay checkout
+document.getElementById('proceedPaymentBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('proceedPaymentBtn');
+  btn.classList.add('loading');
+  btn.disabled = true;
 
   try {
-    // Passes premium under the hood for 3-month free trial
+    // 1. Create subscription on backend (gets Razorpay subscription + short URL)
     const data = await window.api.createTrial('premium');
-    if (data.subscription_link) {
+
+    // 2a. If backend returned a subscription_link → open Razorpay Checkout
+    if (data.subscription_id && typeof Razorpay !== 'undefined') {
+      const rzpKeyId = data.razorpay_key_id; // backend will send this
+      const options = {
+        key: rzpKeyId,
+        subscription_id: data.subscription_id,
+        name: 'Smart Dental Desk',
+        description: '3-Month Free Trial — Premium Plan',
+        image: '', // add logo URL if available
+        prefill: {
+          name:  data.clinic_name  || '',
+          email: data.clinic_email || '',
+          contact: data.clinic_phone || '',
+        },
+        theme: { color: '#2563eb' },
+        modal: {
+          backdropclose: false,
+          escape: true,
+          animation: true,
+        },
+        handler: async function(response) {
+          // 3. Verify payment signature on backend
+          const overlay = document.getElementById('loading-overlay');
+          document.getElementById('loaderMsg').textContent = 'Activating your 3-Month Free Trial...';
+          overlay.classList.add('active');
+          document.getElementById('cardModal').classList.remove('active');
+
+          try {
+            const verify = await window.api.verifyTrial({
+              razorpay_payment_id:      response.razorpay_payment_id,
+              razorpay_subscription_id: response.razorpay_subscription_id,
+              razorpay_signature:       response.razorpay_signature,
+            });
+            if (verify.success) {
+              window.location.href = verify.redirect_url || './dashboard.html';
+            } else {
+              overlay.classList.remove('active');
+              alert('Card verification failed. Please try again.');
+            }
+          } catch (verifyErr) {
+            overlay.classList.remove('active');
+            alert(verifyErr.message || 'Verification failed. Please try again.');
+          }
+        },
+      };
+      const rzp = new Razorpay(options);
+      rzp.on('payment.failed', function() {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        alert('Payment authorisation failed. Please check your card details and try again.');
+      });
+      document.getElementById('cardModal').classList.remove('active');
+      rzp.open();
+
+    // 2b. Razorpay short_url returned (alternative flow)
+    } else if (data.subscription_link) {
       window.location.href = data.subscription_link;
-    } else if (data.redirect_url) {
-      window.location.href = data.redirect_url;
+
+    // 2c. Direct activation (no Razorpay keys configured yet — dev mode)
+    } else if (data.direct_activation && data.redirect_url) {
+      const overlay = document.getElementById('loading-overlay');
+      document.getElementById('loaderMsg').textContent = 'Activating your 3-Month Free Trial...';
+      overlay.classList.add('active');
+      document.getElementById('cardModal').classList.remove('active');
+      setTimeout(() => { window.location.href = data.redirect_url; }, 800);
     } else {
       window.location.href = './dashboard.html';
     }
+
   } catch (err) {
-    overlay.classList.remove('active');
+    btn.classList.remove('loading');
+    btn.disabled = false;
     alert(err.message || 'Could not start free trial. Please try again.');
   }
-};
+});
 
 function toggleFaq(btn) {
   btn.classList.toggle('open');

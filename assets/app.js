@@ -155,6 +155,12 @@ window.api = (function() {
     getPlans: () => request('/billing/plans'),
     getBillingStatus: () => request('/billing/status'),
     createTrial: (plan) => request('/billing/create-trial', { method: 'POST', body: JSON.stringify({ plan }) }),
+    verifyTrial: (payload) => request('/billing/verify-trial', { method: 'POST', body: JSON.stringify(payload) }),
+    // Generic POST helper — strips /api prefix if full path is passed
+    post: (path, body) => {
+      const endpoint = path.startsWith('/api/') ? path.slice(4) : path;
+      return request(endpoint, { method: 'POST', body: JSON.stringify(body) });
+    },
     
     // Marketplace & Clinic Directory Endpoints
     getPublicClinics: (params = {}) => {

@@ -23,11 +23,12 @@ const { trackAiUsage } = require('../lib/credits');
 const router = express.Router();
 router.use(requireAuth);
 
-// ── Model IDs (OpenRouter) ────────────────────────────────────────────────────
+// ── Model IDs (OpenRouter) ───────────────────────────────────────────────────
 const MODELS = {
-  ultra:  'google/gemma-4-31b-it:free',         // Most reliable, largest free model
-  super:  'google/gemma-4-26b-a4b-it:free',     // Reliable, fast
-  nano:   'openrouter/free',                    // Automatically routes to best healthy free model
+  ultra:  'google/gemma-4-31b-it:free',              // Large, reliable Gemma model
+  super:  'google/gemma-3-27b-it:free',              // Fast Gemma 3 27B
+  nano:   'meta-llama/llama-3.3-8b-instruct:free',   // Reliable Llama 3.3 8B — stable chat
+  mid:    'google/gemma-3-12b-it:free',              // Mid-tier Gemma 3 12B
 };
 
 // ── Model selection logic ─────────────────────────────────────────────────────
@@ -387,7 +388,19 @@ function serializeContext(ctx, patientMatch) {
 }
 
 // ── System prompts per mode ───────────────────────────────────────────────────
-function buildSystemPrompt(mode, contextBlock) {
+function buildSystemPrompt(mode, contextBlock, isFirstEver = false) {
+  // One-time greeting instruction — injected only on the clinic's very first AI message ever
+  const firstTimeInstruction = isFirstEver
+    ? `
+
+SPECIAL FIRST-TIME GREETING RULE (applies THIS message only):
+This is the very first time this clinic is using the Smart Dental Desk AI assistant.
+Before responding to their question, warmly welcome them to Smart Dental Desk. Tell them you are their AI assistant and briefly mention that you can help them manage appointments, patients, invoices, and give operational advice.
+Do NOT use emojis. Keep the greeting natural, professional, and brief (2-4 sentences). Then seamlessly answer their actual question or prompt below.
+IMPORTANT: This greeting instruction must never be applied again — it is ONLY for this very first interaction.
+`
+    : '';
+
   const base = {
     data: `You are a dental clinic data analyst AI for Smart Dental Desk.
 You have been provided with LIVE, REAL clinic data pulled directly from the database — it is injected below before this conversation.
@@ -397,7 +410,8 @@ ADAPTIVE VERBOSITY:
 - If the user asks for detailed analysis, provide a structured, detailed, but punchy response. Do not use unnecessary conversational filler.
 Be specific: use exact names, numbers, dates, and amounts from the data. Format answers clearly with bullet points or tables when listing items.
 If a specific data point is not in the provided context, say so concisely — but NEVER say you don't have access to the database.
-The data is always current as of today.`,
+The data is always current as of today.
+Do NOT use emojis in any response.${firstTimeInstruction}`,
 
     thinking: `You are a senior dental practice management consultant AI for Smart Dental Desk.
 You have access to REAL, LIVE clinic data injected below — use it to ground your advice in actual figures and situations.
@@ -406,11 +420,13 @@ Reference real numbers (patient counts, revenue, appointment volumes) when givin
 ADAPTIVE VERBOSITY: 
 - If the user just says "hi", "hello", or asks a very simple question, respond in 1-2 lines maximum.
 - If the user asks for deep operational advice, provide a detailed response applying your clinic intelligence. Do not write huge essays, use bullet points for readability, and get straight to the point.
+Do NOT use emojis in any response.${firstTimeInstruction}
 
 ${CLINIC_INTELLIGENCE}`,
 
     automation: `You are an automation assistant AI for Smart Dental Desk.
 You have access to real clinic data injected below.
+Do NOT use emojis in any response.${firstTimeInstruction}
 
 CRITICAL ROLE: You are an authorized CRM system assistant. Writing emails on behalf of the clinic is a core, authorized function.
 
@@ -600,14 +616,18 @@ router.post('/chat', chatRules, async (req, res, next) => {
     const subscriptionPlan = req.clinic?.subscription_plan || 'basic';
     const { model, mode } = getModel(subscriptionPlan, requestedMode);
 
-    // 1. Fetch live clinic context + optional patient search — in parallel
-    const [clinicCtx, patientMatch] = await Promise.all([
+    // 1. Fetch live clinic context + optional patient search + total message count — in parallel
+    const [clinicCtx, patientMatch, totalMsgRes] = await Promise.all([
       fetchClinicContext(req.clinicId),
       searchPatientByName(req.clinicId, message),
+      supabase.from('ai_chats').select('*', { count: 'exact', head: true }).eq('clinic_id', req.clinicId),
     ]);
 
+    // isFirstEver = true only when the clinic has never sent a single AI message before
+    const isFirstEver = (totalMsgRes.count ?? 0) === 0;
+
     const contextBlock = serializeContext(clinicCtx, patientMatch);
-    const systemPrompt = buildSystemPrompt(mode, contextBlock);
+    const systemPrompt = buildSystemPrompt(mode, contextBlock, isFirstEver);
 
     // 2. Fetch recent chat history for conversation continuity (this session only)
     let history = [];
@@ -773,13 +793,15 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
     const subscriptionPlan = req.clinic?.subscription_plan || 'basic';
     const { model, mode } = getModel(subscriptionPlan, requestedMode);
 
-    const [clinicCtx, patientMatch] = await Promise.all([
+    const [clinicCtx, patientMatch, totalMsgResStream] = await Promise.all([
       fetchClinicContext(req.clinicId),
       searchPatientByName(req.clinicId, message),
+      supabase.from('ai_chats').select('*', { count: 'exact', head: true }).eq('clinic_id', req.clinicId),
     ]);
 
+    const isFirstEverStream = (totalMsgResStream.count ?? 0) === 0;
     const contextBlock = serializeContext(clinicCtx, patientMatch);
-    const systemPrompt = buildSystemPrompt(mode, contextBlock);
+    const systemPrompt = buildSystemPrompt(mode, contextBlock, isFirstEverStream);
 
     let history = [];
     let existingSessionName = null;
@@ -842,7 +864,8 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
     const fallbackModels = [
       model,
       'google/gemma-4-31b-it:free',
-      'openrouter/free'
+      'meta-llama/llama-3.3-8b-instruct:free',
+      'google/gemma-3-12b-it:free',
     ];
 
     let lastError = null;
@@ -866,7 +889,7 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
       });
 
       if (openRouterRes.ok) break;
-      
+
       const errBody = await openRouterRes.json().catch(() => ({}));
       lastError = errBody?.error?.message || `OpenRouter error: ${openRouterRes.status}`;
       console.warn(`[AI Stream] Model ${testModel} failed: ${lastError} — Retrying...`);

@@ -150,16 +150,19 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const token = localStorage.getItem('sdd_token');
   if (!token) {
-    window.location.href = '/login.html';
+    window.location.href = './login.html';
     return;
   }
 
+  // If they already have an active subscription, send to dashboard
   try {
-    const res = await api.getSettings(); // Check if they are actually authed
-    if (!res) throw new Error('Not auth');
-  } catch(e) {
-    window.location.href = '/login.html';
-    return;
+    const subData = await window.api.getBillingStatus();
+    if (subData.subscription && ['trialing','active'].includes(subData.subscription.status)) {
+      window.location.href = './dashboard.html';
+      return;
+    }
+  } catch (e) {
+    // No subscription yet (expected for new users) — show plans
   }
 
   loadPlans();
@@ -170,13 +173,13 @@ async function loadPlans() {
   container.innerHTML = 'Loading plans...';
   
   try {
-    const data = await api.request('/billing/plans');
+    const data = await window.api.getPlans();
     container.innerHTML = '';
     
     const plans = data.plans;
     
-    // Check icon SVG
     const checkIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    const xIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
 
     const formatPrice = (p) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(p);
 
@@ -185,12 +188,12 @@ async function loadPlans() {
         <div class="plan-name">Starter</div>
         <div class="plan-price">${formatPrice(plans.starter.price)}<span>/month</span></div>
         <ul class="plan-features">
-          <li>${checkIcon} ${plans.starter.credits.toLocaleString()} AI Credits</li>
+          <li>${checkIcon} ${plans.starter.credits.toLocaleString()} AI Credits/month</li>
           <li>${checkIcon} Ultra AI for Data</li>
           <li>${checkIcon} Nano AI for Automation</li>
-          <li style="opacity: 0.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Marketplace Listing</li>
+          <li style="opacity: 0.5">${xIcon} Marketplace Listing</li>
         </ul>
-        <button class="btn btn-outline btn-select-plan" onclick="selectPlan('starter')">Start Trial</button>
+        <button class="btn btn-outline btn-select-plan" onclick="selectPlan('starter')">Start 3-Month Trial</button>
       </div>
     `;
 
@@ -200,12 +203,12 @@ async function loadPlans() {
         <div class="plan-name">Growth</div>
         <div class="plan-price">${formatPrice(plans.growth.price)}<span>/month</span></div>
         <ul class="plan-features">
-          <li>${checkIcon} ${plans.growth.credits.toLocaleString()} AI Credits</li>
-          <li>${checkIcon} Ultra AI for Data & Thinking</li>
+          <li>${checkIcon} ${plans.growth.credits.toLocaleString()} AI Credits/month</li>
+          <li>${checkIcon} Ultra AI for Data &amp; Thinking</li>
           <li>${checkIcon} Nano AI for Automation</li>
           <li>${checkIcon} Premium Marketplace Listing</li>
         </ul>
-        <button class="btn btn-primary btn-select-plan" onclick="selectPlan('growth')">Start Trial</button>
+        <button class="btn btn-primary btn-select-plan" onclick="selectPlan('growth')">Start 3-Month Trial</button>
       </div>
     `;
 
@@ -214,19 +217,19 @@ async function loadPlans() {
         <div class="plan-name">Premium</div>
         <div class="plan-price">${formatPrice(plans.premium.price)}<span>/month</span></div>
         <ul class="plan-features">
-          <li>${checkIcon} ${plans.premium.credits.toLocaleString()} AI Credits</li>
+          <li>${checkIcon} ${plans.premium.credits.toLocaleString()} AI Credits/month</li>
           <li>${checkIcon} Super AI for Thinking</li>
           <li>${checkIcon} Ultra AI for Automation</li>
           <li>${checkIcon} Priority Marketplace Listing</li>
         </ul>
-        <button class="btn btn-outline btn-select-plan" onclick="selectPlan('premium')">Start Trial</button>
+        <button class="btn btn-outline btn-select-plan" onclick="selectPlan('premium')">Start 3-Month Trial</button>
       </div>
     `;
 
     container.innerHTML = starterHTML + growthHTML + premiumHTML;
 
   } catch (err) {
-    container.innerHTML = `<p style="color:var(--color-error)">Error loading plans: ${err.message}</p>`;
+    container.innerHTML = `<p style="color:red">Error loading plans: ${err.message}</p>`;
   }
 }
 
@@ -235,19 +238,16 @@ window.selectPlan = async function(plan) {
   overlay.classList.add('active');
   
   try {
-    const data = await api.request('/billing/create-trial', {
-      method: 'POST',
-      body: JSON.stringify({ plan })
-    });
+    const data = await window.api.createTrial(plan);
     
     if (data.subscription_link) {
-      window.location.href = data.subscription_link; // Redirect to Razorpay hosted checkout
+      window.location.href = data.subscription_link;
     } else {
-      alert('Could not start trial. Missing checkout link.');
+      alert('Could not start trial. Missing checkout link. Please contact support.');
       overlay.classList.remove('active');
     }
   } catch (err) {
-    alert(err.message);
+    alert(err.message || 'Something went wrong. Please try again.');
     overlay.classList.remove('active');
   }
 };

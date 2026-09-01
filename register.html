@@ -604,8 +604,8 @@
         localStorage.setItem('sdd_clinic', JSON.stringify(res.clinic));
       }
 
-      // Redirect to dashboard
-      window.location.href = './dashboard.html';
+      // Redirect to plan selection (new users must choose a trial plan)
+      window.location.href = './pricing.html';
     } catch (error) {
       err.textContent = error.message || 'Registration failed. Please try again.';
       err.style.display = 'block';

@@ -143,15 +143,17 @@ router.post('/create-trial', requireAuth, [
 });
 
 // ── GET /api/billing/status ───────────────────────────────────────────────────
-router.get('/status', requireAuth, requireActiveSubscription, async (req, res, next) => {
+// NOTE: No requireActiveSubscription here — this endpoint is called BEFORE a
+// subscription exists (e.g. on pricing.html) to check the current state.
+router.get('/status', requireAuth, async (req, res, next) => {
   try {
     const { data: sub } = await supabase
       .from('subscriptions')
-      .select('*')
+      .select('status, plan, trial_ends_at, current_period_end')
       .eq('clinic_id', req.clinicId)
-      .single();
+      .maybeSingle();
     
-    res.json({ subscription: sub });
+    res.json({ subscription: sub || null });
   } catch (err) { next(err); }
 });
 

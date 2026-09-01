@@ -152,6 +152,9 @@ window.api = (function() {
     getCreditsHistory: () => request('/credits/history'),
     createTopupOrder: (pack_id) => request('/credits/topup/create-order', { method: 'POST', body: JSON.stringify({ pack_id }) }),
     verifyTopup: (payload) => request('/credits/topup/verify', { method: 'POST', body: JSON.stringify(payload) }),
+    getPlans: () => request('/billing/plans'),
+    getBillingStatus: () => request('/billing/status'),
+    createTrial: (plan) => request('/billing/create-trial', { method: 'POST', body: JSON.stringify({ plan }) }),
     
     // Marketplace & Clinic Directory Endpoints
     getPublicClinics: (params = {}) => {

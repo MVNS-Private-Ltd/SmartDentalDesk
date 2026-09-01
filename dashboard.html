@@ -1595,6 +1595,23 @@
     window.location.href = './login.html';
   }
 
+  // Subscription Gate — redirect to pricing if no active/trialing subscription
+  (async function checkSubscription() {
+    try {
+      const sub = await window.api.getBillingStatus();
+      const status = sub?.subscription?.status;
+      if (!status || !['trialing', 'active'].includes(status)) {
+        window.location.href = './pricing.html';
+      }
+    } catch (err) {
+      // If we get a non-402 error (network issue), allow access silently
+      // 402 errors already redirect via the app.js interceptor
+      if (err.message && !err.message.includes('API Request Failed')) {
+        console.warn('[Dashboard] Subscription check failed silently:', err.message);
+      }
+    }
+  })();
+
   document.addEventListener('DOMContentLoaded', async () => {
     // ── Setup & Auth ──────────────────────────────────────────────────────────
     const userData = JSON.parse(localStorage.getItem('sdd_user') || '{}');

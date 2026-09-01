@@ -19,7 +19,6 @@ const supabase    = require('../lib/supabase');
 const requireAuth = require('../middleware/auth');
 const { CREDIT_COSTS } = require('../lib/plans');
 const { trackAiUsage } = require('../lib/credits');
-const { CREDIT_COSTS } = require('../lib/plans');
 
 const router = express.Router();
 router.use(requireAuth);

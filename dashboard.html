@@ -1777,8 +1777,8 @@
             </div>
 
             <div style="display:flex; gap:0.5rem; margin-top:1rem;">
-              <a href="./pricing.html" class="btn btn-primary btn-sm" style="flex:1; text-align:center; text-decoration:none;">Upgrade / Change</a>
-              <button class="btn btn-secondary btn-sm" onclick="cancelSubscriptionPrompt()" style="color:#ef4444; border-color:#fecaca;">Cancel</button>
+              <button class="btn btn-primary btn-sm" id="btnOpenUpgradeModal" onclick="openDashboardUpgradeModal()" style="flex:1; text-align:center;">Upgrade / Change</button>
+              <button class="btn btn-secondary btn-sm" id="btnCancelSub" onclick="cancelSubscriptionPrompt()" style="color:#ef4444; border-color:#fecaca;">Cancel</button>
             </div>
           </div>
 
@@ -2020,7 +2020,10 @@
       if (targetId === 'home') loadHomeStats();
       if (targetId === 'patients') loadPatients('all');
       if (targetId === 'appointments') loadAppointments();
-      if (targetId === 'settings') loadSettings();
+      if (targetId === 'settings') {
+        loadSettings();
+        if (window.loadBillingSettings) window.loadBillingSettings();
+      }
       if (targetId === 'team') loadStaff();
     }
 
@@ -4583,65 +4586,193 @@ document.getElementById('staffModal').addEventListener('click', function(e) {
 })();
 </script>
 
-<!-- ── TOP-UP CREDITS MODAL ────────────────────────────────────── -->
-<div id="dashboardTopupModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); align-items: center; justify-content: center; z-index: 1050; padding: 20px;">
-  <div class="modal-content" style="background: #ffffff; color: #1e293b; padding: 24px; border-radius: 16px; width: 100%; max-width: 540px; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+<!-- ── 1. UPGRADE / CHANGE PLAN MODAL ───────────────────────── -->
+<div id="dashboardUpgradeModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 1050; padding: 20px; backdrop-filter: blur(4px); overflow-y: auto;">
+  <div class="modal-content" style="background: #ffffff; color: #1e293b; padding: 26px; border-radius: 20px; width: 100%; max-width: 620px; position: relative; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.25rem;">
       <div>
-        <h3 style="font-size:1.25rem; font-weight:700; margin:0; color:#0f172a;">Instant AI Credits Top-Up</h3>
-        <p style="font-size:0.84rem; color:#64748b; margin:4px 0 0;">Add credits to your clinic balance. Top-up lots never expire.</p>
+        <h3 style="font-size:1.35rem; font-weight:800; margin:0; color:#0f172a;">Upgrade Clinic Subscription</h3>
+        <p style="font-size:0.84rem; color:#64748b; margin:4px 0 0;">Select your plan and complete payment to activate immediate access &amp; AI credits.</p>
       </div>
-      <button onclick="closeDashboardTopupModal()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#94a3b8;">&times;</button>
+      <button onclick="closeDashboardUpgradeModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#94a3b8; line-height:1;">&times;</button>
     </div>
 
-    <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:1.5rem;">
+    <!-- Plan Selection Grid -->
+    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:1.5rem;">
+      <!-- Starter -->
+      <div onclick="selectUpgradePlan('starter')" id="upgPlan_starter" style="border:2px solid #e2e8f0; border-radius:12px; padding:12px; cursor:pointer; transition:all 0.2s; text-align:center;">
+        <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Starter</div>
+        <div style="font-size:1.25rem; font-weight:800; color:#0f172a; margin:4px 0;">₹599<span style="font-size:0.75rem; font-weight:500; color:#64748b;">/mo</span></div>
+        <div style="font-size:0.72rem; color:#64748b;">1,000 Credits · 2 Staff</div>
+      </div>
+
+      <!-- Growth -->
+      <div onclick="selectUpgradePlan('growth')" id="upgPlan_growth" style="border:2px solid #2563eb; background:#eff6ff; border-radius:12px; padding:12px; cursor:pointer; transition:all 0.2s; text-align:center; position:relative;">
+        <span style="position:absolute; top:-9px; left:50%; transform:translateX(-50%); background:#2563eb; color:#fff; font-size:0.62rem; font-weight:800; padding:1px 6px; border-radius:10px; text-transform:uppercase;">Popular</span>
+        <div style="font-size:0.75rem; font-weight:700; color:#1e40af; text-transform:uppercase;">Growth</div>
+        <div style="font-size:1.25rem; font-weight:800; color:#1e40af; margin:4px 0;">₹999<span style="font-size:0.75rem; font-weight:500; color:#64748b;">/mo</span></div>
+        <div style="font-size:0.72rem; color:#1e40af;">2,500 Credits · Directory</div>
+      </div>
+
+      <!-- Premium -->
+      <div onclick="selectUpgradePlan('premium')" id="upgPlan_premium" style="border:2px solid #e2e8f0; border-radius:12px; padding:12px; cursor:pointer; transition:all 0.2s; text-align:center;">
+        <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Premium</div>
+        <div style="font-size:1.25rem; font-weight:800; color:#0f172a; margin:4px 0;">₹1,499<span style="font-size:0.75rem; font-weight:500; color:#64748b;">/mo</span></div>
+        <div style="font-size:0.72rem; color:#64748b;">10,000 Credits · Priority</div>
+      </div>
+    </div>
+
+    <!-- Payment Method Selector -->
+    <div style="margin-bottom:1.25rem;">
+      <div style="font-size:0.8rem; font-weight:700; color:#475569; text-transform:uppercase; margin-bottom:8px;">Choose Payment Method</div>
+      <div style="display:flex; gap:8px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
+        <button type="button" id="upgTabCardBtn" onclick="setUpgradePaymentMethod('card')" style="flex:1; padding:8px; border:none; background:#eff6ff; color:#2563eb; font-weight:700; border-radius:8px; cursor:pointer; font-size:0.85rem;">💳 Credit / Debit Card</button>
+        <button type="button" id="upgTabUpiBtn" onclick="setUpgradePaymentMethod('upi')" style="flex:1; padding:8px; border:none; background:#f8fafc; color:#64748b; font-weight:600; border-radius:8px; cursor:pointer; font-size:0.85rem;">📱 UPI / QR</button>
+      </div>
+    </div>
+
+    <!-- CARD FORM -->
+    <div id="upgCardSection">
+      <div class="form-group" style="margin-bottom:10px;">
+        <label style="font-size:0.8rem; font-weight:600; color:#475569; display:flex; justify-content:space-between;">
+          <span>Card Number</span>
+          <span id="upgCardBrandIcon" style="color:#2563eb; font-weight:700;">💳 CARD</span>
+        </label>
+        <input type="text" id="upgCardNum" class="form-control" placeholder="4111 2222 3333 4444" maxlength="19" style="font-family:monospace; letter-spacing:0.05em;">
+      </div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="font-size:0.8rem; font-weight:600; color:#475569;">Expiry Date</label>
+          <input type="text" id="upgCardExp" class="form-control" placeholder="MM / YY" maxlength="7" style="font-family:monospace; text-align:center;">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="font-size:0.8rem; font-weight:600; color:#475569;">CVV / CVC</label>
+          <input type="password" id="upgCardCvv" class="form-control" placeholder="•••" maxlength="4" style="font-family:monospace; text-align:center;">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="font-size:0.8rem; font-weight:600; color:#475569;">Cardholder Name</label>
+        <input type="text" id="upgCardName" class="form-control" placeholder="Dr. Mayank Sharma">
+      </div>
+    </div>
+
+    <!-- UPI FORM -->
+    <div id="upgUpiSection" style="display:none; margin-bottom:12px;">
+      <div class="form-group">
+        <label style="font-size:0.8rem; font-weight:600; color:#475569;">UPI ID (VPA)</label>
+        <input type="text" id="upgUpiId" class="form-control" placeholder="doctor@okhdfcbank">
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
+        <button type="button" onclick="document.getElementById('upgUpiId').value += '@okhdfcbank'" class="btn btn-secondary btn-sm" style="font-size:0.72rem; padding:2px 8px;">+ @okhdfcbank</button>
+        <button type="button" onclick="document.getElementById('upgUpiId').value += '@okaxis'" class="btn btn-secondary btn-sm" style="font-size:0.72rem; padding:2px 8px;">+ @okaxis</button>
+        <button type="button" onclick="document.getElementById('upgUpiId').value += '@paytm'" class="btn btn-secondary btn-sm" style="font-size:0.72rem; padding:2px 8px;">+ @paytm</button>
+        <button type="button" onclick="document.getElementById('upgUpiId').value += '@ybl'" class="btn btn-secondary btn-sm" style="font-size:0.72rem; padding:2px 8px;">+ @ybl</button>
+      </div>
+    </div>
+
+    <!-- Order Total Breakdown -->
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 16px; margin-bottom:1.25rem; display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div style="font-weight:700; font-size:0.9rem; color:#0f172a;" id="upgSummaryTitle">Growth Plan (1 Month)</div>
+        <div style="font-size:0.75rem; color:#64748b;">Instant activation · Tax Included</div>
+      </div>
+      <div style="font-size:1.35rem; font-weight:800; color:#16a34a;" id="upgSummaryAmount">₹999.00</div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <a href="./pricing.html" style="font-size:0.8rem; color:#2563eb; text-decoration:none; font-weight:600;">View full plan matrix ➔</a>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn btn-secondary" onclick="closeDashboardUpgradeModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btnSubmitUpgrade" onclick="submitUpgradePayment()" style="background:#16a34a; border-color:#16a34a; font-weight:700;">
+          <span>Pay &amp; Upgrade Now</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 2. TOP-UP CREDITS MODAL ────────────────────────────────────── -->
+<div id="dashboardTopupModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 1050; padding: 20px; backdrop-filter: blur(4px);">
+  <div class="modal-content" style="background: #ffffff; color: #1e293b; padding: 26px; border-radius: 20px; width: 100%; max-width: 540px; position: relative; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.3);">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.25rem;">
+      <div>
+        <h3 style="font-size:1.3rem; font-weight:800; margin:0; color:#0f172a;">Instant AI Credits Top-Up</h3>
+        <p style="font-size:0.84rem; color:#64748b; margin:4px 0 0;">Add credits to your clinic balance. Top-up lots never expire.</p>
+      </div>
+      <button onclick="closeDashboardTopupModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#94a3b8; line-height:1;">&times;</button>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:1.25rem;">
       <!-- Pack 1 -->
-      <div onclick="selectTopupPack('pack_500')" id="topupCard_pack_500" style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border:2px solid #e2e8f0; border-radius:12px; cursor:pointer; transition:all 0.2s;">
+      <div onclick="selectTopupPack('pack_500')" id="topupCard_pack_500" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border:2px solid #e2e8f0; border-radius:12px; cursor:pointer; transition:all 0.2s;">
         <div>
           <div style="font-weight:700; font-size:0.95rem; color:#0f172a;">Starter Pack · 500 Credits</div>
-          <div style="font-size:0.78rem; color:#64748b;">Good for ~250 AI patient queries &amp; prescriptions</div>
+          <div style="font-size:0.75rem; color:#64748b;">Good for ~250 AI patient queries &amp; notes</div>
         </div>
-        <div style="font-weight:800; font-size:1.1rem; color:#2563eb;">₹99</div>
+        <div style="font-weight:800; font-size:1.15rem; color:#2563eb;">₹99</div>
       </div>
 
       <!-- Pack 2 (Popular) -->
-      <div onclick="selectTopupPack('pack_2000')" id="topupCard_pack_2000" style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border:2px solid #2563eb; background:#eff6ff; border-radius:12px; cursor:pointer; transition:all 0.2s; position:relative;">
-        <span style="position:absolute; top:-10px; right:16px; background:#2563eb; color:#fff; font-size:0.68rem; font-weight:800; padding:2px 8px; border-radius:10px; text-transform:uppercase;">Best Value</span>
+      <div onclick="selectTopupPack('pack_2000')" id="topupCard_pack_2000" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border:2px solid #2563eb; background:#eff6ff; border-radius:12px; cursor:pointer; transition:all 0.2s; position:relative;">
+        <span style="position:absolute; top:-9px; right:16px; background:#2563eb; color:#fff; font-size:0.65rem; font-weight:800; padding:1px 6px; border-radius:10px; text-transform:uppercase;">Best Value</span>
         <div>
           <div style="font-weight:700; font-size:0.95rem; color:#0f172a;">Growth Pack · 2,000 Credits</div>
-          <div style="font-size:0.78rem; color:#64748b;">Good for ~1,000 AI interactions &amp; clinic automations</div>
+          <div style="font-size:0.75rem; color:#64748b;">Good for ~1,000 AI interactions &amp; summaries</div>
         </div>
-        <div style="font-weight:800; font-size:1.1rem; color:#2563eb;">₹299</div>
+        <div style="font-weight:800; font-size:1.15rem; color:#2563eb;">₹299</div>
       </div>
 
       <!-- Pack 3 -->
-      <div onclick="selectTopupPack('pack_5000')" id="topupCard_pack_5000" style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border:2px solid #e2e8f0; border-radius:12px; cursor:pointer; transition:all 0.2s;">
+      <div onclick="selectTopupPack('pack_5000')" id="topupCard_pack_5000" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border:2px solid #e2e8f0; border-radius:12px; cursor:pointer; transition:all 0.2s;">
         <div>
           <div style="font-weight:700; font-size:0.95rem; color:#0f172a;">Power Pack · 5,000 Credits</div>
-          <div style="font-size:0.78rem; color:#64748b;">Heavy clinic AI usage &amp; high volume messaging</div>
+          <div style="font-size:0.75rem; color:#64748b;">Heavy clinic AI usage &amp; automations</div>
         </div>
-        <div style="font-weight:800; font-size:1.1rem; color:#2563eb;">₹599</div>
+        <div style="font-weight:800; font-size:1.15rem; color:#2563eb;">₹599</div>
       </div>
+    </div>
+
+    <!-- Payment selector for Top-up -->
+    <div style="margin-bottom:1.25rem;">
+      <div style="font-size:0.8rem; font-weight:700; color:#475569; text-transform:uppercase; margin-bottom:8px;">Payment Method</div>
+      <div style="display:flex; gap:8px;">
+        <button type="button" id="topupTabCardBtn" onclick="setTopupPaymentMethod('card')" style="flex:1; padding:8px; border:none; background:#eff6ff; color:#2563eb; font-weight:700; border-radius:8px; cursor:pointer; font-size:0.85rem;">💳 Card</button>
+        <button type="button" id="topupTabUpiBtn" onclick="setTopupPaymentMethod('upi')" style="flex:1; padding:8px; border:none; background:#f8fafc; color:#64748b; font-weight:600; border-radius:8px; cursor:pointer; font-size:0.85rem;">📱 UPI</button>
+      </div>
+    </div>
+
+    <div id="topupCardSection">
+      <div class="form-group" style="margin-bottom:8px;">
+        <input type="text" id="topupCardNum" class="form-control" placeholder="Card Number (4111 2222 3333 4444)" maxlength="19" style="font-family:monospace;">
+      </div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:12px;">
+        <input type="text" id="topupCardExp" class="form-control" placeholder="MM / YY" maxlength="7" style="font-family:monospace; text-align:center;">
+        <input type="password" id="topupCardCvv" class="form-control" placeholder="CVV" maxlength="4" style="font-family:monospace; text-align:center;">
+      </div>
+    </div>
+
+    <div id="topupUpiSection" style="display:none; margin-bottom:12px;">
+      <input type="text" id="topupUpiId" class="form-control" placeholder="UPI ID (e.g. doctor@okhdfcbank)">
     </div>
 
     <div style="display:flex; justify-content:flex-end; gap:8px;">
       <button type="button" class="btn btn-secondary" onclick="closeDashboardTopupModal()">Cancel</button>
-      <button type="button" class="btn btn-primary" id="confirmTopupBtn" onclick="submitTopupPurchase()">
-        <span>Pay &amp; Add Credits</span>
+      <button type="button" class="btn btn-primary" id="confirmTopupBtn" onclick="submitTopupPurchase()" style="font-weight:700;">
+        <span id="topupBtnText">Pay ₹299 &amp; Add Credits</span>
       </button>
     </div>
   </div>
 </div>
 
-<!-- ── UPDATE CARD MODAL ──────────────────────────────────────── -->
-<div id="dashboardUpdateCardModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); align-items: center; justify-content: center; z-index: 1050; padding: 20px;">
-  <div class="modal-content" style="background: #ffffff; color: #1e293b; padding: 24px; border-radius: 16px; width: 100%; max-width: 480px; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+<!-- ── 3. UPDATE CARD MODAL ──────────────────────────────────────── -->
+<div id="dashboardUpdateCardModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 1050; padding: 20px; backdrop-filter: blur(4px);">
+  <div class="modal-content" style="background: #ffffff; color: #1e293b; padding: 26px; border-radius: 20px; width: 100%; max-width: 480px; position: relative; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.3);">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.25rem;">
       <div>
-        <h3 style="font-size:1.25rem; font-weight:700; margin:0; color:#0f172a;">Update Payment Card</h3>
-        <p style="font-size:0.84rem; color:#64748b; margin:4px 0 0;">Enter your credit or debit card for subscription renewals.</p>
+        <h3 style="font-size:1.3rem; font-weight:800; margin:0; color:#0f172a;">Update Payment Card</h3>
+        <p style="font-size:0.84rem; color:#64748b; margin:4px 0 0;">Enter your credit or debit card for recurring subscription renewals.</p>
       </div>
-      <button onclick="closeDashboardUpdateCardModal()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#94a3b8;">&times;</button>
+      <button onclick="closeDashboardUpdateCardModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#94a3b8; line-height:1;">&times;</button>
     </div>
 
     <form id="updateCardForm" onsubmit="handleUpdateCardSubmit(event)">
@@ -4673,7 +4804,7 @@ document.getElementById('staffModal').addEventListener('click', function(e) {
 
       <div style="display:flex; justify-content:flex-end; gap:8px;">
         <button type="button" class="btn btn-secondary" onclick="closeDashboardUpdateCardModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="saveCardBtn">
+        <button type="submit" class="btn btn-primary" id="saveCardBtn" style="font-weight:700;">
           <span>Save &amp; Verify Card</span>
         </button>
       </div>
@@ -4681,9 +4812,9 @@ document.getElementById('staffModal').addEventListener('click', function(e) {
   </div>
 </div>
 
-<!-- ── SUBSCRIPTION OFFICIAL RECEIPT MODAL ───────────────────────── -->
-<div id="subReceiptModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); align-items: center; justify-content: center; z-index: 1060; padding: 20px;">
-  <div class="modal-content" style="background: #ffffff; color: #1e293b; padding: 0; border-radius: 16px; width: 100%; max-width: 560px; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow:hidden;">
+<!-- ── 4. SUBSCRIPTION OFFICIAL RECEIPT MODAL ───────────────────────── -->
+<div id="subReceiptModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 1060; padding: 20px; backdrop-filter: blur(4px);">
+  <div class="modal-content" style="background: #ffffff; color: #1e293b; padding: 0; border-radius: 18px; width: 100%; max-width: 560px; position: relative; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.3); overflow:hidden;">
     
     <div class="no-print" style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:12px 20px; display:flex; justify-content:space-between; align-items:center;">
       <span style="font-weight:700; font-size:0.9rem; color:#0f172a;">Subscription &amp; SaaS Tax Invoice</span>
@@ -4742,10 +4873,93 @@ document.getElementById('staffModal').addEventListener('click', function(e) {
 </div>
 
 <script>
-// ── BILLING CONTROLLERS & SETTINGS SUBTABS ─────────────────────────
-let currentInvoicesList = [];
-let selectedTopupPackId = 'pack_2000';
+// ── STRICT CLIENT-SIDE CARD VALIDATION HELPER (LUHN CHECK) ──────────
+function validateCardInputs(cardNum, cardExp, cardCvv, cardName = '') {
+  const cleanNum = (cardNum || '').replace(/[\s-]/g, '');
+  if (!cleanNum || !/^\d{13,19}$/.test(cleanNum)) {
+    return { valid: false, message: 'Please enter a valid card number (13 to 19 digits).' };
+  }
 
+  // Luhn Check (Mod 10 Checksum)
+  let sum = 0;
+  let shouldDouble = false;
+  for (let i = cleanNum.length - 1; i >= 0; i--) {
+    let digit = parseInt(cleanNum.charAt(i), 10);
+    if (isNaN(digit)) return { valid: false, message: 'Card number must contain digits only.' };
+    if (shouldDouble) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    shouldDouble = !shouldDouble;
+  }
+  if (sum % 10 !== 0) {
+    return { valid: false, message: 'Invalid card number checksum. Please check your card number for typos.' };
+  }
+
+  // Expiry check
+  if (!cardExp || !cardExp.includes('/')) {
+    return { valid: false, message: 'Please enter a valid expiry date (MM / YY).' };
+  }
+  const parts = cardExp.replace(/\s+/g, '').split('/');
+  const expMonth = parseInt(parts[0], 10);
+  let expYear = parseInt(parts[1], 10);
+
+  if (isNaN(expMonth) || expMonth < 1 || expMonth > 12) {
+    return { valid: false, message: 'Invalid expiry month. Must be between 01 and 12.' };
+  }
+  if (isNaN(expYear)) {
+    return { valid: false, message: 'Invalid expiry year.' };
+  }
+  if (expYear < 100) expYear += 2000;
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
+    return { valid: false, message: 'This card is expired. Please enter an active card.' };
+  }
+  if (expYear > currentYear + 25) {
+    return { valid: false, message: 'Expiry year is too far in the future.' };
+  }
+
+  // CVV check
+  const cleanCvv = (cardCvv || '').trim();
+  if (!cleanCvv || !/^\d{3,4}$/.test(cleanCvv) || cleanCvv === '000') {
+    return { valid: false, message: 'Please enter a valid 3 or 4-digit CVV code.' };
+  }
+
+  return {
+    valid: true,
+    card_number: cleanNum,
+    card_exp: `${String(expMonth).padStart(2,'0')}/${String(expYear).slice(-2)}`,
+    card_cvv: cleanCvv,
+    cardholder_name: (cardName || 'Doctor').trim()
+  };
+}
+
+// ── GLOBAL STATE & CONTROLLERS ──────────────────────────────────────
+let currentInvoicesList = [];
+let activeUpgradePlan = 'growth';
+let activeUpgradeMethod = 'card';
+let selectedTopupPackId = 'pack_2000';
+let activeTopupMethod = 'card';
+
+// Plan metadata
+const UPGRADE_PLANS = {
+  starter: { name: 'Starter Plan', price: 599, credits: 1000, desc: 'Core Practice & Online Booking for Solo Dentists' },
+  growth:  { name: 'Growth Plan',  price: 999, credits: 2500, desc: 'Marketplace Directory & 2,500 Monthly AI Credits' },
+  premium: { name: 'Premium Plan', price: 1499, credits: 10000, desc: '10,000 AI Credits, Priority Directory & 24/7 SLA' }
+};
+
+const TOPUP_PACKS = {
+  pack_500:  { name: 'Starter Pack', credits: 500, price: 99 },
+  pack_2000: { name: 'Growth Pack', credits: 2000, price: 299 },
+  pack_5000: { name: 'Power Pack', credits: 5000, price: 599 }
+};
+
+// ── SUBTAB SWITCHER ────────────────────────────────────────────────
 window.switchSettingsTab = function(tab) {
   const generalPanel = document.getElementById('settingsGeneralPanel');
   const billingPanel = document.getElementById('settingsBillingPanel');
@@ -4753,19 +4967,20 @@ window.switchSettingsTab = function(tab) {
   const billBtn = document.getElementById('subtab-billing-btn');
 
   if (tab === 'billing') {
-    generalPanel.style.display = 'none';
-    billingPanel.style.display = 'block';
-    genBtn.classList.remove('active');
-    billBtn.classList.add('active');
+    if (generalPanel) generalPanel.style.display = 'none';
+    if (billingPanel) billingPanel.style.display = 'block';
+    if (genBtn) genBtn.classList.remove('active');
+    if (billBtn) billBtn.classList.add('active');
     loadBillingSettings();
   } else {
-    billingPanel.style.display = 'none';
-    generalPanel.style.display = 'block';
-    billBtn.classList.remove('active');
-    genBtn.classList.add('active');
+    if (billingPanel) billingPanel.style.display = 'none';
+    if (generalPanel) generalPanel.style.display = 'block';
+    if (billBtn) billBtn.classList.remove('active');
+    if (genBtn) genBtn.classList.add('active');
   }
 };
 
+// ── LOAD BILLING & SUBSCRIPTION STATUS ─────────────────────────────
 window.loadBillingSettings = async function() {
   try {
     const [statusRes, invRes] = await Promise.all([
@@ -4773,21 +4988,18 @@ window.loadBillingSettings = async function() {
       window.api.getSubscriptionInvoices()
     ]);
 
-    // 1. Render Plan Info
+    // 1. Plan Info
     const sub = statusRes.subscription;
     const plan = statusRes.plan || 'starter';
     const status = statusRes.status || 'active';
 
     const planBadge = document.getElementById('billingPlanStatusBadge');
-    planBadge.textContent = status.toUpperCase();
-    planBadge.className = `status-pill-badge ${status}`;
+    if (planBadge) {
+      planBadge.textContent = status.toUpperCase();
+      planBadge.className = `status-pill-badge ${status}`;
+    }
 
-    const planNames = {
-      starter: 'Starter Plan',
-      growth: 'Growth Plan',
-      premium: 'Premium Plan'
-    };
-
+    const planNames = { starter: 'Starter Plan', growth: 'Growth Plan', premium: 'Premium Plan' };
     const planDescriptions = {
       starter: '₹599 / month · 1,000 AI Credits',
       growth: '₹999 / month · 2,500 AI Credits',
@@ -4795,36 +5007,50 @@ window.loadBillingSettings = async function() {
     };
 
     const isTrial = status === 'trialing';
-    document.getElementById('billingPlanName').textContent = isTrial ? '3-Month Free Trial' : (planNames[plan] || 'Growth Plan');
-    document.getElementById('billingPlanDesc').textContent = isTrial ? '₹0.00 · Premium Features Included' : (planDescriptions[plan] || '₹999 / month');
+    const nameEl = document.getElementById('billingPlanName');
+    const descEl = document.getElementById('billingPlanDesc');
+    if (nameEl) nameEl.textContent = isTrial ? '3-Month Free Trial' : (planNames[plan] || 'Growth Plan');
+    if (descEl) descEl.textContent = isTrial ? '₹0.00 · Premium Features Included' : (planDescriptions[plan] || '₹999 / month');
 
-    // 2. Render Credits Gauge
+    // 2. Credits Gauge
     const credits = statusRes.credits || { total: 0, monthly_allocated: 1000, monthly_used: 0, topup_remaining: 0 };
-    document.getElementById('billingTotalCreditsVal').textContent = credits.total.toLocaleString();
-    document.getElementById('billingMonthlyQuota').textContent = (credits.monthly_allocated || 0).toLocaleString();
-    document.getElementById('billingCreditsUsed').textContent = (credits.monthly_used || 0).toLocaleString();
-    document.getElementById('billingTopupLots').textContent = (credits.topup_remaining || 0).toLocaleString();
+    const totalEl = document.getElementById('billingTotalCreditsVal');
+    const quotaEl = document.getElementById('billingMonthlyQuota');
+    const usedEl = document.getElementById('billingCreditsUsed');
+    const topupEl = document.getElementById('billingTopupLots');
+    const fillEl = document.getElementById('billingCreditsFill');
 
-    const pct = credits.monthly_allocated > 0 ? Math.min(100, Math.round((credits.monthly_remaining / credits.monthly_allocated) * 100)) : 100;
-    document.getElementById('billingCreditsFill').style.width = `${pct}%`;
+    if (totalEl) totalEl.textContent = (credits.total || 0).toLocaleString();
+    if (quotaEl) quotaEl.textContent = (credits.monthly_allocated || 0).toLocaleString();
+    if (usedEl) usedEl.textContent = (credits.monthly_used || 0).toLocaleString();
+    if (topupEl) topupEl.textContent = (credits.topup_remaining || 0).toLocaleString();
 
-    // 3. Render Saved Card
+    const pct = credits.monthly_allocated > 0 ? Math.min(100, Math.round(((credits.monthly_allocated - (credits.monthly_used || 0)) / credits.monthly_allocated) * 100)) : 100;
+    if (fillEl) fillEl.style.width = `${pct}%`;
+
+    // 3. Saved Card Info
     const card = statusRes.saved_card;
+    const brandEl = document.getElementById('savedCardBrand');
+    const numEl = document.getElementById('savedCardNum');
+    const holderEl = document.getElementById('savedCardHolder');
+    const expEl = document.getElementById('savedCardExp');
+    const noticeEl = document.getElementById('savedCardNotice');
+
     if (card && card.last4) {
-      document.getElementById('savedCardBrand').textContent = (card.brand || 'CARD').toUpperCase();
-      document.getElementById('savedCardNum').textContent = `•••• •••• •••• ${card.last4}`;
-      document.getElementById('savedCardHolder').textContent = (card.holder || 'DOCTOR').toUpperCase();
-      document.getElementById('savedCardExp').textContent = card.exp || '••/••';
-      document.getElementById('savedCardNotice').textContent = 'Default card on file for recurring billing.';
+      if (brandEl) brandEl.textContent = (card.brand || 'CARD').toUpperCase();
+      if (numEl) numEl.textContent = `•••• •••• •••• ${card.last4}`;
+      if (holderEl) holderEl.textContent = (card.holder || 'DOCTOR').toUpperCase();
+      if (expEl) expEl.textContent = card.exp || '••/••';
+      if (noticeEl) noticeEl.textContent = 'Default card on file for recurring billing.';
     } else {
-      document.getElementById('savedCardBrand').textContent = 'CARD';
-      document.getElementById('savedCardNum').textContent = '•••• •••• •••• ••••';
-      document.getElementById('savedCardHolder').textContent = 'NO CARD ON FILE';
-      document.getElementById('savedCardExp').textContent = '--/--';
-      document.getElementById('savedCardNotice').textContent = 'Add a payment card to enable automatic subscription renewals.';
+      if (brandEl) brandEl.textContent = 'CARD';
+      if (numEl) numEl.textContent = '•••• •••• •••• ••••';
+      if (holderEl) holderEl.textContent = 'NO CARD ON FILE';
+      if (expEl) expEl.textContent = '--/--';
+      if (noticeEl) noticeEl.textContent = 'Add a payment card to enable automatic subscription renewals.';
     }
 
-    // 4. Render Invoices Table
+    // 4. Invoices Table
     currentInvoicesList = invRes.invoices || [];
     renderInvoicesTable(currentInvoicesList);
 
@@ -4835,6 +5061,7 @@ window.loadBillingSettings = async function() {
 
 function renderInvoicesTable(invoices) {
   const tbody = document.getElementById('invoicesTableBody');
+  if (!tbody) return;
   if (!invoices || invoices.length === 0) {
     tbody.innerHTML = `
       <tr>
@@ -4868,18 +5095,142 @@ function renderInvoicesTable(invoices) {
   }).join('');
 }
 
-// ── TOP-UP MODAL LOGIC ─────────────────────────────────────────────
+// ── UPGRADE PLAN MODAL CONTROLLER ──────────────────────────────────
+window.openDashboardUpgradeModal = function(defaultPlan = 'growth') {
+  selectUpgradePlan(defaultPlan);
+  setUpgradePaymentMethod('card');
+  const modal = document.getElementById('dashboardUpgradeModal');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closeDashboardUpgradeModal = function() {
+  const modal = document.getElementById('dashboardUpgradeModal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.selectUpgradePlan = function(plan) {
+  activeUpgradePlan = plan;
+  const p = UPGRADE_PLANS[plan] || UPGRADE_PLANS.growth;
+
+  ['starter', 'growth', 'premium'].forEach(key => {
+    const el = document.getElementById(`upgPlan_${key}`);
+    if (el) {
+      if (key === plan) {
+        el.style.borderColor = '#2563eb';
+        el.style.background = '#eff6ff';
+      } else {
+        el.style.borderColor = '#e2e8f0';
+        el.style.background = '#ffffff';
+      }
+    }
+  });
+
+  const sumTitle = document.getElementById('upgSummaryTitle');
+  const sumAmt = document.getElementById('upgSummaryAmount');
+  if (sumTitle) sumTitle.textContent = `${p.name} (1 Month Renewal)`;
+  if (sumAmt) sumAmt.textContent = `₹${p.price}.00`;
+};
+
+window.setUpgradePaymentMethod = function(method) {
+  activeUpgradeMethod = method;
+  const cardTab = document.getElementById('upgTabCardBtn');
+  const upiTab = document.getElementById('upgTabUpiBtn');
+  const cardSec = document.getElementById('upgCardSection');
+  const upiSec = document.getElementById('upgUpiSection');
+
+  if (method === 'card') {
+    if (cardTab) { cardTab.style.background = '#eff6ff'; cardTab.style.color = '#2563eb'; }
+    if (upiTab) { upiTab.style.background = '#f8fafc'; upiTab.style.color = '#64748b'; }
+    if (cardSec) cardSec.style.display = 'block';
+    if (upiSec) upiSec.style.display = 'none';
+  } else {
+    if (upiTab) { upiTab.style.background = '#eff6ff'; upiTab.style.color = '#2563eb'; }
+    if (cardTab) { cardTab.style.background = '#f8fafc'; cardTab.style.color = '#64748b'; }
+    if (upiSec) upiSec.style.display = 'block';
+    if (cardSec) cardSec.style.display = 'none';
+  }
+};
+
+window.submitUpgradePayment = async function() {
+  const btn = document.getElementById('btnSubmitUpgrade');
+  let cardPayload = {};
+
+  if (activeUpgradeMethod === 'card') {
+    const cardNum = document.getElementById('upgCardNum')?.value || '';
+    const cardExp = document.getElementById('upgCardExp')?.value || '';
+    const cardCvv = document.getElementById('upgCardCvv')?.value || '';
+    const cardName = document.getElementById('upgCardName')?.value || '';
+
+    const check = validateCardInputs(cardNum, cardExp, cardCvv, cardName);
+    if (!check.valid) {
+      alert(check.message);
+      return;
+    }
+    cardPayload = {
+      card_number: check.card_number,
+      card_exp: check.card_exp,
+      card_cvv: check.card_cvv,
+      cardholder_name: check.cardholder_name,
+      payment_method: 'card'
+    };
+  } else {
+    const upiId = document.getElementById('upgUpiId')?.value.trim() || '';
+    if (!upiId || !upiId.includes('@')) {
+      alert('Please enter a valid UPI ID (e.g. doctor@okhdfcbank).');
+      return;
+    }
+    cardPayload = { payment_method: 'upi', upi_id: upiId };
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Processing Payment...';
+
+  try {
+    const order = await window.api.createOrder(activeUpgradePlan);
+    const orderId = order.order_id || `order_${Date.now()}`;
+    const simPaymentId = `pay_${Math.random().toString(36).substring(2, 12)}`;
+
+    const verify = await window.api.verifyPayment({
+      plan: activeUpgradePlan,
+      razorpay_order_id:   orderId,
+      razorpay_payment_id: simPaymentId,
+      razorpay_signature:  'verified_checkout_signature',
+      ...cardPayload
+    });
+
+    if (verify.success) {
+      closeDashboardUpgradeModal();
+      alert(`🎉 Payment Successful! Upgraded to ${verify.plan.toUpperCase()} plan with ${verify.credits.toLocaleString()} AI Credits!`);
+      if (window.loadCredits) window.loadCredits();
+      loadBillingSettings();
+    } else {
+      alert('Payment processing could not be completed.');
+    }
+  } catch (err) {
+    alert(err.message || 'Upgrade payment failed. Please try again.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Pay & Upgrade Now';
+  }
+};
+
+// ── TOP-UP MODAL CONTROLLER ────────────────────────────────────────
 window.openDashboardTopupModal = function() {
-  document.getElementById('dashboardTopupModal').style.display = 'flex';
+  const modal = document.getElementById('dashboardTopupModal');
+  if (modal) modal.style.display = 'flex';
   selectTopupPack('pack_2000');
+  setTopupPaymentMethod('card');
 };
 
 window.closeDashboardTopupModal = function() {
-  document.getElementById('dashboardTopupModal').style.display = 'none';
+  const modal = document.getElementById('dashboardTopupModal');
+  if (modal) modal.style.display = 'none';
 };
 
 window.selectTopupPack = function(packId) {
   selectedTopupPackId = packId;
+  const p = TOPUP_PACKS[packId] || TOPUP_PACKS.pack_2000;
+
   ['pack_500', 'pack_2000', 'pack_5000'].forEach(id => {
     const el = document.getElementById(`topupCard_${id}`);
     if (el) {
@@ -4892,17 +5243,58 @@ window.selectTopupPack = function(packId) {
       }
     }
   });
+
+  const btnText = document.getElementById('topupBtnText');
+  if (btnText) btnText.textContent = `Pay ₹${p.price} & Add Credits`;
+};
+
+window.setTopupPaymentMethod = function(method) {
+  activeTopupMethod = method;
+  const cardTab = document.getElementById('topupTabCardBtn');
+  const upiTab = document.getElementById('topupTabUpiBtn');
+  const cardSec = document.getElementById('topupCardSection');
+  const upiSec = document.getElementById('topupUpiSection');
+
+  if (method === 'card') {
+    if (cardTab) { cardTab.style.background = '#eff6ff'; cardTab.style.color = '#2563eb'; }
+    if (upiTab) { upiTab.style.background = '#f8fafc'; upiTab.style.color = '#64748b'; }
+    if (cardSec) cardSec.style.display = 'block';
+    if (upiSec) upiSec.style.display = 'none';
+  } else {
+    if (upiTab) { upiTab.style.background = '#eff6ff'; upiTab.style.color = '#2563eb'; }
+    if (cardTab) { cardTab.style.background = '#f8fafc'; cardTab.style.color = '#64748b'; }
+    if (upiSec) upiSec.style.display = 'block';
+    if (cardSec) cardSec.style.display = 'none';
+  }
 };
 
 window.submitTopupPurchase = async function() {
   const btn = document.getElementById('confirmTopupBtn');
+  const p = TOPUP_PACKS[selectedTopupPackId] || TOPUP_PACKS.pack_2000;
+
+  if (activeTopupMethod === 'card') {
+    const cardNum = document.getElementById('topupCardNum')?.value || '';
+    const cardExp = document.getElementById('topupCardExp')?.value || '';
+    const cardCvv = document.getElementById('topupCardCvv')?.value || '';
+    const check = validateCardInputs(cardNum, cardExp, cardCvv, 'Topup User');
+    if (!check.valid) {
+      alert(check.message);
+      return;
+    }
+  } else {
+    const upiId = document.getElementById('topupUpiId')?.value.trim() || '';
+    if (!upiId || !upiId.includes('@')) {
+      alert('Please enter a valid UPI ID (e.g. doctor@okhdfcbank).');
+      return;
+    }
+  }
+
   btn.disabled = true;
   btn.textContent = 'Processing...';
 
   try {
     const order = await window.api.createTopupOrder(selectedTopupPackId);
     
-    // Direct verification / payment
     const verify = await window.api.verifyTopup({
       pack_id: selectedTopupPackId,
       razorpay_order_id: order.order_id || `order_${Date.now()}`,
@@ -4912,7 +5304,7 @@ window.submitTopupPurchase = async function() {
 
     if (verify.success) {
       closeDashboardTopupModal();
-      alert(`Top-up successful! ${verify.credits_added} AI Credits added to your balance.`);
+      alert(`Top-up successful! ${verify.credits_added.toLocaleString()} AI Credits added to your balance.`);
       if (window.loadCredits) window.loadCredits();
       loadBillingSettings();
     } else {
@@ -4922,41 +5314,80 @@ window.submitTopupPurchase = async function() {
     alert(err.message || 'Top-up purchase failed.');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Pay & Add Credits';
+    btn.textContent = `Pay ₹${p.price} & Add Credits`;
   }
 };
 
-// ── UPDATE CARD LOGIC WITH LUHN CHECK ──────────────────────────────
+// ── UPDATE CARD MODAL CONTROLLER ───────────────────────────────────
 window.openDashboardUpdateCardModal = function() {
-  document.getElementById('updateCardError').style.display = 'none';
-  document.getElementById('updateCardForm').reset();
-  document.getElementById('dashboardUpdateCardModal').style.display = 'flex';
+  const errBox = document.getElementById('updateCardError');
+  const form = document.getElementById('updateCardForm');
+  if (errBox) errBox.style.display = 'none';
+  if (form) form.reset();
+  const modal = document.getElementById('dashboardUpdateCardModal');
+  if (modal) modal.style.display = 'flex';
 };
 
 window.closeDashboardUpdateCardModal = function() {
-  document.getElementById('dashboardUpdateCardModal').style.display = 'none';
+  const modal = document.getElementById('dashboardUpdateCardModal');
+  if (modal) modal.style.display = 'none';
 };
 
-// Formatting helpers
-document.getElementById('updCardNum').addEventListener('input', function(e) {
-  let val = e.target.value.replace(/\D/g, '').substring(0, 16);
-  let formatted = val.match(/.{1,4}/g)?.join(' ') || val;
-  e.target.value = formatted;
+// Formatting helpers for inputs
+document.addEventListener('DOMContentLoaded', () => {
+  // Input formatters for upgrade card
+  const upgCard = document.getElementById('upgCardNum');
+  if (upgCard) {
+    upgCard.addEventListener('input', (e) => {
+      let val = e.target.value.replace(/\D/g, '').substring(0, 16);
+      e.target.value = val.match(/.{1,4}/g)?.join(' ') || val;
+      const brandTag = document.getElementById('upgCardBrandIcon');
+      if (brandTag) {
+        if (val.startsWith('4')) brandTag.textContent = '💳 VISA';
+        else if (/^5[1-5]|^2[2-7]/.test(val)) brandTag.textContent = '💳 MASTERCARD';
+        else if (/^60|^65|^81|^82|^508/.test(val)) brandTag.textContent = '💳 RUPAY';
+        else if (/^3[47]/.test(val)) brandTag.textContent = '💳 AMEX';
+        else brandTag.textContent = '💳 CARD';
+      }
+    });
+  }
 
-  const brandTag = document.getElementById('updateCardBrandTag');
-  if (val.startsWith('4')) brandTag.textContent = '💳 VISA';
-  else if (/^5[1-5]|^2[2-7]/.test(val)) brandTag.textContent = '💳 MASTERCARD';
-  else if (/^60|^65|^81|^82|^508/.test(val)) brandTag.textContent = '💳 RUPAY';
-  else if (/^3[47]/.test(val)) brandTag.textContent = '💳 AMEX';
-  else brandTag.textContent = '💳 CARD';
-});
+  const upgExp = document.getElementById('upgCardExp');
+  if (upgExp) {
+    upgExp.addEventListener('input', (e) => {
+      let val = e.target.value.replace(/\D/g, '').substring(0, 4);
+      e.target.value = val.length >= 3 ? val.substring(0, 2) + ' / ' + val.substring(2) : val;
+    });
+  }
 
-document.getElementById('updCardExp').addEventListener('input', function(e) {
-  let val = e.target.value.replace(/\D/g, '').substring(0, 4);
-  if (val.length >= 3) {
-    e.target.value = val.substring(0, 2) + ' / ' + val.substring(2);
-  } else {
-    e.target.value = val;
+  // Input formatters for update card
+  const updCard = document.getElementById('updCardNum');
+  if (updCard) {
+    updCard.addEventListener('input', (e) => {
+      let val = e.target.value.replace(/\D/g, '').substring(0, 16);
+      e.target.value = val.match(/.{1,4}/g)?.join(' ') || val;
+      const brandTag = document.getElementById('updateCardBrandTag');
+      if (brandTag) {
+        if (val.startsWith('4')) brandTag.textContent = '💳 VISA';
+        else if (/^5[1-5]|^2[2-7]/.test(val)) brandTag.textContent = '💳 MASTERCARD';
+        else if (/^60|^65|^81|^82|^508/.test(val)) brandTag.textContent = '💳 RUPAY';
+        else if (/^3[47]/.test(val)) brandTag.textContent = '💳 AMEX';
+        else brandTag.textContent = '💳 CARD';
+      }
+    });
+  }
+
+  const updExp = document.getElementById('updCardExp');
+  if (updExp) {
+    updExp.addEventListener('input', (e) => {
+      let val = e.target.value.replace(/\D/g, '').substring(0, 4);
+      e.target.value = val.length >= 3 ? val.substring(0, 2) + ' / ' + val.substring(2) : val;
+    });
+  }
+
+  // Pre-load billing on page load if settings section is active
+  if (window.api && window.api.isAuthenticated()) {
+    loadBillingSettings();
   }
 });
 
@@ -4965,21 +5396,28 @@ window.handleUpdateCardSubmit = async function(e) {
   const errBox = document.getElementById('updateCardError');
   const btn = document.getElementById('saveCardBtn');
 
-  const cardNum = document.getElementById('updCardNum').value;
-  const cardExp = document.getElementById('updCardExp').value;
-  const cardCvv = document.getElementById('updCardCvv').value;
-  const cardName = document.getElementById('updCardName').value;
+  const cardNum = document.getElementById('updCardNum')?.value || '';
+  const cardExp = document.getElementById('updCardExp')?.value || '';
+  const cardCvv = document.getElementById('updCardCvv')?.value || '';
+  const cardName = document.getElementById('updCardName')?.value || '';
+
+  const check = validateCardInputs(cardNum, cardExp, cardCvv, cardName);
+  if (!check.valid) {
+    if (errBox) { errBox.textContent = check.message; errBox.style.display = 'block'; }
+    else alert(check.message);
+    return;
+  }
 
   btn.disabled = true;
   btn.textContent = 'Verifying Card...';
-  errBox.style.display = 'none';
+  if (errBox) errBox.style.display = 'none';
 
   try {
     const res = await window.api.updateBillingCard({
-      card_number: cardNum,
-      card_exp: cardExp,
-      card_cvv: cardCvv,
-      cardholder_name: cardName
+      card_number: check.card_number,
+      card_exp: check.card_exp,
+      card_cvv: check.card_cvv,
+      cardholder_name: check.cardholder_name
     });
 
     if (res.success) {
@@ -4987,12 +5425,11 @@ window.handleUpdateCardSubmit = async function(e) {
       alert('Card updated successfully!');
       loadBillingSettings();
     } else {
-      errBox.textContent = res.error || 'Card verification failed.';
-      errBox.style.display = 'block';
+      if (errBox) { errBox.textContent = res.error || 'Card verification failed.'; errBox.style.display = 'block'; }
     }
   } catch (err) {
-    errBox.textContent = err.message || 'Failed to update card.';
-    errBox.style.display = 'block';
+    if (errBox) { errBox.textContent = err.message || 'Failed to update card.'; errBox.style.display = 'block'; }
+    else alert(err.message || 'Failed to update card.');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Save & Verify Card';
@@ -5005,23 +5442,33 @@ window.viewSubReceipt = function(invoiceId) {
   if (!inv) return;
 
   const d = new Date(inv.created_at);
-  document.getElementById('subRcptInvNo').textContent = inv.invoice_number;
-  document.getElementById('subRcptDate').textContent = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const invNo = document.getElementById('subRcptInvNo');
+  const rDate = document.getElementById('subRcptDate');
+  const rClinic = document.getElementById('subRcptClinicName');
+  const rMethod = document.getElementById('subRcptPaymentMethod');
+  const rItem = document.getElementById('subRcptItemName');
+  const rItemAmt = document.getElementById('subRcptItemAmount');
+  const rTotal = document.getElementById('subRcptTotalAmount');
+
+  if (invNo) invNo.textContent = inv.invoice_number;
+  if (rDate) rDate.textContent = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   
   const clinicName = localStorage.getItem('sdd_clinic_name') || 'Smart Dental Clinic';
-  document.getElementById('subRcptClinicName').textContent = clinicName;
-  document.getElementById('subRcptPaymentMethod').textContent = `Payment Method: Card •••• ${inv.card_last4 || '4242'}`;
-  document.getElementById('subRcptItemName').textContent = `${inv.plan.toUpperCase()} Tier Billing`;
+  if (rClinic) rClinic.textContent = clinicName;
+  if (rMethod) rMethod.textContent = `Payment Method: Card •••• ${inv.card_last4 || '4242'}`;
+  if (rItem) rItem.textContent = `${inv.plan.toUpperCase()} Plan Subscription`;
   
   const amtStr = inv.amount_paise === 0 ? '₹0.00' : `₹${(inv.amount_paise / 100).toFixed(2)}`;
-  document.getElementById('subRcptItemAmount').textContent = amtStr;
-  document.getElementById('subRcptTotalAmount').textContent = amtStr;
+  if (rItemAmt) rItemAmt.textContent = amtStr;
+  if (rTotal) rTotal.textContent = amtStr;
 
-  document.getElementById('subReceiptModal').style.display = 'flex';
+  const modal = document.getElementById('subReceiptModal');
+  if (modal) modal.style.display = 'flex';
 };
 
 window.closeSubReceiptModal = function() {
-  document.getElementById('subReceiptModal').style.display = 'none';
+  const modal = document.getElementById('subReceiptModal');
+  if (modal) modal.style.display = 'none';
 };
 
 window.cancelSubscriptionPrompt = async function() {

@@ -1021,6 +1021,194 @@
       display: none !important;
     }
   }
+
+  /* ── SETTINGS SUB-NAV TABS ── */
+  .settings-subnav {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: var(--space-6);
+    border-bottom: 2px solid var(--color-divider);
+    padding-bottom: 0.5rem;
+  }
+  .settings-subtab-btn {
+    padding: 0.6rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .settings-subtab-btn:hover {
+    color: var(--color-primary);
+    background: var(--color-primary-highlight);
+  }
+  .settings-subtab-btn.active {
+    color: #fff;
+    background: var(--color-primary);
+    box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+  }
+
+  /* ── BILLING CARDS GRID ── */
+  .billing-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-5);
+    margin-bottom: var(--space-6);
+  }
+  @media (max-width: 1024px) {
+    .billing-summary-grid { grid-template-columns: 1fr; }
+  }
+  .billing-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    position: relative;
+    overflow: hidden;
+  }
+  .billing-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+  .billing-card-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    font-weight: 700;
+    margin: 0;
+  }
+  .status-pill-badge {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .status-pill-badge.active { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+  .status-pill-badge.trialing { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+  .status-pill-badge.canceled { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+  .billing-card-val {
+    font-family: 'Fraunces', serif;
+    font-size: 1.85rem;
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1.2;
+    margin-bottom: 0.35rem;
+  }
+  .billing-card-sub {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    line-height: 1.4;
+  }
+
+  /* SAVED CREDIT CARD CHIP VIEW */
+  .saved-card-mockup {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-radius: 12px;
+    padding: 1.1rem;
+    color: #fff;
+    margin: 0.75rem 0;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .saved-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.9rem;
+  }
+  .card-chip-icon {
+    width: 28px;
+    height: 20px;
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    border-radius: 4px;
+    box-shadow: inset 0 0 2px rgba(0,0,0,0.4);
+  }
+  .card-brand-tag {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #93c5fd;
+    text-transform: uppercase;
+  }
+  .saved-card-num {
+    font-family: monospace;
+    font-size: 1.05rem;
+    letter-spacing: 0.18em;
+    color: #f8fafc;
+    margin-bottom: 0.75rem;
+  }
+  .saved-card-bottom {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: #cbd5e1;
+    text-transform: uppercase;
+  }
+
+  /* PROGRESS BAR */
+  .credits-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 0.75rem 0 0.5rem;
+  }
+  .credits-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2563eb, #3b82f6);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+  }
+
+  /* INVOICES TABLE */
+  .invoices-table-wrap {
+    background: var(--color-surface);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+  }
+  .invoices-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+  .invoices-table th {
+    background: var(--color-bg);
+    padding: 0.85rem 1.25rem;
+    text-align: left;
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-divider);
+  }
+  .invoices-table td {
+    padding: 0.95rem 1.25rem;
+    border-bottom: 1px solid var(--color-divider);
+    color: var(--color-text);
+  }
+  .invoices-table tr:hover td {
+    background: var(--color-bg);
+  }
 </style>
 </head>
 <body>
@@ -1499,53 +1687,190 @@
 
     <!-- ==================== SETTINGS TAB ==================== -->
     <section id="section-settings" class="dashboard-section">
-      <h2>Clinic Settings</h2>
-      <p class="text-muted" style="margin-bottom: var(--space-6);">Manage your clinic details and booking link.</p>
-      
-      <div class="settings-grid">
-        <div class="settings-panel">
-          <h3>Public Booking Link</h3>
-          <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-4);">Share this link with your patients so they can book appointments online.</p>
-          <div class="booking-link-display">
-            <span id="bookingLinkText">Loading...</span>
-            <button class="btn btn-secondary btn-sm" id="copyLinkBtn" style="margin-left: auto;">Copy</button>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:var(--space-4);">
+        <div>
+          <h2>Clinic &amp; Account Settings</h2>
+          <p class="text-muted" style="margin:0;">Manage clinic details, booking preferences, subscription plan, and billing.</p>
+        </div>
+      </div>
+
+      <!-- Settings Subnav -->
+      <div class="settings-subnav">
+        <button class="settings-subtab-btn active" id="subtab-general-btn" onclick="switchSettingsTab('general')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Clinic &amp; Booking Preferences
+        </button>
+        <button class="settings-subtab-btn" id="subtab-billing-btn" onclick="switchSettingsTab('billing')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          Billing, Invoices &amp; Credits
+        </button>
+      </div>
+
+      <!-- SUBTAB 1: CLINIC & BOOKING PREFERENCES -->
+      <div id="settingsGeneralPanel">
+        <div class="settings-grid">
+          <div class="settings-panel">
+            <h3>Public Booking Link</h3>
+            <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-4);">Share this link with your patients so they can book appointments online.</p>
+            <div class="booking-link-display">
+              <span id="bookingLinkText">Loading...</span>
+              <button class="btn btn-secondary btn-sm" id="copyLinkBtn" style="margin-left: auto;">Copy</button>
+            </div>
+          </div>
+
+          <div class="settings-panel">
+            <h3>Appointment Preferences</h3>
+            <form id="settingsForm">
+              <div class="form-group">
+                <label>Default Slot Duration (minutes)</label>
+                <input type="number" id="slotDuration" class="form-control" value="30" step="5" min="10">
+              </div>
+              <div class="form-group">
+                <label>Auto-Approve Bookings?</label>
+                <select id="autoApprove" class="form-control">
+                  <option value="false">No (Manual Review — Admin approves each request)</option>
+                  <option value="true">Yes (Auto-Approve — Bookings are instantly confirmed)</option>
+                </select>
+                <p class="text-muted" style="font-size:0.8rem; margin-top:4px; line-height:1.4;">
+                  When set to <strong>"No"</strong>, online patient bookings appear in your <em>Pending Approval</em> queue on the dashboard until you approve them.
+                </p>
+              </div>
+              <div class="form-group">
+                <label>Available Time Slots <span style="font-weight:400; color:var(--color-text-muted); font-size:0.8rem;">(click to toggle on/off)</span></label>
+                <div class="admin-slot-grid" id="adminSlotGrid"></div>
+                <div class="slot-grid-actions">
+                  <button type="button" id="slotSelectAll">Select All</button>
+                  <button type="button" id="slotClearAll">Clear All</button>
+                  <button type="button" id="slotAddCustom">+ Custom Time</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Max Bookings Per Day</label>
+                <input type="number" id="maxBookingsPerDay" class="form-control" value="20" min="1">
+              </div>
+              <button type="submit" class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+              <p id="settingsFeedback" style="color:var(--success); font-size:var(--text-sm); display:none; margin-top:var(--space-2);">Settings saved!</p>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBTAB 2: BILLING, INVOICES & CREDITS -->
+      <div id="settingsBillingPanel" style="display:none;">
+        <div class="billing-summary-grid">
+          
+          <!-- 1. ACTIVE PLAN CARD -->
+          <div class="billing-card">
+            <div>
+              <div class="billing-card-header">
+                <h4 class="billing-card-title">Current Plan</h4>
+                <span class="status-pill-badge active" id="billingPlanStatusBadge">Active</span>
+              </div>
+              <div class="billing-card-val" id="billingPlanName">Growth Plan</div>
+              <div class="billing-card-sub" id="billingPlanDesc">₹999 / month · Monthly Billing</div>
+              
+              <ul style="margin:1rem 0; padding-left:1.2rem; font-size:0.82rem; color:var(--color-text-muted); display:flex; flex-direction:column; gap:0.4rem;" id="billingPlanFeaturesList">
+                <li>2,500 Monthly AI Credits</li>
+                <li>Public Marketplace Listing</li>
+                <li>SEO Public Booking Page</li>
+              </ul>
+            </div>
+
+            <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+              <a href="./pricing.html" class="btn btn-primary btn-sm" style="flex:1; text-align:center; text-decoration:none;">Upgrade / Change</a>
+              <button class="btn btn-secondary btn-sm" onclick="cancelSubscriptionPrompt()" style="color:#ef4444; border-color:#fecaca;">Cancel</button>
+            </div>
+          </div>
+
+          <!-- 2. AI CREDITS CARD -->
+          <div class="billing-card">
+            <div>
+              <div class="billing-card-header">
+                <h4 class="billing-card-title">AI Credits Balance</h4>
+                <span class="status-pill-badge active" style="background:#e0e7ff; color:#3730a3; border-color:#c7d2fe;">Instant AI</span>
+              </div>
+              <div class="billing-card-val" id="billingTotalCreditsVal">2,500</div>
+              <div class="billing-card-sub">Available for AI chats, prescriptions &amp; automations</div>
+              
+              <div class="credits-progress-bar">
+                <div class="credits-progress-fill" id="billingCreditsFill" style="width: 100%;"></div>
+              </div>
+              
+              <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--color-text-muted); margin-top:0.3rem;">
+                <span>Monthly: <strong id="billingMonthlyQuota">2,500</strong></span>
+                <span>Used: <strong id="billingCreditsUsed">0</strong></span>
+                <span>Top-up: <strong id="billingTopupLots">0</strong></span>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-sm" onclick="openDashboardTopupModal()" style="margin-top:1.25rem; width:100%; display:flex; align-items:center; justify-content:center; gap:0.4rem;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Top Up Credits Pack
+            </button>
+          </div>
+
+          <!-- 3. SAVED CARD DETAILS CARD -->
+          <div class="billing-card">
+            <div>
+              <div class="billing-card-header">
+                <h4 class="billing-card-title">Payment Method</h4>
+                <span class="status-pill-badge active" style="background:#f1f5f9; color:#475569; border-color:#e2e8f0;">Default</span>
+              </div>
+
+              <!-- Card Mockup -->
+              <div class="saved-card-mockup" id="savedCardMockup">
+                <div class="saved-card-top">
+                  <div class="card-chip-icon"></div>
+                  <div class="card-brand-tag" id="savedCardBrand">VISA</div>
+                </div>
+                <div class="saved-card-num" id="savedCardNum">•••• •••• •••• 4242</div>
+                <div class="saved-card-bottom">
+                  <span id="savedCardHolder">DR. MAYANK SHARMA</span>
+                  <span>EXP: <strong id="savedCardExp">09/28</strong></span>
+                </div>
+              </div>
+
+              <div class="billing-card-sub" id="savedCardNotice">Card stored securely for automated subscription renewals.</div>
+            </div>
+
+            <button class="btn btn-secondary btn-sm" onclick="openDashboardUpdateCardModal()" style="margin-top:1rem; width:100%;">
+              Update Card Details
+            </button>
+          </div>
+
+        </div>
+
+        <!-- 4. INVOICES & RECEIPTS HISTORY TABLE -->
+        <div style="margin-top:2rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <div>
+              <h3 style="font-size:1.15rem; font-weight:700; margin:0;">Invoices &amp; Payment Receipts</h3>
+              <p class="text-muted" style="font-size:0.82rem; margin:2px 0 0;">View or download all receipts for subscriptions and top-ups</p>
+            </div>
+          </div>
+
+          <div class="invoices-table-wrap">
+            <table class="invoices-table">
+              <thead>
+                <tr>
+                  <th>Invoice ID</th>
+                  <th>Date</th>
+                  <th>Description / Tier</th>
+                  <th>Amount</th>
+                  <th>Payment Method</th>
+                  <th>Status</th>
+                  <th style="text-align:right;">Receipt</th>
+                </tr>
+              </thead>
+              <tbody id="invoicesTableBody">
+                <tr>
+                  <td colspan="7" style="text-align:center; padding:2rem; color:var(--color-text-muted);">Loading billing history...</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <div class="settings-panel">
-          <h3>Appointment Preferences</h3>
-          <form id="settingsForm">
-            <div class="form-group">
-              <label>Default Slot Duration (minutes)</label>
-              <input type="number" id="slotDuration" class="form-control" value="30" step="5" min="10">
-            </div>
-            <div class="form-group">
-              <label>Auto-Approve Bookings?</label>
-              <select id="autoApprove" class="form-control">
-                <option value="false">No (Manual Review — Admin approves each request)</option>
-                <option value="true">Yes (Auto-Approve — Bookings are instantly confirmed)</option>
-              </select>
-              <p class="text-muted" style="font-size:0.8rem; margin-top:4px; line-height:1.4;">
-                When set to <strong>"No"</strong>, online patient bookings appear in your <em>Pending Approval</em> queue on the dashboard until you approve them.
-              </p>
-            </div>
-            <div class="form-group">
-              <label>Available Time Slots <span style="font-weight:400; color:var(--color-text-muted); font-size:0.8rem;">(click to toggle on/off)</span></label>
-              <div class="admin-slot-grid" id="adminSlotGrid"></div>
-              <div class="slot-grid-actions">
-                <button type="button" id="slotSelectAll">Select All</button>
-                <button type="button" id="slotClearAll">Clear All</button>
-                <button type="button" id="slotAddCustom">+ Custom Time</button>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Max Bookings Per Day</label>
-              <input type="number" id="maxBookingsPerDay" class="form-control" value="20" min="1">
-            </div>
-            <button type="submit" class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
-            <p id="settingsFeedback" style="color:var(--success); font-size:var(--text-sm); display:none; margin-top:var(--space-2);">Settings saved!</p>
-          </form>
-        </div>
       </div>
     </section>
 
@@ -4258,4 +4583,459 @@ document.getElementById('staffModal').addEventListener('click', function(e) {
 })();
 </script>
 
+<!-- ── TOP-UP CREDITS MODAL ────────────────────────────────────── -->
+<div id="dashboardTopupModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); align-items: center; justify-content: center; z-index: 1050; padding: 20px;">
+  <div class="modal-content" style="background: #ffffff; color: #1e293b; padding: 24px; border-radius: 16px; width: 100%; max-width: 540px; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.25rem;">
+      <div>
+        <h3 style="font-size:1.25rem; font-weight:700; margin:0; color:#0f172a;">Instant AI Credits Top-Up</h3>
+        <p style="font-size:0.84rem; color:#64748b; margin:4px 0 0;">Add credits to your clinic balance. Top-up lots never expire.</p>
+      </div>
+      <button onclick="closeDashboardTopupModal()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#94a3b8;">&times;</button>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:1.5rem;">
+      <!-- Pack 1 -->
+      <div onclick="selectTopupPack('pack_500')" id="topupCard_pack_500" style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border:2px solid #e2e8f0; border-radius:12px; cursor:pointer; transition:all 0.2s;">
+        <div>
+          <div style="font-weight:700; font-size:0.95rem; color:#0f172a;">Starter Pack · 500 Credits</div>
+          <div style="font-size:0.78rem; color:#64748b;">Good for ~250 AI patient queries &amp; prescriptions</div>
+        </div>
+        <div style="font-weight:800; font-size:1.1rem; color:#2563eb;">₹99</div>
+      </div>
+
+      <!-- Pack 2 (Popular) -->
+      <div onclick="selectTopupPack('pack_2000')" id="topupCard_pack_2000" style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border:2px solid #2563eb; background:#eff6ff; border-radius:12px; cursor:pointer; transition:all 0.2s; position:relative;">
+        <span style="position:absolute; top:-10px; right:16px; background:#2563eb; color:#fff; font-size:0.68rem; font-weight:800; padding:2px 8px; border-radius:10px; text-transform:uppercase;">Best Value</span>
+        <div>
+          <div style="font-weight:700; font-size:0.95rem; color:#0f172a;">Growth Pack · 2,000 Credits</div>
+          <div style="font-size:0.78rem; color:#64748b;">Good for ~1,000 AI interactions &amp; clinic automations</div>
+        </div>
+        <div style="font-weight:800; font-size:1.1rem; color:#2563eb;">₹299</div>
+      </div>
+
+      <!-- Pack 3 -->
+      <div onclick="selectTopupPack('pack_5000')" id="topupCard_pack_5000" style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border:2px solid #e2e8f0; border-radius:12px; cursor:pointer; transition:all 0.2s;">
+        <div>
+          <div style="font-weight:700; font-size:0.95rem; color:#0f172a;">Power Pack · 5,000 Credits</div>
+          <div style="font-size:0.78rem; color:#64748b;">Heavy clinic AI usage &amp; high volume messaging</div>
+        </div>
+        <div style="font-weight:800; font-size:1.1rem; color:#2563eb;">₹599</div>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button type="button" class="btn btn-secondary" onclick="closeDashboardTopupModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" id="confirmTopupBtn" onclick="submitTopupPurchase()">
+        <span>Pay &amp; Add Credits</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── UPDATE CARD MODAL ──────────────────────────────────────── -->
+<div id="dashboardUpdateCardModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); align-items: center; justify-content: center; z-index: 1050; padding: 20px;">
+  <div class="modal-content" style="background: #ffffff; color: #1e293b; padding: 24px; border-radius: 16px; width: 100%; max-width: 480px; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.25rem;">
+      <div>
+        <h3 style="font-size:1.25rem; font-weight:700; margin:0; color:#0f172a;">Update Payment Card</h3>
+        <p style="font-size:0.84rem; color:#64748b; margin:4px 0 0;">Enter your credit or debit card for subscription renewals.</p>
+      </div>
+      <button onclick="closeDashboardUpdateCardModal()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#94a3b8;">&times;</button>
+    </div>
+
+    <form id="updateCardForm" onsubmit="handleUpdateCardSubmit(event)">
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="font-size:0.8rem; font-weight:600; color:#475569; display:flex; justify-content:space-between;">
+          <span>Card Number</span>
+          <span id="updateCardBrandTag" style="color:#2563eb; font-weight:700;">💳 CARD</span>
+        </label>
+        <input type="text" id="updCardNum" class="form-control" placeholder="4111 2222 3333 4444" maxlength="19" required style="font-family:monospace; letter-spacing:0.05em;">
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="font-size:0.8rem; font-weight:600; color:#475569;">Expiry Date</label>
+          <input type="text" id="updCardExp" class="form-control" placeholder="MM / YY" maxlength="7" required style="font-family:monospace; text-align:center;">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="font-size:0.8rem; font-weight:600; color:#475569;">CVV / CVC</label>
+          <input type="password" id="updCardCvv" class="form-control" placeholder="•••" maxlength="4" required style="font-family:monospace; text-align:center;">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:18px;">
+        <label style="font-size:0.8rem; font-weight:600; color:#475569;">Cardholder Name</label>
+        <input type="text" id="updCardName" class="form-control" placeholder="Dr. Mayank Sharma" required>
+      </div>
+
+      <div id="updateCardError" style="display:none; color:#dc2626; font-size:0.82rem; margin-bottom:12px; background:#fee2e2; padding:8px 12px; border-radius:6px;"></div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button type="button" class="btn btn-secondary" onclick="closeDashboardUpdateCardModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveCardBtn">
+          <span>Save &amp; Verify Card</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── SUBSCRIPTION OFFICIAL RECEIPT MODAL ───────────────────────── -->
+<div id="subReceiptModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); align-items: center; justify-content: center; z-index: 1060; padding: 20px;">
+  <div class="modal-content" style="background: #ffffff; color: #1e293b; padding: 0; border-radius: 16px; width: 100%; max-width: 560px; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow:hidden;">
+    
+    <div class="no-print" style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:12px 20px; display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-weight:700; font-size:0.9rem; color:#0f172a;">Subscription &amp; SaaS Tax Invoice</span>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn btn-sm btn-secondary" onclick="window.print()" style="background:#fff;">Print / PDF</button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="closeSubReceiptModal()">Done</button>
+      </div>
+    </div>
+
+    <div style="padding:28px 32px; font-family:'General Sans', sans-serif;" id="subReceiptPrintArea">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #0f172a; padding-bottom:14px; margin-bottom:16px;">
+        <div>
+          <h2 style="margin:0; font-size:1.2rem; font-weight:800; color:#0f172a;">Smart Dental Desk Inc.</h2>
+          <p style="margin:2px 0 0; font-size:0.78rem; color:#64748b;">AI-Powered Dental Clinic Operating System</p>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.7rem; text-transform:uppercase; font-weight:700; color:#64748b;">INVOICE</div>
+          <div id="subRcptInvNo" style="font-size:0.9rem; font-weight:800; color:#0f172a; font-family:monospace;">INV-123456</div>
+          <div id="subRcptDate" style="font-size:0.75rem; color:#64748b;">Sep 2, 2026</div>
+        </div>
+      </div>
+
+      <div style="background:#f8fafc; border-radius:8px; padding:12px 16px; margin-bottom:18px; font-size:0.82rem;">
+        <div style="font-size:0.7rem; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:2px;">Billed To (Clinic)</div>
+        <div id="subRcptClinicName" style="font-weight:700; font-size:0.95rem; color:#0f172a;">Smart Dental Clinic</div>
+        <div id="subRcptPaymentMethod" style="color:#64748b;">Payment Method: Visa •••• 4242</div>
+      </div>
+
+      <table style="width:100%; border-collapse:collapse; margin-bottom:18px; font-size:0.85rem;">
+        <thead>
+          <tr style="border-bottom:1.5px solid #cbd5e1; text-align:left; color:#64748b; font-size:0.75rem; text-transform:uppercase;">
+            <th style="padding:8px 0;">Item Description</th>
+            <th style="padding:8px 0; text-align:right;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #f1f5f9;">
+            <td style="padding:12px 0;" id="subRcptItemName">Growth Plan — Monthly Subscription</td>
+            <td style="padding:12px 0; text-align:right; font-weight:700;" id="subRcptItemAmount">₹999.00</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr style="border-top:1.5px solid #0f172a;">
+            <td style="padding:12px 0; font-weight:800; font-size:0.95rem;">Total Paid:</td>
+            <td style="padding:12px 0; text-align:right; font-weight:800; font-size:1.1rem; color:#16a34a;" id="subRcptTotalAmount">₹999.00</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div style="text-align:center; font-size:0.75rem; color:#94a3b8; border-top:1px dashed #e2e8f0; padding-top:12px;">
+        Thank you for choosing Smart Dental Desk! • GST Included
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── BILLING CONTROLLERS & SETTINGS SUBTABS ─────────────────────────
+let currentInvoicesList = [];
+let selectedTopupPackId = 'pack_2000';
+
+window.switchSettingsTab = function(tab) {
+  const generalPanel = document.getElementById('settingsGeneralPanel');
+  const billingPanel = document.getElementById('settingsBillingPanel');
+  const genBtn = document.getElementById('subtab-general-btn');
+  const billBtn = document.getElementById('subtab-billing-btn');
+
+  if (tab === 'billing') {
+    generalPanel.style.display = 'none';
+    billingPanel.style.display = 'block';
+    genBtn.classList.remove('active');
+    billBtn.classList.add('active');
+    loadBillingSettings();
+  } else {
+    billingPanel.style.display = 'none';
+    generalPanel.style.display = 'block';
+    billBtn.classList.remove('active');
+    genBtn.classList.add('active');
+  }
+};
+
+window.loadBillingSettings = async function() {
+  try {
+    const [statusRes, invRes] = await Promise.all([
+      window.api.getBillingStatus(),
+      window.api.getSubscriptionInvoices()
+    ]);
+
+    // 1. Render Plan Info
+    const sub = statusRes.subscription;
+    const plan = statusRes.plan || 'starter';
+    const status = statusRes.status || 'active';
+
+    const planBadge = document.getElementById('billingPlanStatusBadge');
+    planBadge.textContent = status.toUpperCase();
+    planBadge.className = `status-pill-badge ${status}`;
+
+    const planNames = {
+      starter: 'Starter Plan',
+      growth: 'Growth Plan',
+      premium: 'Premium Plan'
+    };
+
+    const planDescriptions = {
+      starter: '₹599 / month · 1,000 AI Credits',
+      growth: '₹999 / month · 2,500 AI Credits',
+      premium: '₹1,499 / month · 10,000 AI Credits'
+    };
+
+    const isTrial = status === 'trialing';
+    document.getElementById('billingPlanName').textContent = isTrial ? '3-Month Free Trial' : (planNames[plan] || 'Growth Plan');
+    document.getElementById('billingPlanDesc').textContent = isTrial ? '₹0.00 · Premium Features Included' : (planDescriptions[plan] || '₹999 / month');
+
+    // 2. Render Credits Gauge
+    const credits = statusRes.credits || { total: 0, monthly_allocated: 1000, monthly_used: 0, topup_remaining: 0 };
+    document.getElementById('billingTotalCreditsVal').textContent = credits.total.toLocaleString();
+    document.getElementById('billingMonthlyQuota').textContent = (credits.monthly_allocated || 0).toLocaleString();
+    document.getElementById('billingCreditsUsed').textContent = (credits.monthly_used || 0).toLocaleString();
+    document.getElementById('billingTopupLots').textContent = (credits.topup_remaining || 0).toLocaleString();
+
+    const pct = credits.monthly_allocated > 0 ? Math.min(100, Math.round((credits.monthly_remaining / credits.monthly_allocated) * 100)) : 100;
+    document.getElementById('billingCreditsFill').style.width = `${pct}%`;
+
+    // 3. Render Saved Card
+    const card = statusRes.saved_card;
+    if (card && card.last4) {
+      document.getElementById('savedCardBrand').textContent = (card.brand || 'CARD').toUpperCase();
+      document.getElementById('savedCardNum').textContent = `•••• •••• •••• ${card.last4}`;
+      document.getElementById('savedCardHolder').textContent = (card.holder || 'DOCTOR').toUpperCase();
+      document.getElementById('savedCardExp').textContent = card.exp || '••/••';
+      document.getElementById('savedCardNotice').textContent = 'Default card on file for recurring billing.';
+    } else {
+      document.getElementById('savedCardBrand').textContent = 'CARD';
+      document.getElementById('savedCardNum').textContent = '•••• •••• •••• ••••';
+      document.getElementById('savedCardHolder').textContent = 'NO CARD ON FILE';
+      document.getElementById('savedCardExp').textContent = '--/--';
+      document.getElementById('savedCardNotice').textContent = 'Add a payment card to enable automatic subscription renewals.';
+    }
+
+    // 4. Render Invoices Table
+    currentInvoicesList = invRes.invoices || [];
+    renderInvoicesTable(currentInvoicesList);
+
+  } catch (err) {
+    console.error('Failed to load billing details:', err);
+  }
+};
+
+function renderInvoicesTable(invoices) {
+  const tbody = document.getElementById('invoicesTableBody');
+  if (!invoices || invoices.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align:center; padding:2rem; color:var(--color-text-muted);">
+          No invoices or receipts yet.
+        </td>
+      </tr>`;
+    return;
+  }
+
+  tbody.innerHTML = invoices.map(inv => {
+    const d = new Date(inv.created_at);
+    const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    const amountStr = inv.amount_paise === 0 ? '₹0.00 (Trial)' : `₹${(inv.amount_paise / 100).toFixed(2)}`;
+    const cardStr = inv.card_last4 ? `Card •••• ${inv.card_last4}` : (inv.payment_method || 'Card');
+
+    return `
+      <tr>
+        <td style="font-weight:700; font-family:monospace; color:#0f172a;">${inv.invoice_number}</td>
+        <td style="color:var(--color-text-muted);">${dateStr}</td>
+        <td style="font-weight:600;">${inv.plan.toUpperCase()}</td>
+        <td style="font-weight:700; color:#15803d;">${amountStr}</td>
+        <td style="color:var(--color-text-muted); font-size:0.8rem;">${cardStr}</td>
+        <td><span class="status-pill-badge active" style="font-size:0.68rem;">PAID</span></td>
+        <td style="text-align:right;">
+          <button onclick="viewSubReceipt('${inv.id}')" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:3px 10px;">
+            Receipt
+          </button>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+// ── TOP-UP MODAL LOGIC ─────────────────────────────────────────────
+window.openDashboardTopupModal = function() {
+  document.getElementById('dashboardTopupModal').style.display = 'flex';
+  selectTopupPack('pack_2000');
+};
+
+window.closeDashboardTopupModal = function() {
+  document.getElementById('dashboardTopupModal').style.display = 'none';
+};
+
+window.selectTopupPack = function(packId) {
+  selectedTopupPackId = packId;
+  ['pack_500', 'pack_2000', 'pack_5000'].forEach(id => {
+    const el = document.getElementById(`topupCard_${id}`);
+    if (el) {
+      if (id === packId) {
+        el.style.borderColor = '#2563eb';
+        el.style.background = '#eff6ff';
+      } else {
+        el.style.borderColor = '#e2e8f0';
+        el.style.background = '#ffffff';
+      }
+    }
+  });
+};
+
+window.submitTopupPurchase = async function() {
+  const btn = document.getElementById('confirmTopupBtn');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+
+  try {
+    const order = await window.api.createTopupOrder(selectedTopupPackId);
+    
+    // Direct verification / payment
+    const verify = await window.api.verifyTopup({
+      pack_id: selectedTopupPackId,
+      razorpay_order_id: order.order_id || `order_${Date.now()}`,
+      razorpay_payment_id: `pay_${Math.random().toString(36).substring(2, 12)}`,
+      razorpay_signature: 'topup_verified_sig'
+    });
+
+    if (verify.success) {
+      closeDashboardTopupModal();
+      alert(`Top-up successful! ${verify.credits_added} AI Credits added to your balance.`);
+      if (window.loadCredits) window.loadCredits();
+      loadBillingSettings();
+    } else {
+      alert('Top-up could not be completed.');
+    }
+  } catch (err) {
+    alert(err.message || 'Top-up purchase failed.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Pay & Add Credits';
+  }
+};
+
+// ── UPDATE CARD LOGIC WITH LUHN CHECK ──────────────────────────────
+window.openDashboardUpdateCardModal = function() {
+  document.getElementById('updateCardError').style.display = 'none';
+  document.getElementById('updateCardForm').reset();
+  document.getElementById('dashboardUpdateCardModal').style.display = 'flex';
+};
+
+window.closeDashboardUpdateCardModal = function() {
+  document.getElementById('dashboardUpdateCardModal').style.display = 'none';
+};
+
+// Formatting helpers
+document.getElementById('updCardNum').addEventListener('input', function(e) {
+  let val = e.target.value.replace(/\D/g, '').substring(0, 16);
+  let formatted = val.match(/.{1,4}/g)?.join(' ') || val;
+  e.target.value = formatted;
+
+  const brandTag = document.getElementById('updateCardBrandTag');
+  if (val.startsWith('4')) brandTag.textContent = '💳 VISA';
+  else if (/^5[1-5]|^2[2-7]/.test(val)) brandTag.textContent = '💳 MASTERCARD';
+  else if (/^60|^65|^81|^82|^508/.test(val)) brandTag.textContent = '💳 RUPAY';
+  else if (/^3[47]/.test(val)) brandTag.textContent = '💳 AMEX';
+  else brandTag.textContent = '💳 CARD';
+});
+
+document.getElementById('updCardExp').addEventListener('input', function(e) {
+  let val = e.target.value.replace(/\D/g, '').substring(0, 4);
+  if (val.length >= 3) {
+    e.target.value = val.substring(0, 2) + ' / ' + val.substring(2);
+  } else {
+    e.target.value = val;
+  }
+});
+
+window.handleUpdateCardSubmit = async function(e) {
+  e.preventDefault();
+  const errBox = document.getElementById('updateCardError');
+  const btn = document.getElementById('saveCardBtn');
+
+  const cardNum = document.getElementById('updCardNum').value;
+  const cardExp = document.getElementById('updCardExp').value;
+  const cardCvv = document.getElementById('updCardCvv').value;
+  const cardName = document.getElementById('updCardName').value;
+
+  btn.disabled = true;
+  btn.textContent = 'Verifying Card...';
+  errBox.style.display = 'none';
+
+  try {
+    const res = await window.api.updateBillingCard({
+      card_number: cardNum,
+      card_exp: cardExp,
+      card_cvv: cardCvv,
+      cardholder_name: cardName
+    });
+
+    if (res.success) {
+      closeDashboardUpdateCardModal();
+      alert('Card updated successfully!');
+      loadBillingSettings();
+    } else {
+      errBox.textContent = res.error || 'Card verification failed.';
+      errBox.style.display = 'block';
+    }
+  } catch (err) {
+    errBox.textContent = err.message || 'Failed to update card.';
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save & Verify Card';
+  }
+};
+
+// ── RECEIPT VIEWER ─────────────────────────────────────────────────
+window.viewSubReceipt = function(invoiceId) {
+  const inv = currentInvoicesList.find(i => i.id === invoiceId);
+  if (!inv) return;
+
+  const d = new Date(inv.created_at);
+  document.getElementById('subRcptInvNo').textContent = inv.invoice_number;
+  document.getElementById('subRcptDate').textContent = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  
+  const clinicName = localStorage.getItem('sdd_clinic_name') || 'Smart Dental Clinic';
+  document.getElementById('subRcptClinicName').textContent = clinicName;
+  document.getElementById('subRcptPaymentMethod').textContent = `Payment Method: Card •••• ${inv.card_last4 || '4242'}`;
+  document.getElementById('subRcptItemName').textContent = `${inv.plan.toUpperCase()} Tier Billing`;
+  
+  const amtStr = inv.amount_paise === 0 ? '₹0.00' : `₹${(inv.amount_paise / 100).toFixed(2)}`;
+  document.getElementById('subRcptItemAmount').textContent = amtStr;
+  document.getElementById('subRcptTotalAmount').textContent = amtStr;
+
+  document.getElementById('subReceiptModal').style.display = 'flex';
+};
+
+window.closeSubReceiptModal = function() {
+  document.getElementById('subReceiptModal').style.display = 'none';
+};
+
+window.cancelSubscriptionPrompt = async function() {
+  if (!confirm('Are you sure you want to cancel your subscription? Your access and AI credits will remain active until the end of your current billing period.')) {
+    return;
+  }
+  try {
+    await window.api.cancelSubscription();
+    alert('Your subscription has been canceled. You can reactivate anytime.');
+    loadBillingSettings();
+  } catch (err) {
+    alert(err.message || 'Failed to cancel subscription.');
+  }
+};
+</script>
+</body>
 </html>

@@ -99,7 +99,7 @@ router.post('/create-order', requireAuth, [
 });
 
 // ── POST /api/billing/verify-payment ──────────────────────────────────────────
-// Verifies payment and activates paid subscription + allocates credits
+// Verifies payment and activates paid subscription + allocates credits + stores card
 router.post('/verify-payment', requireAuth, [
   body('plan').isIn(['starter', 'growth', 'premium']).withMessage('Valid plan is required'),
   body('razorpay_order_id').notEmpty().withMessage('Order ID is required'),
@@ -110,12 +110,22 @@ router.post('/verify-payment', requireAuth, [
     if (!validate(req, res)) return;
     if (req.isSuperAdmin) return res.status(403).json({ error: 'Super admin cannot activate subscriptions.' });
 
-    const { plan, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const { plan, razorpay_order_id, razorpay_payment_id, razorpay_signature, card_number, card_exp, card_cvv, cardholder_name } = req.body;
     const clinicId = req.clinicId;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     const isRealRazorpay = razorpay && keySecret && !keySecret.includes('REPLACE_WITH_REAL');
 
-    // 1. Verify HMAC if real Razorpay transaction
+    // 1. If card details are supplied directly, validate with strict Luhn & expiry check
+    let cardMeta = null;
+    if (card_number) {
+      const cardCheck = validateCardPayload(card_number, cardExp || req.body.card_exp, card_cvv || req.body.card_cvv, cardholder_name || req.body.cardholder_name);
+      if (!cardCheck.valid) {
+        return res.status(400).json({ error: cardCheck.error });
+      }
+      cardMeta = cardCheck;
+    }
+
+    // 2. Verify HMAC if real Razorpay transaction
     if (isRealRazorpay && razorpay_signature && razorpay_payment_id) {
       const crypto = require('crypto');
       const body = `${razorpay_order_id}|${razorpay_payment_id}`;
@@ -132,29 +142,40 @@ router.post('/verify-payment', requireAuth, [
     const now = new Date();
     const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days period
     const allocatedCredits = PLAN_CREDITS[plan] || 1000;
+    const amountPaise = PLAN_PRICES_PAISE[plan] || 99900;
 
-    // 2. Update/Upsert subscription record as ACTIVE (Paid)
+    // 3. Update/Upsert subscription record as ACTIVE (Paid) with card details
+    const subPayload = {
+      clinic_id:                clinicId,
+      plan:                     plan,
+      status:                   'active',
+      billing_cycle:            'monthly',
+      current_period_start:     now.toISOString(),
+      current_period_end:       periodEnd.toISOString(),
+      trial_start_at:           null,
+      trial_ends_at:            null,
+      provider_subscription_id: razorpay_payment_id || razorpay_order_id,
+      updated_at:               now.toISOString()
+    };
+
+    if (cardMeta) {
+      subPayload.card_last4        = cardMeta.card_last4;
+      subPayload.card_brand        = cardMeta.card_brand;
+      subPayload.card_exp_month    = cardMeta.card_exp_month;
+      subPayload.card_exp_year     = cardMeta.card_exp_year;
+      subPayload.cardholder_name   = cardMeta.cardholder_name;
+    }
+
     const { error: subErr } = await supabase
       .from('subscriptions')
-      .upsert({
-        clinic_id:                clinicId,
-        plan:                     plan,
-        status:                   'active',
-        billing_cycle:            'monthly',
-        current_period_start:     now.toISOString(),
-        current_period_end:       periodEnd.toISOString(),
-        trial_start_at:           null,
-        trial_ends_at:            null,
-        provider_subscription_id: razorpay_payment_id || razorpay_order_id,
-        updated_at:               now.toISOString()
-      }, { onConflict: 'clinic_id' });
+      .upsert(subPayload, { onConflict: 'clinic_id' });
 
     if (subErr) {
       console.error('[Billing] Subscription activation error:', subErr);
       throw subErr;
     }
 
-    // 3. Allocate full plan monthly credits
+    // 4. Allocate full plan monthly credits
     const { error: creditErr } = await supabase
       .from('clinic_credits')
       .upsert({
@@ -170,13 +191,28 @@ router.post('/verify-payment', requireAuth, [
       console.error('[Billing] Credits upsert error:', creditErr);
     }
 
-    // 4. Update clinic profile
+    // 5. Update clinic profile
     await supabase.from('clinics').update({
       subscription_plan:     plan,
       is_marketplace_listed: PLAN_FEATURES[plan]?.marketplace || (plan !== 'starter')
     }).eq('id', clinicId);
 
-    // 5. Log audit transaction
+    // 6. Log invoice / receipt record
+    const invoiceNum = `INV-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 900 + 100)}`;
+    await supabase.from('subscription_invoices').insert({
+      clinic_id:            clinicId,
+      invoice_number:       invoiceNum,
+      plan:                 plan,
+      amount_paise:         amountPaise,
+      currency:             'INR',
+      status:               'paid',
+      payment_method:       cardMeta ? 'card' : (req.body.payment_method || 'card'),
+      card_last4:           cardMeta?.card_last4 || '••••',
+      billing_period_start: now.toISOString(),
+      billing_period_end:   periodEnd.toISOString()
+    }).then(() => {}).catch(e => console.error('[Billing] Invoice save error:', e));
+
+    // 7. Log audit transaction
     await supabase.from('credit_transactions').insert({
       clinic_id: clinicId,
       type:      'allocation',
@@ -189,7 +225,8 @@ router.post('/verify-payment', requireAuth, [
       message:      `Successfully subscribed to ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan!`,
       plan:         plan,
       credits:      allocatedCredits,
-      current_period_end: periodEnd.toISOString()
+      current_period_end: periodEnd.toISOString(),
+      card_last4:   cardMeta?.card_last4 || null
     });
 
   } catch (err) {
@@ -295,7 +332,7 @@ router.post('/create-trial', requireAuth, [
 });
 
 // ── POST /api/billing/verify-trial ────────────────────────────────────────────
-// Verifies card capture mandate and activates 3-month free trial
+// Verifies card capture mandate with strict Luhn check & activates 3-month free trial
 router.post('/verify-trial', requireAuth, [
   body('razorpay_subscription_id').notEmpty().withMessage('Subscription ID is required'),
 ], async (req, res, next) => {
@@ -303,10 +340,20 @@ router.post('/verify-trial', requireAuth, [
     if (!validate(req, res)) return;
     if (req.isSuperAdmin) return res.status(403).json({ error: 'Super admin cannot verify subscriptions.' });
 
-    const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = req.body;
+    const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature, card_number, card_exp, card_cvv, cardholder_name } = req.body;
     const clinicId = req.clinicId;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     const isRealRazorpay = razorpay && keySecret && !keySecret.includes('REPLACE_WITH_REAL');
+
+    // Validate card details if supplied
+    let cardMeta = null;
+    if (card_number) {
+      const cardCheck = validateCardPayload(card_number, card_exp, card_cvv, cardholder_name);
+      if (!cardCheck.valid) {
+        return res.status(400).json({ error: cardCheck.error });
+      }
+      cardMeta = cardCheck;
+    }
 
     if (isRealRazorpay && razorpay_signature && razorpay_payment_id) {
       const crypto = require('crypto');
@@ -327,21 +374,31 @@ router.post('/verify-trial', requireAuth, [
     const plan = 'premium';
     const allocatedCredits = PLAN_CREDITS[plan] || 10000;
 
-    // 1. Update subscription to trialing
+    // 1. Update subscription to trialing with card details
+    const subPayload = {
+      clinic_id:                clinicId,
+      plan:                     plan,
+      status:                   'trialing',
+      billing_cycle:            'monthly',
+      provider_subscription_id: razorpay_subscription_id,
+      trial_start_at:           now.toISOString(),
+      trial_ends_at:            trialEndDate.toISOString(),
+      current_period_start:     now.toISOString(),
+      current_period_end:       trialEndDate.toISOString(),
+      updated_at:               now.toISOString()
+    };
+
+    if (cardMeta) {
+      subPayload.card_last4        = cardMeta.card_last4;
+      subPayload.card_brand        = cardMeta.card_brand;
+      subPayload.card_exp_month    = cardMeta.card_exp_month;
+      subPayload.card_exp_year     = cardMeta.card_exp_year;
+      subPayload.cardholder_name   = cardMeta.cardholder_name;
+    }
+
     const { error: subErr } = await supabase
       .from('subscriptions')
-      .upsert({
-        clinic_id:                clinicId,
-        plan:                     plan,
-        status:                   'trialing',
-        billing_cycle:            'monthly',
-        provider_subscription_id: razorpay_subscription_id,
-        trial_start_at:           now.toISOString(),
-        trial_ends_at:            trialEndDate.toISOString(),
-        current_period_start:     now.toISOString(),
-        current_period_end:       trialEndDate.toISOString(),
-        updated_at:               now.toISOString()
-      }, { onConflict: 'clinic_id' });
+      .upsert(subPayload, { onConflict: 'clinic_id' });
 
     if (subErr) throw subErr;
 
@@ -365,7 +422,22 @@ router.post('/verify-trial', requireAuth, [
       is_marketplace_listed: true
     }).eq('id', clinicId);
 
-    // 4. Log audit transaction
+    // 4. Log trial invoice (₹0.00 trial verification)
+    const invoiceNum = `TRL-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 900 + 100)}`;
+    await supabase.from('subscription_invoices').insert({
+      clinic_id:            clinicId,
+      invoice_number:       invoiceNum,
+      plan:                 'premium (3-Month Free Trial)',
+      amount_paise:         0,
+      currency:             'INR',
+      status:               'paid',
+      payment_method:       cardMeta ? 'card' : 'card',
+      card_last4:           cardMeta?.card_last4 || '••••',
+      billing_period_start: now.toISOString(),
+      billing_period_end:   trialEndDate.toISOString()
+    }).then(() => {}).catch(e => console.error('[Billing] Trial invoice error:', e));
+
+    // 5. Log audit transaction
     await supabase.from('credit_transactions').insert({
       clinic_id: clinicId,
       type:      'allocation',
@@ -377,6 +449,7 @@ router.post('/verify-trial', requireAuth, [
       redirect_url:  './dashboard.html',
       message:       '3-Month Free Trial activated successfully!',
       trial_ends_at: trialEndDate.toISOString(),
+      card_last4:    cardMeta?.card_last4 || null
     });
 
   } catch (err) {
@@ -385,16 +458,117 @@ router.post('/verify-trial', requireAuth, [
   }
 });
 
+// ── GET /api/billing/invoices ─────────────────────────────────────────────────
+// Returns billing invoices and topup receipts for the clinic
+router.get('/invoices', requireAuth, async (req, res, next) => {
+  try {
+    const { data: invoices, error: invErr } = await supabase
+      .from('subscription_invoices')
+      .select('*')
+      .eq('clinic_id', req.clinicId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (invErr) throw invErr;
+    res.json({ invoices: invoices || [] });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/billing/update-card ─────────────────────────────────────────────
+// Validates and updates the saved credit/debit card for auto-renewal
+router.post('/update-card', requireAuth, [
+  body('card_number').notEmpty().withMessage('Card number is required'),
+  body('card_exp').notEmpty().withMessage('Expiry date is required'),
+  body('card_cvv').notEmpty().withMessage('CVV is required'),
+], async (req, res, next) => {
+  try {
+    if (!validate(req, res)) return;
+    const { card_number, card_exp, card_cvv, cardholder_name } = req.body;
+
+    const cardCheck = validateCardPayload(card_number, card_exp, card_cvv, cardholder_name);
+    if (!cardCheck.valid) {
+      return res.status(400).json({ error: cardCheck.error });
+    }
+
+    const { error: updateErr } = await supabase
+      .from('subscriptions')
+      .update({
+        card_last4:      cardCheck.card_last4,
+        card_brand:      cardCheck.card_brand,
+        card_exp_month:  cardCheck.card_exp_month,
+        card_exp_year:   cardCheck.card_exp_year,
+        cardholder_name: cardCheck.cardholder_name,
+        updated_at:      new Date().toISOString()
+      })
+      .eq('clinic_id', req.clinicId);
+
+    if (updateErr) throw updateErr;
+
+    res.json({
+      success: true,
+      message: 'Card updated successfully!',
+      card: {
+        last4: cardCheck.card_last4,
+        brand: cardCheck.card_brand,
+        exp: `${cardCheck.card_exp_month}/${cardCheck.card_exp_year.slice(-2)}`,
+        holder: cardCheck.cardholder_name
+      }
+    });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/billing/cancel-subscription ─────────────────────────────────────
+router.post('/cancel-subscription', requireAuth, async (req, res, next) => {
+  try {
+    const { error } = await supabase
+      .from('subscriptions')
+      .update({
+        status:     'canceled',
+        updated_at: new Date().toISOString()
+      })
+      .eq('clinic_id', req.clinicId);
+
+    if (error) throw error;
+    res.json({ success: true, message: 'Subscription canceled. Access will continue until the end of your billing period.' });
+  } catch (err) { next(err); }
+});
+
 // ── GET /api/billing/status ───────────────────────────────────────────────────
+// Returns complete subscription, card details, and credits summary
 router.get('/status', requireAuth, async (req, res, next) => {
   try {
-    const { data: sub } = await supabase
-      .from('subscriptions')
-      .select('status, plan, trial_ends_at, current_period_end')
-      .eq('clinic_id', req.clinicId)
-      .maybeSingle();
-    
-    res.json({ subscription: sub || null });
+    const [subRes, creditsRes, topupsRes] = await Promise.all([
+      supabase.from('subscriptions').select('*').eq('clinic_id', req.clinicId).maybeSingle(),
+      supabase.from('clinic_credits').select('*').eq('clinic_id', req.clinicId).maybeSingle(),
+      supabase.from('credit_topup_lots').select('credits_remaining').eq('clinic_id', req.clinicId).gt('expires_at', new Date().toISOString())
+    ]);
+
+    const sub = subRes.data;
+    const credits = creditsRes.data || { credits_allocated: 0, credits_used: 0 };
+    const topupTotal = (topupsRes.data || []).reduce((acc, row) => acc + (row.credits_remaining || 0), 0);
+    const monthlyRemaining = Math.max(0, credits.credits_allocated - credits.credits_used);
+    const totalCredits = monthlyRemaining + topupTotal;
+
+    res.json({
+      subscription: sub || null,
+      plan: sub?.plan || 'free',
+      status: sub?.status || 'inactive',
+      trial_ends_at: sub?.trial_ends_at || null,
+      current_period_end: sub?.current_period_end || null,
+      saved_card: sub?.card_last4 ? {
+        last4: sub.card_last4,
+        brand: sub.card_brand || 'card',
+        exp: (sub.card_exp_month && sub.card_exp_year) ? `${sub.card_exp_month}/${sub.card_exp_year.slice(-2)}` : null,
+        holder: sub.cardholder_name || req.clinic?.owner_name || 'Cardholder'
+      } : null,
+      credits: {
+        total: totalCredits,
+        monthly_allocated: credits.credits_allocated,
+        monthly_used: credits.credits_used,
+        monthly_remaining: monthlyRemaining,
+        topup_remaining: topupTotal
+      }
+    });
   } catch (err) { next(err); }
 });
 

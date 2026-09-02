@@ -35,10 +35,11 @@ module.exports = async function requireAuth(req, res, next) {
     // If not found in clinics, check if user is a staff member or super admin
     if (!clinic) {
       if (isSuperAdmin) {
-        // Super admin might not have a personal clinic record, or manages all
+        // Super admin manages all
         userRole = 'super_admin';
         clinic = { id: null, name: 'SaaS Platform Control', owner_name: 'Platform Owner' };
       } else {
+        // Check if active staff
         const { data: staff, error: staffErr } = await supabase
           .from('staff')
           .select('*, clinics(id, name, owner_name, subscription_plan)')
@@ -46,11 +47,37 @@ module.exports = async function requireAuth(req, res, next) {
           .eq('is_active', true)
           .maybeSingle();
         
-        if (staffErr || !staff || !staff.clinics) {
-          return res.status(403).json({ error: 'No active clinic or staff profile associated with this account.' });
+        if (staff && staff.clinics) {
+          clinic = staff.clinics;
+          userRole = staff.role; // e.g., 'receptionist'
+        } else {
+          // Self-heal: Auto-provision clinic for this authenticated doctor
+          const crypto = require('crypto');
+          const bookingSlug = crypto.randomBytes(3).toString('hex') + Math.random().toString(36).substring(2, 5);
+          const ownerName = user.user_metadata?.full_name || user.user_metadata?.name || user.email.split('@')[0];
+          
+          const { data: newClinic, error: autoCreateErr } = await supabase
+            .from('clinics')
+            .insert({
+              owner_id: user.id,
+              name: `${ownerName}'s Clinic`,
+              owner_name: ownerName,
+              email: user.email,
+              phone: user.phone || null,
+              subscription_plan: 'free',
+              booking_slug: bookingSlug
+            })
+            .select('id, name, owner_name, subscription_plan')
+            .single();
+
+          if (autoCreateErr || !newClinic) {
+            console.error('[Auth Middleware] Auto-provision clinic error:', autoCreateErr);
+            return res.status(403).json({ error: 'No active clinic or staff profile associated with this account.' });
+          }
+
+          clinic = newClinic;
+          userRole = 'admin';
         }
-        clinic = staff.clinics;
-        userRole = staff.role; // e.g., 'receptionist'
       }
     } else if (isSuperAdmin) {
       userRole = 'super_admin';

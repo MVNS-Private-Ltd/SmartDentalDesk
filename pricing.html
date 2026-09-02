@@ -663,7 +663,41 @@ body{
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
         <div class="no-charge-text">
-          <strong>No payment today.</strong> Your card is stored securely as a mandate by Razorpay. The first charge of the plan you choose only happens after your 90-day trial ends. Cancel anytime with one click.
+          <strong>No payment today (₹0.00).</strong> Your card is stored securely as a mandate. You get 90 days of full access to all features. Cancel anytime in 1 click before day 90 to pay nothing.
+        </div>
+      </div>
+
+      <!-- FREE TRIAL CARD DETAILS INPUTS -->
+      <div id="trialCardForm" style="margin-bottom:1.25rem;">
+        <div class="form-group">
+          <label>Card Number</label>
+          <div class="input-wrapper">
+            <input type="text" id="trialCardNum" placeholder="4532 •••• •••• 8892" maxlength="19" autocomplete="cc-number">
+            <span class="input-icon" id="trialCardBrandIcon">💳 CARD</span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Expiry Date</label>
+            <div class="input-wrapper">
+              <input type="text" id="trialCardExp" placeholder="MM / YY" maxlength="5" autocomplete="cc-exp">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>CVV / CVC</label>
+            <div class="input-wrapper">
+              <input type="password" id="trialCardCvv" placeholder="•••" maxlength="4" autocomplete="cc-csc">
+              <span class="input-icon">🔒</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0.5rem;">
+          <label>Cardholder Name</label>
+          <div class="input-wrapper">
+            <input type="text" id="trialCardName" placeholder="Dr. Full Name" autocomplete="cc-name">
+          </div>
         </div>
       </div>
 
@@ -672,7 +706,7 @@ body{
         <div class="btn-spinner"></div>
         <span class="btn-text">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-          Verify Card &amp; Start Free Trial
+          Verify Card &amp; Start 3-Month Free Trial
         </span>
       </button>
 
@@ -1350,8 +1384,58 @@ document.getElementById('cardModal').addEventListener('click', (e) => {
   }
 });
 
+// Formatting helpers for Trial Card inputs
+document.getElementById('trialCardNum').addEventListener('input', function(e) {
+  let val = e.target.value.replace(/\D/g, '').substring(0, 16);
+  let formatted = val.match(/.{1,4}/g)?.join(' ') || val;
+  e.target.value = formatted;
+
+  const brandIcon = document.getElementById('trialCardBrandIcon');
+  if (val.startsWith('4')) {
+    brandIcon.textContent = '💳 VISA';
+  } else if (/^5[1-5]/.test(val) || /^2[2-7]/.test(val)) {
+    brandIcon.textContent = '💳 MASTERCARD';
+  } else if (/^60|^65|^81|^82/.test(val) || /^508/.test(val)) {
+    brandIcon.textContent = '💳 RUPAY';
+  } else if (/^3[47]/.test(val)) {
+    brandIcon.textContent = '💳 AMEX';
+  } else {
+    brandIcon.textContent = '💳 CARD';
+  }
+});
+
+document.getElementById('trialCardExp').addEventListener('input', function(e) {
+  let val = e.target.value.replace(/\D/g, '').substring(0, 4);
+  if (val.length >= 3) {
+    e.target.value = val.substring(0, 2) + ' / ' + val.substring(2);
+  } else {
+    e.target.value = val;
+  }
+});
+
 // Proceed with Free Trial verification
 document.getElementById('proceedPaymentBtn').addEventListener('click', async () => {
+  const cardNum = document.getElementById('trialCardNum').value.replace(/\s+/g, '');
+  const cardExp = document.getElementById('trialCardExp').value.trim();
+  const cardCvv = document.getElementById('trialCardCvv').value.trim();
+  const cardName = document.getElementById('trialCardName').value.trim();
+
+  if (cardNum.length < 13) {
+    alert('Please enter a valid card number.');
+    document.getElementById('trialCardNum').focus();
+    return;
+  }
+  if (cardExp.length < 5) {
+    alert('Please enter a valid expiry date (MM / YY).');
+    document.getElementById('trialCardExp').focus();
+    return;
+  }
+  if (cardCvv.length < 3) {
+    alert('Please enter a valid CVV code.');
+    document.getElementById('trialCardCvv').focus();
+    return;
+  }
+
   const btn = document.getElementById('proceedPaymentBtn');
   btn.classList.add('loading');
   btn.disabled = true;
@@ -1368,7 +1452,7 @@ document.getElementById('proceedPaymentBtn').addEventListener('click', async () 
         name: 'Smart Dental Desk',
         description: '3-Month Free Trial — Mandate Card Verification',
         prefill: {
-          name:    data.clinic_name  || '',
+          name:    cardName || data.clinic_name  || '',
           email:   data.clinic_email || '',
           contact: data.clinic_phone || ''
         },

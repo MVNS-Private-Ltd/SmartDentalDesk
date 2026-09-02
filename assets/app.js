@@ -154,6 +154,8 @@ window.api = (function() {
     verifyTopup: (payload) => request('/credits/topup/verify', { method: 'POST', body: JSON.stringify(payload) }),
     getPlans: () => request('/billing/plans'),
     getBillingStatus: () => request('/billing/status'),
+    createOrder: (plan) => request('/billing/create-order', { method: 'POST', body: JSON.stringify({ plan }) }),
+    verifyPayment: (payload) => request('/billing/verify-payment', { method: 'POST', body: JSON.stringify(payload) }),
     createTrial: (plan) => request('/billing/create-trial', { method: 'POST', body: JSON.stringify({ plan }) }),
     verifyTrial: (payload) => request('/billing/verify-trial', { method: 'POST', body: JSON.stringify(payload) }),
     // Generic POST helper — strips /api prefix if full path is passed

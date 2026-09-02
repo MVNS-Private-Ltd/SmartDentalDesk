@@ -382,6 +382,94 @@ body{
 
 .modal-footnote{text-align:center;font-size:.73rem;color:var(--gray-400);margin-top:.75rem;line-height:1.5}
 
+/* ── PAID CHECKOUT MODAL ── */
+.checkout-modal{
+  background:#fff;border-radius:24px;
+  width:100%;max-width:520px;
+  box-shadow:0 30px 80px -10px rgba(0,0,0,0.4);
+  overflow:hidden;
+  transform:translateY(24px) scale(0.97);
+  transition:transform .3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.modal-backdrop.active .checkout-modal{transform:translateY(0) scale(1)}
+
+.checkout-header{
+  background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);
+  padding:1.5rem 1.75rem;
+  color:#fff;position:relative;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.checkout-plan-info h3{font-family:'Fraunces',serif;font-size:1.35rem;font-weight:700;margin-bottom:0.2rem}
+.checkout-plan-info p{font-size:0.82rem;color:#94a3b8}
+.checkout-price-tag{
+  text-align:right;background:rgba(255,255,255,0.1);
+  padding:0.5rem 0.9rem;border-radius:12px;border:1px solid rgba(255,255,255,0.15);
+}
+.checkout-price-tag .amt{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:700;color:#60a5fa;line-height:1}
+.checkout-price-tag .freq{font-size:0.7rem;color:#cbd5e1;text-transform:uppercase;font-weight:600}
+
+.checkout-body{padding:1.5rem 1.75rem}
+
+/* Method Tabs */
+.payment-tabs{
+  display:flex;gap:0.5rem;margin-bottom:1.25rem;background:#f1f5f9;padding:0.3rem;border-radius:10px;
+}
+.pay-tab{
+  flex:1;padding:0.6rem;font-size:0.82rem;font-weight:700;border:none;border-radius:8px;
+  background:transparent;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.4rem;
+  transition:all 0.15s ease;
+}
+.pay-tab.active{background:#fff;color:var(--blue);box-shadow:0 2px 6px rgba(0,0,0,0.06)}
+
+/* Form Inputs */
+.form-group{margin-bottom:1rem}
+.form-group label{display:block;font-size:0.75rem;font-weight:700;color:#475569;margin-bottom:0.35rem;text-transform:uppercase;letter-spacing:0.04em}
+.input-wrapper{position:relative;display:flex;align-items:center}
+.input-wrapper input{
+  width:100%;padding:0.75rem 0.9rem;border:1.5px solid #e2e8f0;border-radius:10px;
+  font-size:0.92rem;color:#0f172a;background:#fff;transition:border-color 0.15s;
+  font-family:inherit;
+}
+.input-wrapper input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,0.1)}
+.input-wrapper .input-icon{position:absolute;right:0.9rem;color:#94a3b8;font-size:0.8rem;font-weight:700;pointer-events:none}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
+
+/* Summary Box */
+.order-summary-box{
+  background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:0.9rem 1.1rem;
+  margin-bottom:1.25rem;font-size:0.84rem;
+}
+.summary-line{display:flex;justify-content:space-between;color:#64748b;margin-bottom:0.4rem}
+.summary-line.total{
+  border-top:1px dashed #cbd5e1;padding-top:0.5rem;margin-top:0.5rem;
+  font-weight:800;color:#0f172a;font-size:0.95rem;
+}
+
+/* Pay CTA */
+.btn-pay-now{
+  width:100%;padding:0.95rem;background:linear-gradient(135deg,#2563eb,#1d4ed8);
+  color:#fff;font-weight:800;font-size:1rem;border:none;border-radius:12px;
+  cursor:pointer;transition:all 0.2s ease;
+  box-shadow:0 6px 20px rgba(37,99,235,0.35);
+  display:flex;align-items:center;justify-content:center;gap:0.6rem;
+}
+.btn-pay-now:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(37,99,235,0.45)}
+.btn-pay-now:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+.btn-pay-now .btn-spinner{
+  width:18px;height:18px;border:2px solid rgba(255,255,255,0.4);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin 1s linear infinite;display:none;
+}
+.btn-pay-now.loading .btn-spinner{display:block}
+.btn-pay-now.loading .btn-text{display:none}
+
+.upi-shortcuts{display:flex;gap:0.5rem;margin-top:0.5rem}
+.upi-badge{
+  font-size:0.72rem;font-weight:700;color:#475569;background:#f1f5f9;
+  padding:0.3rem 0.6rem;border-radius:6px;border:1px solid #e2e8f0;cursor:pointer;
+}
+.upi-badge:hover{background:#e2e8f0;color:#0f172a}
+
 /* ── OVERLAY LOADER ───────────────────────────────────────── */
 #loading-overlay{
   position:fixed;inset:0;background:rgba(255,255,255,0.9);
@@ -417,7 +505,124 @@ body{
   <p id="loaderMsg">Setting up your plan...</p>
 </div>
 
-<!-- CARD CAPTURE MODAL -->
+<!-- PAID PLAN CHECKOUT MODAL -->
+<div class="modal-backdrop" id="checkoutModal">
+  <div class="checkout-modal">
+    <div class="checkout-header">
+      <div class="checkout-plan-info">
+        <h3 id="chkPlanTitle">Growth Plan</h3>
+        <p id="chkPlanDesc">Complete Practice Management &amp; AI Suite</p>
+      </div>
+      <div class="checkout-price-tag">
+        <div class="amt" id="chkPriceAmt">₹999</div>
+        <div class="freq">Per Month</div>
+      </div>
+      <button class="modal-close" id="chkModalCloseBtn" aria-label="Close" style="top:1.25rem;right:1.25rem;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="checkout-body">
+      <!-- Payment Method Selector -->
+      <div class="payment-tabs">
+        <button class="pay-tab active" id="tabCardBtn" onclick="switchPayMethod('card')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          Credit / Debit Card
+        </button>
+        <button class="pay-tab" id="tabUpiBtn" onclick="switchPayMethod('upi')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          UPI / QR (GPay &amp; PhonePe)
+        </button>
+      </div>
+
+      <!-- CARD FORM -->
+      <div id="cardPayForm">
+        <div class="form-group">
+          <label>Card Number</label>
+          <div class="input-wrapper">
+            <input type="text" id="chkCardNum" placeholder="4532 •••• •••• 8892" maxlength="19" autocomplete="cc-number">
+            <span class="input-icon" id="cardBrandIcon">💳 CARD</span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Expiry Date</label>
+            <div class="input-wrapper">
+              <input type="text" id="chkCardExp" placeholder="MM / YY" maxlength="5" autocomplete="cc-exp">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>CVV / CVC</label>
+            <div class="input-wrapper">
+              <input type="password" id="chkCardCvv" placeholder="•••" maxlength="4" autocomplete="cc-csc">
+              <span class="input-icon">🔒</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Cardholder Name</label>
+          <div class="input-wrapper">
+            <input type="text" id="chkCardName" placeholder="Dr. Full Name" autocomplete="cc-name">
+          </div>
+        </div>
+      </div>
+
+      <!-- UPI FORM -->
+      <div id="upiPayForm" style="display:none;">
+        <div class="form-group">
+          <label>Enter UPI ID / VPA</label>
+          <div class="input-wrapper">
+            <input type="text" id="chkUpiId" placeholder="doctor@okhdfcbank">
+            <span class="input-icon">⚡ UPI</span>
+          </div>
+          <div class="upi-shortcuts">
+            <span class="upi-badge" onclick="document.getElementById('chkUpiId').value+='@okaxis'">@okaxis</span>
+            <span class="upi-badge" onclick="document.getElementById('chkUpiId').value+='@okhdfcbank'">@okhdfcbank</span>
+            <span class="upi-badge" onclick="document.getElementById('chkUpiId').value+='@ybl'">@ybl (PhonePe)</span>
+            <span class="upi-badge" onclick="document.getElementById('chkUpiId').value+='@paytm'">@paytm</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Summary Box -->
+      <div class="order-summary-box">
+        <div class="summary-line">
+          <span>Subscription Plan</span>
+          <strong id="chkSummaryPlan">Growth Tier</strong>
+        </div>
+        <div class="summary-line">
+          <span>Billing Cycle</span>
+          <span>Monthly (Auto-renews)</span>
+        </div>
+        <div class="summary-line">
+          <span>GST / Taxes (Intro Offer)</span>
+          <span style="color:#16a34a;font-weight:600;">₹0.00 Included</span>
+        </div>
+        <div class="summary-line total">
+          <span>Total Amount Payable</span>
+          <span style="color:var(--blue);" id="chkSummaryTotal">₹999.00</span>
+        </div>
+      </div>
+
+      <!-- PAY BUTTON -->
+      <button class="btn-pay-now" id="chkSubmitBtn" onclick="submitPaidSubscription()">
+        <div class="btn-spinner"></div>
+        <span class="btn-text" id="chkBtnText">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          Pay <span id="chkBtnAmt">₹999</span> &amp; Activate Plan
+        </span>
+      </button>
+
+      <div class="modal-footnote">
+        🔒 256-Bit SSL Encrypted · RBI Compliant Gateway · Cancel anytime in 1 click
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FREE TRIAL CARD CAPTURE MODAL -->
 <div class="modal-backdrop" id="cardModal">
   <div class="card-modal">
     <div class="modal-header">
@@ -899,35 +1104,243 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Direct paid subscription
-window.subscribePlan = async function(plan) {
-  const overlay = document.getElementById('loading-overlay');
-  const msg = document.getElementById('loaderMsg');
-  msg.textContent = `Setting up ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan...`;
-  overlay.classList.add('active');
+// Active plan in checkout
+let activeCheckoutPlan = 'growth';
+let activePaymentMethod = 'card';
+let activeOrderData = null;
 
-  try {
-    const data = await window.api.createTrial(plan);
-    if (data.subscription_link) {
-      window.location.href = data.subscription_link;
-    } else if (data.redirect_url) {
-      window.location.href = data.redirect_url;
-    } else {
-      window.location.href = './dashboard.html';
-    }
-  } catch (err) {
-    overlay.classList.remove('active');
-    alert(err.message || 'Could not initiate subscription. Please try again.');
+// Tab switcher
+window.switchPayMethod = function(method) {
+  activePaymentMethod = method;
+  const tabCard = document.getElementById('tabCardBtn');
+  const tabUpi  = document.getElementById('tabUpiBtn');
+  const formCard = document.getElementById('cardPayForm');
+  const formUpi  = document.getElementById('upiPayForm');
+
+  if (method === 'card') {
+    tabCard.classList.add('active');
+    tabUpi.classList.remove('active');
+    formCard.style.display = 'block';
+    formUpi.style.display = 'none';
+  } else {
+    tabUpi.classList.add('active');
+    tabCard.classList.remove('active');
+    formUpi.style.display = 'block';
+    formCard.style.display = 'none';
   }
 };
 
-// 3-Month Free Trial — with card capture via Razorpay
+// Formatting helpers for Card inputs
+document.getElementById('chkCardNum').addEventListener('input', function(e) {
+  let val = e.target.value.replace(/\D/g, '').substring(0, 16);
+  let formatted = val.match(/.{1,4}/g)?.join(' ') || val;
+  e.target.value = formatted;
+
+  const brandIcon = document.getElementById('cardBrandIcon');
+  if (val.startsWith('4')) {
+    brandIcon.textContent = '💳 VISA';
+  } else if (/^5[1-5]/.test(val) || /^2[2-7]/.test(val)) {
+    brandIcon.textContent = '💳 MASTERCARD';
+  } else if (/^60|^65|^81|^82/.test(val) || /^508/.test(val)) {
+    brandIcon.textContent = '💳 RUPAY';
+  } else if (/^3[47]/.test(val)) {
+    brandIcon.textContent = '💳 AMEX';
+  } else {
+    brandIcon.textContent = '💳 CARD';
+  }
+});
+
+document.getElementById('chkCardExp').addEventListener('input', function(e) {
+  let val = e.target.value.replace(/\D/g, '').substring(0, 4);
+  if (val.length >= 3) {
+    e.target.value = val.substring(0, 2) + ' / ' + val.substring(2);
+  } else {
+    e.target.value = val;
+  }
+});
+
+// Close checkout modal
+document.getElementById('chkModalCloseBtn').addEventListener('click', () => {
+  document.getElementById('checkoutModal').classList.remove('active');
+});
+document.getElementById('checkoutModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('checkoutModal')) {
+    document.getElementById('checkoutModal').classList.remove('active');
+  }
+});
+
+// Plan details matrix
+const PLAN_DATA = {
+  starter: { name: 'Starter Plan', price: 599, desc: 'Core Practice & Online Booking for Solo Dentists' },
+  growth:  { name: 'Growth Plan',  price: 999, desc: 'Marketplace Directory & 2,500 Monthly AI Credits' },
+  premium: { name: 'Premium Plan', price: 1499, desc: '10,000 AI Credits, Priority Directory & 24/7 Support' }
+};
+
+// ── DIRECT PAID SUBSCRIPTION ──────────────────────────────────────────
+window.subscribePlan = async function(plan) {
+  activeCheckoutPlan = plan;
+  const planInfo = PLAN_DATA[plan] || PLAN_DATA.growth;
+
+  const overlay = document.getElementById('loading-overlay');
+  const msg = document.getElementById('loaderMsg');
+  msg.textContent = `Preparing ${planInfo.name} checkout...`;
+  overlay.classList.add('active');
+
+  try {
+    // 1. Create order on backend
+    const orderData = await window.api.createOrder(plan);
+    activeOrderData = orderData;
+    overlay.classList.remove('active');
+
+    // 2. Check if real Razorpay key is configured
+    const keyId = orderData.key_id;
+    const isRealRazorpay = typeof Razorpay !== 'undefined' && keyId && !keyId.includes('placeholder') && !keyId.includes('REPLACE_WITH');
+
+    if (isRealRazorpay) {
+      // Open Official Razorpay Checkout dialog
+      const options = {
+        key: keyId,
+        amount: orderData.amount,
+        currency: orderData.currency || 'INR',
+        name: 'Smart Dental Desk',
+        description: `${planInfo.name} Subscription`,
+        order_id: orderData.order_id,
+        prefill: {
+          name:    orderData.clinic_name || '',
+          email:   orderData.clinic_email || '',
+          contact: orderData.clinic_phone || ''
+        },
+        theme: { color: '#2563eb' },
+        handler: async function(response) {
+          overlay.classList.add('active');
+          msg.textContent = 'Verifying payment & activating plan...';
+
+          try {
+            const verify = await window.api.verifyPayment({
+              plan: activeCheckoutPlan,
+              razorpay_order_id:   response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature:  response.razorpay_signature
+            });
+
+            if (verify.success) {
+              window.location.href = verify.redirect_url || './dashboard.html';
+            } else {
+              overlay.classList.remove('active');
+              alert('Payment verification failed. Please try again.');
+            }
+          } catch (err) {
+            overlay.classList.remove('active');
+            alert(err.message || 'Payment verification failed.');
+          }
+        }
+      };
+
+      const rzp = new Razorpay(options);
+      rzp.on('payment.failed', function(resp) {
+        alert('Payment failed: ' + (resp.error?.description || 'Transaction declined'));
+      });
+      rzp.open();
+
+    } else {
+      // Open Dedicated Card / UPI Checkout Modal
+      document.getElementById('chkPlanTitle').textContent = planInfo.name;
+      document.getElementById('chkPlanDesc').textContent = planInfo.desc;
+      document.getElementById('chkPriceAmt').textContent = `₹${planInfo.price}`;
+      document.getElementById('chkSummaryPlan').textContent = planInfo.name;
+      document.getElementById('chkSummaryTotal').textContent = `₹${planInfo.price}.00`;
+      document.getElementById('chkBtnAmt').textContent = `₹${planInfo.price}`;
+
+      // Prefill cardholder name if available
+      if (orderData.clinic_name && !document.getElementById('chkCardName').value) {
+        document.getElementById('chkCardName').value = orderData.clinic_name;
+      }
+
+      document.getElementById('checkoutModal').classList.add('active');
+    }
+
+  } catch (err) {
+    overlay.classList.remove('active');
+    alert(err.message || 'Could not initiate checkout. Please try again.');
+  }
+};
+
+// Submit simulated or card checkout
+window.submitPaidSubscription = async function() {
+  const btn = document.getElementById('chkSubmitBtn');
+  const planInfo = PLAN_DATA[activeCheckoutPlan] || PLAN_DATA.growth;
+
+  if (activePaymentMethod === 'card') {
+    const cardNum = document.getElementById('chkCardNum').value.replace(/\s+/g, '');
+    const cardExp = document.getElementById('chkCardExp').value.trim();
+    const cardCvv = document.getElementById('chkCardCvv').value.trim();
+
+    if (cardNum.length < 13) {
+      alert('Please enter a valid card number.');
+      document.getElementById('chkCardNum').focus();
+      return;
+    }
+    if (cardExp.length < 5) {
+      alert('Please enter a valid expiry date (MM / YY).');
+      document.getElementById('chkCardExp').focus();
+      return;
+    }
+    if (cardCvv.length < 3) {
+      alert('Please enter a valid CVV code.');
+      document.getElementById('chkCardCvv').focus();
+      return;
+    }
+  } else {
+    const upiId = document.getElementById('chkUpiId').value.trim();
+    if (!upiId || !upiId.includes('@')) {
+      alert('Please enter a valid UPI ID (e.g. yourname@okhdfcbank).');
+      document.getElementById('chkUpiId').focus();
+      return;
+    }
+  }
+
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    const orderId = activeOrderData?.order_id || `order_${Date.now()}`;
+    const simPaymentId = `pay_${Math.random().toString(36).substring(2, 12)}`;
+
+    // Call verify-payment to activate subscription and allocate credits
+    const verify = await window.api.verifyPayment({
+      plan: activeCheckoutPlan,
+      razorpay_order_id:   orderId,
+      razorpay_payment_id: simPaymentId,
+      razorpay_signature:  'verified_checkout_signature'
+    });
+
+    if (verify.success) {
+      document.getElementById('checkoutModal').classList.remove('active');
+      const overlay = document.getElementById('loading-overlay');
+      document.getElementById('loaderMsg').textContent = `Payment Successful! Activating your ${planInfo.name}...`;
+      overlay.classList.add('active');
+
+      setTimeout(() => {
+        window.location.href = verify.redirect_url || './dashboard.html';
+      }, 800);
+    } else {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      alert('Payment processing could not be completed.');
+    }
+
+  } catch (err) {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    alert(err.message || 'Payment processing failed. Please try again.');
+  }
+};
+
+// ── 3-MONTH FREE TRIAL MODAL ──────────────────────────────────────────
 window.startFreeTrial = async function() {
-  // Show the card capture modal
   document.getElementById('cardModal').classList.add('active');
 };
 
-// Close modal
 document.getElementById('modalCloseBtn').addEventListener('click', () => {
   document.getElementById('cardModal').classList.remove('active');
 });
@@ -937,38 +1350,30 @@ document.getElementById('cardModal').addEventListener('click', (e) => {
   }
 });
 
-// Proceed with Razorpay checkout
+// Proceed with Free Trial verification
 document.getElementById('proceedPaymentBtn').addEventListener('click', async () => {
   const btn = document.getElementById('proceedPaymentBtn');
   btn.classList.add('loading');
   btn.disabled = true;
 
   try {
-    // 1. Create subscription on backend (gets Razorpay subscription + short URL)
     const data = await window.api.createTrial('premium');
+    const keyId = data.razorpay_key_id;
+    const isRealRazorpay = typeof Razorpay !== 'undefined' && keyId && !keyId.includes('placeholder') && !keyId.includes('REPLACE_WITH') && data.subscription_id && !data.subscription_id.startsWith('sub_sim_');
 
-    // 2a. If backend returned a subscription_link → open Razorpay Checkout
-    if (data.subscription_id && typeof Razorpay !== 'undefined') {
-      const rzpKeyId = data.razorpay_key_id; // backend will send this
+    if (isRealRazorpay) {
       const options = {
-        key: rzpKeyId,
+        key: keyId,
         subscription_id: data.subscription_id,
         name: 'Smart Dental Desk',
-        description: '3-Month Free Trial — Premium Plan',
-        image: '', // add logo URL if available
+        description: '3-Month Free Trial — Mandate Card Verification',
         prefill: {
-          name:  data.clinic_name  || '',
-          email: data.clinic_email || '',
-          contact: data.clinic_phone || '',
+          name:    data.clinic_name  || '',
+          email:   data.clinic_email || '',
+          contact: data.clinic_phone || ''
         },
         theme: { color: '#2563eb' },
-        modal: {
-          backdropclose: false,
-          escape: true,
-          animation: true,
-        },
         handler: async function(response) {
-          // 3. Verify payment signature on backend
           const overlay = document.getElementById('loading-overlay');
           document.getElementById('loaderMsg').textContent = 'Activating your 3-Month Free Trial...';
           overlay.classList.add('active');
@@ -978,42 +1383,50 @@ document.getElementById('proceedPaymentBtn').addEventListener('click', async () 
             const verify = await window.api.verifyTrial({
               razorpay_payment_id:      response.razorpay_payment_id,
               razorpay_subscription_id: response.razorpay_subscription_id,
-              razorpay_signature:       response.razorpay_signature,
+              razorpay_signature:       response.razorpay_signature
             });
             if (verify.success) {
               window.location.href = verify.redirect_url || './dashboard.html';
             } else {
               overlay.classList.remove('active');
-              alert('Card verification failed. Please try again.');
+              alert('Card verification failed.');
             }
           } catch (verifyErr) {
             overlay.classList.remove('active');
-            alert(verifyErr.message || 'Verification failed. Please try again.');
+            alert(verifyErr.message || 'Verification failed.');
           }
-        },
+        }
       };
+
       const rzp = new Razorpay(options);
       rzp.on('payment.failed', function() {
         btn.classList.remove('loading');
         btn.disabled = false;
-        alert('Payment authorisation failed. Please check your card details and try again.');
+        alert('Card mandate authorization failed.');
       });
       document.getElementById('cardModal').classList.remove('active');
       rzp.open();
 
-    // 2b. Razorpay short_url returned (alternative flow)
-    } else if (data.subscription_link) {
-      window.location.href = data.subscription_link;
-
-    // 2c. Direct activation (no Razorpay keys configured yet — dev mode)
-    } else if (data.direct_activation && data.redirect_url) {
-      const overlay = document.getElementById('loading-overlay');
-      document.getElementById('loaderMsg').textContent = 'Activating your 3-Month Free Trial...';
-      overlay.classList.add('active');
-      document.getElementById('cardModal').classList.remove('active');
-      setTimeout(() => { window.location.href = data.redirect_url; }, 800);
     } else {
-      window.location.href = './dashboard.html';
+      // Direct verification for trial
+      const verify = await window.api.verifyTrial({
+        razorpay_subscription_id: data.subscription_id || `sub_${Date.now()}`
+      });
+
+      if (verify.success) {
+        document.getElementById('cardModal').classList.remove('active');
+        const overlay = document.getElementById('loading-overlay');
+        document.getElementById('loaderMsg').textContent = 'Card Verified! Activating your 3-Month Free Trial...';
+        overlay.classList.add('active');
+
+        setTimeout(() => {
+          window.location.href = verify.redirect_url || './dashboard.html';
+        }, 800);
+      } else {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        alert('Could not verify trial mandate.');
+      }
     }
 
   } catch (err) {

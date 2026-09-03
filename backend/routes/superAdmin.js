@@ -762,27 +762,51 @@ When asked to draft an announcement, provide:
       { role: 'user', content: message }
     ];
 
-    // 3. OpenRouter API Call
-    const model = 'google/gemma-4-31b-it:free';
-    const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://smartdentaldesk.app',
-        'X-Title': 'SmartDentalDesk Platform Command'
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: messages,
-        max_tokens: 2048,
-        temperature: mode === 'announcement' ? 0.3 : 0.6
-      })
-    });
+    // 3. OpenRouter API Call with fallback cascade
+    const fallbackModels = [
+      'openrouter/free',
+      'nvidia/nemotron-3-super-120b-a12b:free',
+      'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+      'minimax/minimax-m3:free',
+      'minimax/minimax-m2.7:free',
+    ];
 
-    if (!openRouterRes.ok) {
-      const errBody = await openRouterRes.json().catch(() => ({}));
-      throw new Error(errBody?.error?.message || `OpenRouter API error: ${openRouterRes.status}`);
+    let openRouterRes;
+    let usedModel = 'openrouter/free';
+    let lastError = null;
+
+    for (const testModel of fallbackModels) {
+      usedModel = testModel;
+      try {
+        openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://smartdentaldesk.app',
+            'X-Title': 'SmartDentalDesk Platform Command'
+          },
+          body: JSON.stringify({
+            model: testModel,
+            messages: messages,
+            max_tokens: 2048,
+            temperature: mode === 'announcement' ? 0.3 : 0.6
+          })
+        });
+
+        if (openRouterRes.ok) break;
+
+        const errBody = await openRouterRes.json().catch(() => ({}));
+        lastError = errBody?.error?.message || `OpenRouter API error: ${openRouterRes.status}`;
+        console.warn(`[SuperAdmin AI] Model ${testModel} failed: ${lastError} — Retrying fallback...`);
+      } catch (fetchErr) {
+        lastError = fetchErr.message;
+        console.warn(`[SuperAdmin AI] Fetch error for ${testModel}: ${lastError} — Retrying fallback...`);
+      }
+    }
+
+    if (!openRouterRes || !openRouterRes.ok) {
+      throw new Error(lastError || 'All AI models failed to respond.');
     }
 
     const aiData = await openRouterRes.json();
@@ -798,7 +822,7 @@ When asked to draft an announcement, provide:
         role: 'user',
         content: message,
         mode: mode,
-        model_used: model,
+        model_used: usedModel,
         session_id: activeSessionId,
         session_name: 'Platform Command AI'
       }),
@@ -807,7 +831,7 @@ When asked to draft an announcement, provide:
         role: 'assistant',
         content: replyText,
         mode: mode,
-        model_used: model,
+        model_used: usedModel,
         session_id: activeSessionId,
         session_name: 'Platform Command AI'
       })

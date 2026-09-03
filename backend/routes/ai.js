@@ -24,12 +24,23 @@ const router = express.Router();
 router.use(requireAuth);
 
 // ── Model IDs (OpenRouter) ───────────────────────────────────────────────────
+// openrouter/free dynamically routes across all active free models.
+// Specific high-performance free models are provided as backup fallbacks.
 const MODELS = {
-  ultra:  'google/gemma-4-31b-it:free',              // Large, reliable Gemma model
-  super:  'google/gemma-3-27b-it:free',              // Fast Gemma 3 27B
-  nano:   'meta-llama/llama-3.3-8b-instruct:free',   // Reliable Llama 3.3 8B — stable chat
-  mid:    'google/gemma-3-12b-it:free',              // Mid-tier Gemma 3 12B
+  ultra:  'openrouter/free',
+  super:  'nvidia/nemotron-3-super-120b-a12b:free',
+  nano:   'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+  mid:    'minimax/minimax-m3:free',
 };
+
+const FALLBACK_MODELS = [
+  'openrouter/free',
+  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'minimax/minimax-m3:free',
+  'minimax/minimax-m2.7:free',
+  'liquid/lfm-2.5-2.6b:free',
+];
 
 // ── Model selection logic ─────────────────────────────────────────────────────
 function getModel(subscriptionPlan, mode) {
@@ -472,35 +483,42 @@ ${contextBlock}`;
 
 // ── Auto-generate a session name from the context ───────────────────────────
 async function generateSessionName(conversationText) {
-  try {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type':  'application/json',
-        'HTTP-Referer':  'https://smartdentaldesk.app',
-        'X-Title':       'Smart Dental Desk',
-      },
-      body: JSON.stringify({
-        model:      MODELS.nano,
-        messages:   [
-          {
-            role: 'system',
-            content: 'You are a helpful assistant that generates a short, descriptive title (2-6 words max) for a conversation. Return ONLY the title text, no quotes, no extra words.',
-          },
-          { role: 'user', content: conversationText },
-        ],
-        max_tokens:  20,
-        temperature: 0.3,
-      }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const name = data?.choices?.[0]?.message?.content?.trim();
-    return name || null;
-  } catch {
-    return null;
+  for (const testModel of FALLBACK_MODELS) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 4000);
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type':  'application/json',
+          'HTTP-Referer':  'https://smartdentaldesk.app',
+          'X-Title':       'Smart Dental Desk',
+        },
+        body: JSON.stringify({
+          model:      testModel,
+          messages:   [
+            {
+              role: 'system',
+              content: 'You are a helpful assistant that generates a short, descriptive title (2-6 words max) for a conversation. Return ONLY the title text, no quotes, no extra words.',
+            },
+            { role: 'user', content: conversationText },
+          ],
+          max_tokens:  20,
+          temperature: 0.3,
+        }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const name = data?.choices?.[0]?.message?.content?.trim();
+      if (name) return name;
+    } catch {
+      // try next fallback model
+    }
   }
+  return null;
 }
 
 // ── GET /api/ai/sessions — list all unique sessions with name + preview ───────
@@ -715,30 +733,47 @@ router.post('/chat', chatRules, async (req, res, next) => {
     }
     const txnId = deductRes.out_txn_id;
 
-    // 6. Call OpenRouter API
-    const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type':  'application/json',
-        'HTTP-Referer':  'https://smartdentaldesk.app',
-        'X-Title':       'Smart Dental Desk',
-      },
-      body: JSON.stringify({
-        model:       model,
-        messages:    messages,
-        max_tokens:  2048,
-        temperature: mode === 'automation' ? 0.1 : 0.7,
-      }),
-    });
+    // 6. Call OpenRouter API with fallback cascade
+    let openRouterRes;
+    let usedModel = model;
+    const modelCandidates = Array.from(new Set([model, ...FALLBACK_MODELS]));
+    let lastError = null;
 
-    if (!openRouterRes.ok) {
+    for (const testModel of modelCandidates) {
+      usedModel = testModel;
+      try {
+        openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'Content-Type':  'application/json',
+            'HTTP-Referer':  'https://smartdentaldesk.app',
+            'X-Title':       'Smart Dental Desk',
+          },
+          body: JSON.stringify({
+            model:       testModel,
+            messages:    messages,
+            max_tokens:  2048,
+            temperature: mode === 'automation' ? 0.1 : 0.7,
+          }),
+        });
+
+        if (openRouterRes.ok) break;
+
+        const errBody = await openRouterRes.json().catch(() => ({}));
+        lastError = errBody?.error?.message || `OpenRouter error: ${openRouterRes.status}`;
+        console.warn(`[AI Chat] Model ${testModel} failed: ${lastError} — Trying fallback...`);
+      } catch (fetchErr) {
+        lastError = fetchErr.message;
+        console.warn(`[AI Chat] Fetch error for ${testModel}: ${lastError} — Trying fallback...`);
+      }
+    }
+
+    if (!openRouterRes || !openRouterRes.ok) {
       // Release reservation
       await supabase.rpc('release_reservation', { p_txn_id: txnId });
-      
-      const errBody = await openRouterRes.json().catch(() => ({}));
-      console.error('[OpenRouter Error]', openRouterRes.status, errBody);
-      throw new Error(errBody?.error?.message || `OpenRouter API error: ${openRouterRes.status}`);
+      console.error('[OpenRouter Error] All models failed:', lastError);
+      throw new Error(lastError || 'All AI models failed to respond.');
     }
 
     const aiData    = await openRouterRes.json();
@@ -755,7 +790,7 @@ router.post('/chat', chatRules, async (req, res, next) => {
       role:         'assistant',
       content:      replyText,
       mode:         mode,
-      model_used:   model,
+      model_used:   usedModel,
       session_id:   activeSessionId,
       session_name: activeSessionName,
       credits_cost: CREDIT_COSTS[mode] || 1,
@@ -774,7 +809,7 @@ router.post('/chat', chatRules, async (req, res, next) => {
 
     res.json({
       reply:        aiMsg,
-      model_used:   model,
+      model_used:   usedModel,
       mode:         mode,
       plan:         subscriptionPlan,
       session_id:   activeSessionId,
@@ -861,38 +896,38 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
 
     let openRouterRes;
     let usedModel = model;
-    const fallbackModels = [
-      model,
-      'google/gemma-4-31b-it:free',
-      'meta-llama/llama-3.3-8b-instruct:free',
-      'google/gemma-3-12b-it:free',
-    ];
+    const modelCandidates = Array.from(new Set([model, ...FALLBACK_MODELS]));
 
     let lastError = null;
-    for (const testModel of fallbackModels) {
+    for (const testModel of modelCandidates) {
       usedModel = testModel;
-      openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          'Content-Type':  'application/json',
-          'HTTP-Referer':  'https://smartdentaldesk.app',
-          'X-Title':       'Smart Dental Desk',
-        },
-        body: JSON.stringify({
-          model: testModel,
-          messages,
-          max_tokens:  2048,
-          temperature: mode === 'automation' ? 0.1 : 0.7,
-          stream:      true,
-        }),
-      });
+      try {
+        openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'Content-Type':  'application/json',
+            'HTTP-Referer':  'https://smartdentaldesk.app',
+            'X-Title':       'Smart Dental Desk',
+          },
+          body: JSON.stringify({
+            model: testModel,
+            messages,
+            max_tokens:  2048,
+            temperature: mode === 'automation' ? 0.1 : 0.7,
+            stream:      true,
+          }),
+        });
 
-      if (openRouterRes.ok) break;
+        if (openRouterRes.ok) break;
 
-      const errBody = await openRouterRes.json().catch(() => ({}));
-      lastError = errBody?.error?.message || `OpenRouter error: ${openRouterRes.status}`;
-      console.warn(`[AI Stream] Model ${testModel} failed: ${lastError} — Retrying...`);
+        const errBody = await openRouterRes.json().catch(() => ({}));
+        lastError = errBody?.error?.message || `OpenRouter error: ${openRouterRes.status}`;
+        console.warn(`[AI Stream] Model ${testModel} failed: ${lastError} — Retrying...`);
+      } catch (fetchErr) {
+        lastError = fetchErr.message;
+        console.warn(`[AI Stream] Fetch error for ${testModel}: ${lastError} — Retrying...`);
+      }
     }
 
     if (!openRouterRes || !openRouterRes.ok) {

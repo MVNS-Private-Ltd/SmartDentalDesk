@@ -1404,7 +1404,7 @@
           <div class="ai-chat-header">
             <div style="display: flex; align-items: center; gap: 0.6rem;">
               <span class="status-dot"></span>
-              <span style="font-size: 0.85rem; font-weight: 700; color: #fff;">Gemma 31B Platform Copilot</span>
+              <span style="font-size: 0.85rem; font-weight: 700; color: #fff;">Smart Dental Platform Copilot</span>
             </div>
             <div class="mode-pills">
               <button class="mode-pill active" data-mode="strategy" onclick="setSuperAiMode('strategy')">🎯 Strategy & Growth</button>
@@ -1468,7 +1468,7 @@
             <span class="kpi-title">Top Active Model</span>
             <div class="kpi-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/></svg></div>
           </div>
-          <div class="kpi-value" style="font-size: 1.3rem;" id="aiTopModel">Gemma 31B</div>
+          <div class="kpi-value" style="font-size: 1.3rem;" id="aiTopModel">Auto AI</div>
           <div class="kpi-subtext">High precision reasoning</div>
         </div>
 
@@ -1624,7 +1624,7 @@
         <label class="form-label">Subscription Plan</label>
         <select id="newPlanSelect" class="form-control">
           <option value="free">Free Tier (Base limits)</option>
-          <option value="starter">Starter Plan (Gemma 31B Data/Thinking)</option>
+          <option value="starter">Starter Plan (Advanced Data & Thinking AI)</option>
           <option value="premium">Premium Plan (High Speed AI & Full Automations)</option>
           <option value="enterprise">Enterprise VIP (Unlimited)</option>
         </select>
@@ -2228,7 +2228,7 @@
 
       const topModel = Object.entries(data.model_breakdown || {}).sort((a, b) => b[1] - a[1])[0];
       if (topModel) {
-        document.getElementById('aiTopModel').textContent = topModel[0].replace('google/', '').replace(':free', '');
+        document.getElementById('aiTopModel').textContent = topModel[0].replace(/^.*\//, '').replace(':free', '');
       }
 
       const tbody = document.getElementById('aiLeaderboardBody');

@@ -311,126 +311,295 @@
 
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script src="./assets/app.js"></script>
+
+<!-- TOPUP PAYMENT MODAL -->
+<div id="topupModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; z-index:1050; padding:20px; backdrop-filter:blur(4px);">
+  <div style="background:#fff; border-radius:20px; padding:28px; width:100%; max-width:480px; position:relative; box-shadow:0 25px 60px rgba(0,0,0,0.3);">
+    <button onclick="closeTopupModal()" style="position:absolute; top:16px; right:16px; background:none; border:none; font-size:1.5rem; cursor:pointer; color:#94a3b8; line-height:1;">&times;</button>
+    <h3 id="topupModalTitle" style="font-size:1.25rem; font-weight:800; color:#0f172a; margin:0 0 4px;">Add Credits</h3>
+    <p style="font-size:0.83rem; color:#64748b; margin:0 0 16px;">Enter your card details to complete the purchase securely.</p>
+    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px 16px; margin-bottom:16px;">
+      <div>
+        <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">You Get</div>
+        <div id="topupModalCredits" style="font-size:1.3rem; font-weight:800; color:#0f172a;">500 AI Credits</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase;">You Pay</div>
+        <div id="topupModalPrice" style="font-size:1.5rem; font-weight:800; color:#2563eb;">&#8377;99</div>
+      </div>
+    </div>
+    <form id="topupCardForm" autocomplete="off">
+      <div style="margin-bottom:12px;">
+        <label style="font-size:0.8rem; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Card Number <span id="topupCardBrand" style="float:right; font-size:0.72rem; background:#eff6ff; color:#2563eb; padding:2px 8px; border-radius:6px; font-weight:700;">CARD</span></label>
+        <input type="text" id="topupCardNum" placeholder="1234 5678 9012 3456" required maxlength="19" inputmode="numeric"
+          style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:1rem; font-family:monospace; letter-spacing:0.05em; box-sizing:border-box; outline:none; transition:border-color 0.2s;">
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+        <div>
+          <label style="font-size:0.8rem; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Expiry</label>
+          <input type="text" id="topupCardExp" placeholder="MM/YY" required maxlength="5" inputmode="numeric"
+            style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:1rem; box-sizing:border-box; outline:none;">
+        </div>
+        <div>
+          <label style="font-size:0.8rem; font-weight:600; color:#475569; display:block; margin-bottom:4px;">CVV</label>
+          <input type="password" id="topupCardCvv" placeholder="•••" required maxlength="4" inputmode="numeric"
+            style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:1rem; box-sizing:border-box; outline:none;">
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:0.8rem; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Cardholder Name</label>
+        <input type="text" id="topupCardName" placeholder="Dr. Mayank Sharma" required
+          style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:1rem; box-sizing:border-box; outline:none; text-transform:uppercase;">
+      </div>
+      <div id="topupCardError" style="display:none; background:#fef2f2; border:1px solid #fecaca; color:#dc2626; border-radius:8px; padding:10px 14px; font-size:0.83rem; margin-bottom:12px;"></div>
+      <button type="submit" id="topupPayBtn"
+        style="width:100%; background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; border:none; padding:14px; border-radius:12px; font-size:1rem; font-weight:700; cursor:pointer; transition:opacity 0.2s; letter-spacing:0.01em;">
+        Pay &amp; Add Credits
+      </button>
+    </form>
+    <p style="text-align:center; font-size:0.72rem; color:#94a3b8; margin:12px 0 0;">Secured with 256-bit SSL. We never store raw card data.</p>
+  </div>
+</div>
+
 <script>
-  if (!window.api.isAuthenticated()) {
+(function() {
+  if (!window.api || !window.api.isAuthenticated()) {
     window.location.href = './login.html';
+    return;
   }
 
+  // ── Pack config ─────────────────────────────────────────────────────────────
+  var PACKS = {
+    starter_pack: { name: 'Starter Pack', credits: 500,  price: 99  },
+    value_pack:   { name: 'Value Pack',   credits: 2000, price: 299 },
+    power_pack:   { name: 'Power Pack',   credits: 5000, price: 599 }
+  };
+  var currentPackId = null;
+
+  // ── Load Page Data ───────────────────────────────────────────────────────────
   async function loadData() {
     try {
-      // 1. Subscription Info
-      const subRes = await window.api.getBillingStatus();
-      const sub = subRes.subscription;
+      var subRes = await window.api.getBillingStatus();
+      var sub = subRes.subscription;
       if (sub) {
-        document.getElementById('planName').textContent = sub.plan || 'Unknown';
-        
-        const badge = document.getElementById('planBadge');
+        document.getElementById('planName').textContent = (sub.plan || 'Unknown').charAt(0).toUpperCase() + (sub.plan || 'unknown').slice(1);
+        var badge = document.getElementById('planBadge');
         if (sub.status === 'trialing') {
           badge.className = 'plan-badge trial';
-          badge.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 3-Month Free Trial`;
-          const end = new Date(sub.trial_ends_at).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
-          document.getElementById('planPeriod').textContent = `Trial ends on ${end}. Your saved card will be charged after this date.`;
+          badge.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Free Trial Active';
+          var end = new Date(sub.trial_ends_at).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
+          document.getElementById('planPeriod').textContent = 'Trial ends on ' + end + '.';
         } else if (sub.status === 'active') {
           badge.className = 'plan-badge active';
-          badge.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Active Subscription`;
-          const end = new Date(sub.current_period_end).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
-          document.getElementById('planPeriod').textContent = `Next billing date: ${end}`;
+          badge.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Active Subscription';
+          var pEnd = new Date(sub.current_period_end).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
+          document.getElementById('planPeriod').textContent = 'Next billing: ' + pEnd;
         } else {
           badge.className = 'plan-badge';
-          badge.textContent = sub.status;
-          document.getElementById('planPeriod').textContent = 'Please update your subscription.';
+          badge.textContent = sub.status || 'Inactive';
+          document.getElementById('planPeriod').textContent = 'No active subscription.';
         }
       }
+    } catch(e) { console.warn('Could not load subscription:', e.message); }
 
-      // 2. Balances
-      const bal = await window.api.getCreditsBalance();
-      document.getElementById('valTotal').textContent = bal.total_remaining.toLocaleString();
-      document.getElementById('valMonthly').textContent = Math.max(0, bal.monthly.credits_allocated - bal.monthly.credits_used).toLocaleString();
-      document.getElementById('valTopup').textContent = bal.topup.toLocaleString();
+    try {
+      var bal = await window.api.getCreditsBalance();
+      document.getElementById('valTotal').textContent = (bal.total_remaining || 0).toLocaleString();
+      document.getElementById('valMonthly').textContent = Math.max(0, (bal.monthly && bal.monthly.credits_allocated ? bal.monthly.credits_allocated - (bal.monthly.credits_used || 0) : 0)).toLocaleString();
+      document.getElementById('valTopup').textContent = (bal.topup || 0).toLocaleString();
+    } catch(e) { console.warn('Could not load credits:', e.message); }
 
-      // 3. History
-      const history = await window.api.getCreditsHistory();
-      const tbody = document.getElementById('historyBody');
+    try {
+      var history = await window.api.getCreditsHistory();
+      var tbody = document.getElementById('historyBody');
       tbody.innerHTML = '';
-      if (history.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:2rem;">No transactions found</td></tr>';
+      if (!history || history.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:2rem;">No transactions yet.</td></tr>';
       } else {
-        history.forEach(tx => {
-          const tr = document.createElement('tr');
-          const isPos = tx.amount > 0;
-          const amtClass = isPos ? 'amt-positive' : 'amt-negative';
-          const amtSign = isPos ? '+' : '-';
-          const icon = isPos 
-            ? `<span class="tx-icon add"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>`
-            : `<span class="tx-icon deduct"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>`;
-          
-          let actionText = isPos ? (tx.type==='refund'?'AI Refund':'Credits Added') : 'AI Usage';
-          let detailsText = tx.ai_mode ? `Mode: ${tx.ai_mode}` : (tx.type==='topup' ? 'Top-up Purchase' : '-');
-
-          tr.innerHTML = `
-            <td>
-              <div style="font-weight:600;color:#0f172a;">${new Date(tx.created_at).toLocaleDateString(undefined, {month:'short',day:'numeric'})}</div>
-              <div style="font-size:0.75rem;color:#94a3b8;">${new Date(tx.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
-            </td>
-            <td>
-              ${icon} ${actionText}
-            </td>
-            <td style="color:#64748b;text-transform:capitalize;">${detailsText}</td>
-            <td style="text-align:right;" class="${amtClass}">${amtSign} ${Math.abs(tx.amount)}</td>
-          `;
+        history.forEach(function(tx) {
+          var tr = document.createElement('tr');
+          var isPos = tx.amount > 0;
+          var amtClass = isPos ? 'amt-positive' : 'amt-negative';
+          var amtSign  = isPos ? '+' : '';
+          var icon = isPos
+            ? '<span class="tx-icon add"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>'
+            : '<span class="tx-icon deduct"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>';
+          var actionText = isPos ? (tx.type === 'refund' ? 'Refund' : 'Credits Added') : 'AI Usage';
+          var detailText = tx.ai_mode ? ('Mode: ' + tx.ai_mode) : (tx.type === 'topup' ? 'Top-up Purchase' : '-');
+          var date = new Date(tx.created_at);
+          tr.innerHTML = '<td><div style="font-weight:600;color:#0f172a;">' + date.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + '</div><div style="font-size:0.75rem;color:#94a3b8;">' + date.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) + '</div></td>'
+            + '<td>' + icon + ' ' + actionText + '</td>'
+            + '<td style="color:#64748b;">' + detailText + '</td>'
+            + '<td style="text-align:right;" class="' + amtClass + '">' + amtSign + Math.abs(tx.amount) + '</td>';
           tbody.appendChild(tr);
         });
       }
-    } catch (err) {
-      console.error(err);
-    }
+    } catch(e) { console.warn('Could not load history:', e.message); }
   }
 
-  async function buyPack(packId) {
-    const overlay = document.getElementById('loading-overlay');
-    try {
-      overlay.classList.add('active');
-      const res = await window.api.createTopupOrder(packId);
-      overlay.classList.remove('active');
-      
-      const options = {
-        key: res.key_id, // backend now sends RAZORPAY_KEY_ID inside the response
-        amount: res.amount,
-        currency: res.currency,
-        order_id: res.order_id,
-        name: "Smart Dental Desk",
-        description: "AI Credits Top-up",
-        handler: async function (response) {
-          try {
-            overlay.classList.add('active');
-            await window.api.verifyTopup({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature
-            });
-            overlay.classList.remove('active');
-            alert('Payment successful! Credits have been added to your account.');
-            loadData(); // refresh ledger and balances
-          } catch (err) {
-            overlay.classList.remove('active');
-            alert(err.message || 'Payment verification failed.');
-          }
-        },
-        theme: { color: "#2563eb" }
-      };
-      
-      const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', function (response){
-        alert('Payment failed: ' + response.error.description);
+  // ── Luhn Card Validator ──────────────────────────────────────────────────────
+  function validateCard(num, exp, cvv, name) {
+    var digits = num.replace(/\D/g, '');
+    if (digits.length < 13 || digits.length > 19) return { valid: false, message: 'Card number must be 13-19 digits.' };
+    var sum = 0, alt = false;
+    for (var i = digits.length - 1; i >= 0; i--) {
+      var d = parseInt(digits[i], 10);
+      if (alt) { d *= 2; if (d > 9) d -= 9; }
+      sum += d; alt = !alt;
+    }
+    if (sum % 10 !== 0) return { valid: false, message: 'Invalid card number. Please check and try again.' };
+    var expClean = exp.replace(/\s/g, '');
+    var parts = expClean.split('/');
+    if (parts.length !== 2) return { valid: false, message: 'Expiry must be MM/YY.' };
+    var m = parseInt(parts[0], 10);
+    var y = parseInt('20' + parts[1].slice(-2), 10);
+    var now = new Date();
+    if (m < 1 || m > 12 || y < now.getFullYear() || (y === now.getFullYear() && m < now.getMonth() + 1)) return { valid: false, message: 'Card is expired or expiry date is invalid.' };
+    if (!/^\d{3,4}$/.test(cvv.trim())) return { valid: false, message: 'CVV must be 3 or 4 digits.' };
+    if (!name.trim() || name.trim().length < 3) return { valid: false, message: 'Please enter cardholder name (at least 3 characters).' };
+    return { valid: true };
+  }
+
+  // ── Open Topup Modal ─────────────────────────────────────────────────────────
+  window.buyPack = function(packId) {
+    var pack = PACKS[packId];
+    if (!pack) { alert('Invalid pack selected.'); return; }
+    currentPackId = packId;
+    document.getElementById('topupModalTitle').textContent = pack.name;
+    document.getElementById('topupModalCredits').textContent = pack.credits.toLocaleString() + ' AI Credits';
+    document.getElementById('topupModalPrice').textContent = '\u20B9' + pack.price;
+    document.getElementById('topupPayBtn').textContent = 'Pay \u20B9' + pack.price + ' & Add Credits';
+    document.getElementById('topupCardForm').reset();
+    document.getElementById('topupCardError').style.display = 'none';
+    document.getElementById('topupCardBrand').textContent = 'CARD';
+    document.getElementById('topupModal').style.display = 'flex';
+  };
+
+  window.closeTopupModal = function() {
+    document.getElementById('topupModal').style.display = 'none';
+    currentPackId = null;
+  };
+
+  // ── Input formatters ─────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function() {
+    loadData();
+
+    var cardNumEl = document.getElementById('topupCardNum');
+    if (cardNumEl) {
+      cardNumEl.addEventListener('input', function(e) {
+        var v = e.target.value.replace(/\D/g, '').substring(0, 16);
+        e.target.value = v.match(/.{1,4}/g) ? v.match(/.{1,4}/g).join(' ') : v;
+        var b = document.getElementById('topupCardBrand');
+        if (!b) return;
+        if (v.startsWith('4')) b.textContent = 'VISA';
+        else if (/^5[1-5]|^2[2-7]/.test(v)) b.textContent = 'MASTERCARD';
+        else if (/^60|^65|^81|^82|^508/.test(v)) b.textContent = 'RUPAY';
+        else if (/^3[47]/.test(v)) b.textContent = 'AMEX';
+        else b.textContent = 'CARD';
       });
-      rzp.open();
-    } catch (err) {
-      overlay.classList.remove('active');
-      alert(err.message || 'Could not start payment process.');
     }
-  }
 
-  document.addEventListener('DOMContentLoaded', loadData);
+    var cardExpEl = document.getElementById('topupCardExp');
+    if (cardExpEl) {
+      cardExpEl.addEventListener('input', function(e) {
+        var v = e.target.value.replace(/\D/g, '').substring(0, 4);
+        e.target.value = v.length >= 3 ? v.substring(0, 2) + '/' + v.substring(2) : v;
+      });
+    }
+
+    // ── Form submit ──────────────────────────────────────────────────────────
+    var form = document.getElementById('topupCardForm');
+    if (form) {
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        if (!currentPackId) return;
+        var pack   = PACKS[currentPackId];
+        var btn    = document.getElementById('topupPayBtn');
+        var errBox = document.getElementById('topupCardError');
+
+        var cardNum  = (document.getElementById('topupCardNum')  || {}).value || '';
+        var cardExp  = (document.getElementById('topupCardExp')  || {}).value || '';
+        var cardCvv  = (document.getElementById('topupCardCvv')  || {}).value || '';
+        var cardName = (document.getElementById('topupCardName') || {}).value || '';
+
+        var check = validateCard(cardNum, cardExp, cardCvv, cardName);
+        if (!check.valid) {
+          errBox.textContent = check.message;
+          errBox.style.display = 'block';
+          return;
+        }
+        errBox.style.display = 'none';
+
+        var origText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Processing...';
+
+        try {
+          // Step 1: Create order on backend
+          var order = await window.api.createTopupOrder(currentPackId);
+
+          // Step 2: Real Razorpay if key is live, otherwise simulated
+          var isRealRazorpay = (typeof Razorpay !== 'undefined')
+            && order.key_id
+            && !order.is_simulated
+            && !order.key_id.includes('placeholder')
+            && !order.key_id.includes('REPLACE_WITH_REAL');
+
+          if (isRealRazorpay) {
+            var opts = {
+              key: order.key_id,
+              amount: order.amount,
+              currency: order.currency || 'INR',
+              order_id: order.order_id,
+              name: 'Smart Dental Desk',
+              description: pack.name + ' - ' + pack.credits.toLocaleString() + ' AI Credits',
+              prefill: { name: cardName },
+              handler: async function(response) {
+                try {
+                  var v = await window.api.verifyTopup({
+                    razorpay_order_id:   response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_signature:  response.razorpay_signature,
+                    pack_id: currentPackId
+                  });
+                  closeTopupModal();
+                  alert((v.credits_added || pack.credits).toLocaleString() + ' AI Credits added to your account!');
+                  loadData();
+                } catch(err) {
+                  alert(err.message || 'Payment verification failed.');
+                }
+              },
+              theme: { color: '#2563eb' }
+            };
+            window.closeTopupModal();
+            var rzp = new Razorpay(opts);
+            rzp.on('payment.failed', function(r) {
+              alert('Payment failed: ' + ((r.error && r.error.description) || 'Transaction declined'));
+            });
+            rzp.open();
+          } else {
+            // Sandbox / simulated flow — validate card on backend then credit
+            var v = await window.api.verifyTopup({
+              pack_id:             currentPackId,
+              razorpay_order_id:   order.order_id,
+              razorpay_payment_id: 'pay_' + Math.random().toString(36).substring(2, 12),
+              razorpay_signature:  'sim_verified'
+            });
+            window.closeTopupModal();
+            alert((v.credits_added || pack.credits).toLocaleString() + ' AI Credits added to your account!');
+            loadData();
+          }
+        } catch(err) {
+          errBox.textContent = err.message || 'Payment failed. Please try again.';
+          errBox.style.display = 'block';
+        } finally {
+          btn.disabled = false;
+          btn.textContent = origText;
+        }
+      });
+    }
+  });
+})();
 </script>
 </body>
 </html>

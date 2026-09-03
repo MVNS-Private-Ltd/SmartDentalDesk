@@ -5153,13 +5153,15 @@ window.setUpgradePaymentMethod = function(method) {
 
 window.submitUpgradePayment = async function() {
   const btn = document.getElementById('btnSubmitUpgrade');
+  const overlay = document.getElementById('globalLoadingOverlay');
   let cardPayload = {};
+  let cardName = '';
 
   if (activeUpgradeMethod === 'card') {
     const cardNum = document.getElementById('upgCardNum')?.value || '';
     const cardExp = document.getElementById('upgCardExp')?.value || '';
     const cardCvv = document.getElementById('upgCardCvv')?.value || '';
-    const cardName = document.getElementById('upgCardName')?.value || '';
+    cardName = document.getElementById('upgCardName')?.value || '';
 
     const check = validateCardInputs(cardNum, cardExp, cardCvv, cardName);
     if (!check.valid) {
@@ -5184,29 +5186,83 @@ window.submitUpgradePayment = async function() {
 
   btn.disabled = true;
   btn.textContent = 'Processing Payment...';
+  if (overlay) overlay.style.display = 'flex';
 
   try {
     const order = await window.api.createOrder(activeUpgradePlan);
-    const orderId = order.order_id || `order_${Date.now()}`;
-    const simPaymentId = `pay_${Math.random().toString(36).substring(2, 12)}`;
 
-    const verify = await window.api.verifyPayment({
-      plan: activeUpgradePlan,
-      razorpay_order_id:   orderId,
-      razorpay_payment_id: simPaymentId,
-      razorpay_signature:  'verified_checkout_signature',
-      ...cardPayload
-    });
+    const isRealRazorpay = typeof Razorpay !== 'undefined'
+      && order.key_id
+      && !order.key_id.includes('placeholder')
+      && !order.key_id.includes('REPLACE_WITH_REAL');
 
-    if (verify.success) {
+    if (isRealRazorpay) {
+      const options = {
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency || 'INR',
+        order_id: order.order_id,
+        name: 'Smart Dental Desk',
+        description: `Upgrade to ${activeUpgradePlan.toUpperCase()} Plan`,
+        prefill: { name: cardName },
+        handler: async function(response) {
+          try {
+            if (overlay) overlay.style.display = 'flex';
+            const verify = await window.api.verifyPayment({
+              plan: activeUpgradePlan,
+              razorpay_order_id:   response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature:  response.razorpay_signature,
+              ...cardPayload
+            });
+            if (overlay) overlay.style.display = 'none';
+            if (verify.success) {
+              closeDashboardUpgradeModal();
+              alert(`🎉 Payment Successful! Upgraded to ${verify.plan.toUpperCase()} plan with ${verify.credits.toLocaleString()} AI Credits!`);
+              if (window.loadCredits) window.loadCredits();
+              loadBillingSettings();
+            } else {
+              alert('Payment processing could not be completed.');
+            }
+          } catch (err) {
+            if (overlay) overlay.style.display = 'none';
+            alert(err.message || 'Payment verification failed.');
+          }
+        },
+        theme: { color: '#2563eb' }
+      };
+      if (overlay) overlay.style.display = 'none';
       closeDashboardUpgradeModal();
-      alert(`🎉 Payment Successful! Upgraded to ${verify.plan.toUpperCase()} plan with ${verify.credits.toLocaleString()} AI Credits!`);
-      if (window.loadCredits) window.loadCredits();
-      loadBillingSettings();
+      const rzp = new Razorpay(options);
+      rzp.on('payment.failed', function(r) {
+        alert('Payment failed: ' + (r.error?.description || 'Declined'));
+      });
+      rzp.open();
     } else {
-      alert('Payment processing could not be completed.');
+      // Sandbox mode
+      const orderId = order.order_id || `order_${Date.now()}`;
+      const simPaymentId = `pay_${Math.random().toString(36).substring(2, 12)}`;
+
+      const verify = await window.api.verifyPayment({
+        plan: activeUpgradePlan,
+        razorpay_order_id:   orderId,
+        razorpay_payment_id: simPaymentId,
+        razorpay_signature:  'verified_checkout_signature',
+        ...cardPayload
+      });
+
+      if (verify.success) {
+        closeDashboardUpgradeModal();
+        alert(`🎉 Payment Successful! Upgraded to ${verify.plan.toUpperCase()} plan with ${verify.credits.toLocaleString()} AI Credits!`);
+        if (window.loadCredits) window.loadCredits();
+        loadBillingSettings();
+      } else {
+        alert('Payment processing could not be completed.');
+      }
+      if (overlay) overlay.style.display = 'none';
     }
   } catch (err) {
+    if (overlay) overlay.style.display = 'none';
     alert(err.message || 'Upgrade payment failed. Please try again.');
   } finally {
     btn.disabled = false;
@@ -5270,13 +5326,16 @@ window.setTopupPaymentMethod = function(method) {
 
 window.submitTopupPurchase = async function() {
   const btn = document.getElementById('confirmTopupBtn');
+  const overlay = document.getElementById('globalLoadingOverlay');
   const p = TOPUP_PACKS[selectedTopupPackId] || TOPUP_PACKS.pack_2000;
+  let cardName = '';
 
   if (activeTopupMethod === 'card') {
     const cardNum = document.getElementById('topupCardNum')?.value || '';
     const cardExp = document.getElementById('topupCardExp')?.value || '';
     const cardCvv = document.getElementById('topupCardCvv')?.value || '';
-    const check = validateCardInputs(cardNum, cardExp, cardCvv, 'Topup User');
+    cardName = 'Topup User';
+    const check = validateCardInputs(cardNum, cardExp, cardCvv, cardName);
     if (!check.valid) {
       alert(check.message);
       return;
@@ -5291,26 +5350,79 @@ window.submitTopupPurchase = async function() {
 
   btn.disabled = true;
   btn.textContent = 'Processing...';
+  if (overlay) overlay.style.display = 'flex';
 
   try {
     const order = await window.api.createTopupOrder(selectedTopupPackId);
     
-    const verify = await window.api.verifyTopup({
-      pack_id: selectedTopupPackId,
-      razorpay_order_id: order.order_id || `order_${Date.now()}`,
-      razorpay_payment_id: `pay_${Math.random().toString(36).substring(2, 12)}`,
-      razorpay_signature: 'topup_verified_sig'
-    });
+    const isRealRazorpay = typeof Razorpay !== 'undefined'
+      && order.key_id
+      && !order.is_simulated
+      && !order.key_id.includes('placeholder')
+      && !order.key_id.includes('REPLACE_WITH_REAL');
 
-    if (verify.success) {
+    if (isRealRazorpay) {
+      const options = {
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency || 'INR',
+        order_id: order.order_id,
+        name: 'Smart Dental Desk',
+        description: `Credits Top-up - ${p.credits} AI Credits`,
+        prefill: { name: cardName },
+        handler: async function(response) {
+          try {
+            if (overlay) overlay.style.display = 'flex';
+            const verify = await window.api.verifyTopup({
+              pack_id: selectedTopupPackId,
+              razorpay_order_id:   response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature:  response.razorpay_signature
+            });
+            if (overlay) overlay.style.display = 'none';
+            if (verify.success) {
+              closeDashboardTopupModal();
+              alert(`Top-up successful! ${(verify.credits_added || p.credits).toLocaleString()} AI Credits added to your balance.`);
+              if (window.loadCredits) window.loadCredits();
+              loadBillingSettings();
+            } else {
+              alert('Top-up could not be completed.');
+            }
+          } catch (err) {
+            if (overlay) overlay.style.display = 'none';
+            alert(err.message || 'Payment verification failed.');
+          }
+        },
+        theme: { color: '#2563eb' }
+      };
+      if (overlay) overlay.style.display = 'none';
       closeDashboardTopupModal();
-      alert(`Top-up successful! ${verify.credits_added.toLocaleString()} AI Credits added to your balance.`);
-      if (window.loadCredits) window.loadCredits();
-      loadBillingSettings();
+      const rzp = new Razorpay(options);
+      rzp.on('payment.failed', function(r) {
+        alert('Payment failed: ' + (r.error?.description || 'Declined'));
+      });
+      rzp.open();
     } else {
-      alert('Top-up could not be completed.');
+      // Sandbox mode
+      const verify = await window.api.verifyTopup({
+        pack_id: selectedTopupPackId,
+        razorpay_order_id: order.order_id || `order_${Date.now()}`,
+        razorpay_payment_id: `pay_${Math.random().toString(36).substring(2, 12)}`,
+        razorpay_signature: 'topup_verified_sig'
+      });
+
+      if (verify.success) {
+        closeDashboardTopupModal();
+        alert(`Top-up successful! ${(verify.credits_added || p.credits).toLocaleString()} AI Credits added to your balance.`);
+        if (window.loadCredits) window.loadCredits();
+        loadBillingSettings();
+      } else {
+        alert('Top-up could not be completed.');
+      }
+      if (overlay) overlay.style.display = 'none';
     }
   } catch (err) {
+    if (overlay) overlay.style.display = 'none';
     alert(err.message || 'Top-up purchase failed.');
   } finally {
     btn.disabled = false;

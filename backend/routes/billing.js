@@ -31,6 +31,22 @@ function validateCardPayload(number, exp, cvv, name) {
     return { valid: false, error: 'Invalid card number format.' };
   }
   
+  // Luhn Algorithm Check
+  let sum = 0;
+  let isEven = false;
+  for (let i = cleanNumber.length - 1; i >= 0; i--) {
+    let digit = parseInt(cleanNumber.charAt(i), 10);
+    if (isEven) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    isEven = !isEven;
+  }
+  if (sum % 10 !== 0) {
+    return { valid: false, error: 'Card number failed validation (Luhn check).' };
+  }
+  
   const expMatch = exp.match(/^(\d{2})\s*\/?\s*(\d{2,4})$/);
   if (!expMatch) {
     return { valid: false, error: 'Invalid expiry date format. Use MM/YY.' };
@@ -173,7 +189,11 @@ router.post('/verify-payment', requireAuth, [
     }
 
     // 2. Verify HMAC if real Razorpay transaction
-    if (isRealRazorpay && razorpay_signature && razorpay_payment_id) {
+    if (isRealRazorpay) {
+      if (!razorpay_signature || !razorpay_payment_id) {
+        return res.status(400).json({ error: 'Missing payment signature. Verification failed.' });
+      }
+      
       const crypto = require('crypto');
       const body = `${razorpay_order_id}|${razorpay_payment_id}`;
       const expectedSignature = crypto
@@ -402,7 +422,11 @@ router.post('/verify-trial', requireAuth, [
       cardMeta = cardCheck;
     }
 
-    if (isRealRazorpay && razorpay_signature && razorpay_payment_id) {
+    if (isRealRazorpay) {
+      if (!razorpay_signature || !razorpay_payment_id) {
+        return res.status(400).json({ error: 'Missing payment signature. Verification failed.' });
+      }
+      
       const crypto = require('crypto');
       const body = `${razorpay_payment_id}|${razorpay_subscription_id}`;
       const expectedSignature = crypto

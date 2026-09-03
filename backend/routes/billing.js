@@ -53,8 +53,11 @@ function validateCardPayload(number, exp, cvv, name) {
   
   return {
     valid: true,
-    network: getCardNetwork(cleanNumber),
-    last4: cleanNumber.slice(-4)
+    card_brand: getCardNetwork(cleanNumber),
+    card_last4: cleanNumber.slice(-4),
+    card_exp_month: month.toString().padStart(2, '0'),
+    card_exp_year: year.toString(),
+    cardholder_name: name
   };
 }
 

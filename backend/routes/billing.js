@@ -14,6 +14,50 @@ function validate(req, res) {
   return true;
 }
 
+function getCardNetwork(number) {
+  if (number.startsWith('4')) return 'visa';
+  if (/^5[1-5]/.test(number) || /^2[2-7]/.test(number)) return 'mastercard';
+  if (/^3[47]/.test(number)) return 'amex';
+  if (/^6(?:011|5)/.test(number)) return 'discover';
+  return 'unknown';
+}
+
+function validateCardPayload(number, exp, cvv, name) {
+  if (!number || !exp || !cvv || !name) {
+    return { valid: false, error: 'Incomplete card details.' };
+  }
+  const cleanNumber = number.replace(/[\s-]/g, '');
+  if (!/^\d{13,19}$/.test(cleanNumber)) {
+    return { valid: false, error: 'Invalid card number format.' };
+  }
+  
+  const expMatch = exp.match(/^(\d{2})\s*\/?\s*(\d{2,4})$/);
+  if (!expMatch) {
+    return { valid: false, error: 'Invalid expiry date format. Use MM/YY.' };
+  }
+  let month = parseInt(expMatch[1], 10);
+  let year = parseInt(expMatch[2], 10);
+  if (month < 1 || month > 12) {
+    return { valid: false, error: 'Invalid expiry month.' };
+  }
+  if (year < 100) year += 2000;
+  
+  const now = new Date();
+  if (year < now.getFullYear() || (year === now.getFullYear() && month < now.getMonth() + 1)) {
+    return { valid: false, error: 'Card has expired.' };
+  }
+  
+  if (!/^\d{3,4}$/.test(cvv)) {
+    return { valid: false, error: 'Invalid CVV.' };
+  }
+  
+  return {
+    valid: true,
+    network: getCardNetwork(cleanNumber),
+    last4: cleanNumber.slice(-4)
+  };
+}
+
 // ── GET /api/billing/plans ────────────────────────────────────────────────────
 router.get('/plans', (req, res) => {
   res.json({
@@ -118,7 +162,7 @@ router.post('/verify-payment', requireAuth, [
     // 1. If card details are supplied directly, validate with strict Luhn & expiry check
     let cardMeta = null;
     if (card_number) {
-      const cardCheck = validateCardPayload(card_number, cardExp || req.body.card_exp, card_cvv || req.body.card_cvv, cardholder_name || req.body.cardholder_name);
+      const cardCheck = validateCardPayload(card_number, req.body.card_exp, card_cvv || req.body.card_cvv, cardholder_name || req.body.cardholder_name);
       if (!cardCheck.valid) {
         return res.status(400).json({ error: cardCheck.error });
       }

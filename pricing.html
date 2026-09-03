@@ -1261,18 +1261,18 @@ window.subscribePlan = async function(plan) {
               window.location.href = verify.redirect_url || './dashboard.html';
             } else {
               overlay.classList.remove('active');
-              alert('Payment verification failed. Please try again.');
+              window.showToast('Payment verification failed. Please try again.', 'error');
             }
           } catch (err) {
             overlay.classList.remove('active');
-            alert(err.message || 'Payment verification failed.');
+            window.showToast(err.message || 'Payment verification failed.', 'error');
           }
         }
       };
 
       const rzp = new Razorpay(options);
       rzp.on('payment.failed', function(resp) {
-        alert('Payment failed: ' + (resp.error?.description || 'Transaction declined'));
+        window.showToast('Payment failed: ' + (resp.error?.description || 'Transaction declined', 'error'));
       });
       rzp.open();
 
@@ -1295,7 +1295,7 @@ window.subscribePlan = async function(plan) {
 
   } catch (err) {
     overlay.classList.remove('active');
-    alert(err.message || 'Could not initiate checkout. Please try again.');
+    window.showToast(err.message || 'Could not initiate checkout. Please try again.', 'error');
   }
 };
 
@@ -1379,7 +1379,7 @@ window.submitPaidSubscription = async function() {
 
     const check = validateCardInputs(cardNum, cardExp, cardCvv, cardName);
     if (!check.valid) {
-      alert(check.message);
+      window.showToast(check.message, 'error');
       return;
     }
     cardPayload = {
@@ -1392,7 +1392,7 @@ window.submitPaidSubscription = async function() {
   } else {
     const upiId = document.getElementById('chkUpiId').value.trim();
     if (!upiId || !upiId.includes('@')) {
-      alert('Please enter a valid UPI ID (e.g. yourname@okhdfcbank).');
+      window.showToast('Please enter a valid UPI ID (e.g. yourname@okhdfcbank, 'error').');
       document.getElementById('chkUpiId').focus();
       return;
     }
@@ -1427,13 +1427,13 @@ window.submitPaidSubscription = async function() {
     } else {
       btn.classList.remove('loading');
       btn.disabled = false;
-      alert('Payment processing could not be completed.');
+      window.showToast('Payment processing could not be completed.', 'error');
     }
 
   } catch (err) {
     btn.classList.remove('loading');
     btn.disabled = false;
-    alert(err.message || 'Payment processing failed. Please try again.');
+    window.showToast(err.message || 'Payment processing failed. Please try again.', 'error');
   }
 };
 
@@ -1489,7 +1489,7 @@ document.getElementById('proceedPaymentBtn').addEventListener('click', async () 
 
   const check = validateCardInputs(cardNum, cardExp, cardCvv, cardName);
   if (!check.valid) {
-    alert(check.message);
+    window.showToast(check.message, 'error');
     return;
   }
 
@@ -1534,11 +1534,11 @@ document.getElementById('proceedPaymentBtn').addEventListener('click', async () 
               window.location.href = verify.redirect_url || './dashboard.html';
             } else {
               overlay.classList.remove('active');
-              alert('Card verification failed.');
+              window.showToast('Card verification failed.', 'error');
             }
           } catch (verifyErr) {
             overlay.classList.remove('active');
-            alert(verifyErr.message || 'Verification failed.');
+            window.showToast(verifyErr.message || 'Verification failed.', 'error');
           }
         }
       };
@@ -1547,7 +1547,7 @@ document.getElementById('proceedPaymentBtn').addEventListener('click', async () 
       rzp.on('payment.failed', function() {
         btn.classList.remove('loading');
         btn.disabled = false;
-        alert('Card mandate authorization failed.');
+        window.showToast('Card mandate authorization failed.', 'error');
       });
       document.getElementById('cardModal').classList.remove('active');
       rzp.open();
@@ -1574,14 +1574,14 @@ document.getElementById('proceedPaymentBtn').addEventListener('click', async () 
       } else {
         btn.classList.remove('loading');
         btn.disabled = false;
-        alert('Could not verify trial mandate.');
+        window.showToast('Could not verify trial mandate.', 'error');
       }
     }
 
   } catch (err) {
     btn.classList.remove('loading');
     btn.disabled = false;
-    alert(err.message || 'Could not start free trial. Please try again.');
+    window.showToast(err.message || 'Could not start free trial. Please try again.', 'error');
   }
 });
 

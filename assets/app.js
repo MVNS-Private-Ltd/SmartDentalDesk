@@ -91,11 +91,11 @@ window.api = (function() {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        alert('Could not initiate Google login');
+        window.showToast('Could not initiate Google login', 'error');
       }
     } catch (err) {
       console.error('Google login error:', err);
-      alert('Could not initiate Google login');
+      window.showToast('Could not initiate Google login', 'error');
     }
   }
 
@@ -469,3 +469,42 @@ document.addEventListener('DOMContentLoaded', function(){
     }, 30);
   });
 });
+
+
+// ==========================================================================
+// TOAST NOTIFICATION SYSTEM
+// ==========================================================================
+window.showToast = function(message, type = 'info') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  
+  // Icon based on type
+  let icon = 'ℹ️';
+  if (type === 'success') icon = '✅';
+  if (type === 'error') icon = '⚠️';
+
+  toast.innerHTML = `
+    <span style="font-size: 1.2rem;">${icon}</span>
+    <span style="flex-grow: 1;">${message}</span>
+  `;
+
+  container.appendChild(toast);
+
+  // Auto remove after 4 seconds
+  setTimeout(() => {
+    toast.classList.add('toast-closing');
+    setTimeout(() => {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+      if (container.childNodes.length === 0 && container.parentNode) {
+        container.parentNode.removeChild(container);
+      }
+    }, 300); // Wait for closing animation
+  }, 4000);
+};

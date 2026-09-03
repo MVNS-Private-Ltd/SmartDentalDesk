@@ -2132,7 +2132,7 @@
           payment_method
         });
       } catch (err) {
-        alert('Failed to complete visit checkout: ' + err.message);
+        window.showToast('Failed to complete visit checkout: ' + err.message, 'error');
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<span>✓ Complete &amp; Issue Receipt</span>';
@@ -2209,11 +2209,11 @@
       }
       try {
         await window.api.approveAppointment(id);
-        alert('✅ Appointment approved successfully! Confirmation email has been sent to the patient.');
+        window.showToast('✅ Appointment approved successfully! Confirmation email has been sent to the patient.', 'success');
         await loadAppointments(currentAppointmentStatus);
         await loadHomeStats();
       } catch (err) {
-        alert('Failed to approve appointment: ' + err.message);
+        window.showToast('Failed to approve appointment: ' + err.message, 'error');
         if (btn) {
           btn.textContent = '✓ Approve';
           btn.disabled = false;
@@ -2233,11 +2233,11 @@
       }
       try {
         await window.api.rejectAppointment(id, reason);
-        alert('Appointment request declined. Patient has been notified.');
+        window.showToast('Appointment request declined. Patient has been notified.', 'error');
         await loadAppointments(currentAppointmentStatus);
         await loadHomeStats();
       } catch (err) {
-        alert('Failed to decline appointment: ' + err.message);
+        window.showToast('Failed to decline appointment: ' + err.message, 'error');
         if (btn) {
           btn.textContent = '✕ Decline';
           btn.disabled = false;
@@ -2255,7 +2255,7 @@
         await loadAppointments(currentAppointmentStatus);
         await loadHomeStats();
       } catch (err) {
-        alert('Failed to update status: ' + err.message);
+        window.showToast('Failed to update status: ' + err.message, 'error');
       }
     };
 
@@ -2363,7 +2363,7 @@
       const val = prompt('Enter a custom time (e.g. 13:45 or 19:00):');
       if (!val) return;
       const trimmed = val.trim();
-      if (!/^\d{2}:\d{2}$/.test(trimmed)) { alert('Please enter time in HH:MM format.'); return; }
+      if (!/^\d{2}:\d{2}$/.test(trimmed)) { window.showToast('Please enter time in HH:MM format.', 'error'); return; }
       const grid = document.getElementById('adminSlotGrid');
       // Check if already exists
       const existing = grid.querySelector(`[data-time="${trimmed}"]`);
@@ -2401,7 +2401,7 @@
         fb.style.display = 'block';
         setTimeout(() => fb.style.display = 'none', 3000);
       } catch (err) {
-        alert('Failed to save settings: ' + err.message);
+        window.showToast('Failed to save settings: ' + err.message, 'error');
       } finally {
         btn.textContent = 'Save Settings';
       }
@@ -2528,7 +2528,7 @@
                       if (titleEl) { titleEl.textContent = newName; titleEl.classList.add('visible'); }
                     }
                   } catch (err) {
-                    alert('Failed to rename. Please try again.');
+                    window.showToast('Failed to rename. Please try again.', 'error');
                     const fallbackEl = document.createElement('div');
                     fallbackEl.className = 'history-item-name';
                     fallbackEl.title = currentName;
@@ -2587,7 +2587,7 @@
                   sidebarContent.innerHTML = '<p class="text-muted" style="text-align: center;">No past conversations.</p>';
                 }
               } catch (err) {
-                alert('Failed to delete conversation.');
+                window.showToast('Failed to delete conversation.', 'error');
               }
             });
 
@@ -2899,7 +2899,7 @@
 
   async function downloadTemplate(e) {
     e.preventDefault();
-    try { window.api.downloadImportTemplate(); } catch (err) { alert(err.message); }
+    try { window.api.downloadImportTemplate(); } catch (err) { window.showToast(err.message, 'error'); }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -2937,7 +2937,7 @@
   function handleFileSelect(file) {
     if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
       if (window.showToast) showToast('Please select a valid CSV file.', 'error');
-      else alert('Please select a valid CSV file.');
+      else window.showToast('Please select a valid CSV file.', 'error');
       return;
     }
     window.selectedImportFile = file;

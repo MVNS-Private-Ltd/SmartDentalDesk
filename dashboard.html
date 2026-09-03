@@ -3002,7 +3002,7 @@
           payment_method
         });
       } catch (err) {
-        alert('Failed to complete visit checkout: ' + err.message);
+        window.showToast('Failed to complete visit checkout: ' + err.message, 'error');
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<span>✓ Complete &amp; Issue Receipt</span>';
@@ -3079,11 +3079,11 @@
       }
       try {
         await window.api.approveAppointment(id);
-        alert('✅ Appointment approved successfully! Confirmation email has been sent to the patient.');
+        window.showToast('✅ Appointment approved successfully! Confirmation email has been sent to the patient.', 'success');
         await loadAppointments(currentAppointmentStatus);
         await loadHomeStats();
       } catch (err) {
-        alert('Failed to approve appointment: ' + err.message);
+        window.showToast('Failed to approve appointment: ' + err.message, 'error');
         if (btn) {
           btn.textContent = '✓ Approve';
           btn.disabled = false;
@@ -3103,11 +3103,11 @@
       }
       try {
         await window.api.rejectAppointment(id, reason);
-        alert('Appointment request declined. Patient has been notified.');
+        window.showToast('Appointment request declined. Patient has been notified.', 'error');
         await loadAppointments(currentAppointmentStatus);
         await loadHomeStats();
       } catch (err) {
-        alert('Failed to decline appointment: ' + err.message);
+        window.showToast('Failed to decline appointment: ' + err.message, 'error');
         if (btn) {
           btn.textContent = '✕ Decline';
           btn.disabled = false;
@@ -3125,7 +3125,7 @@
         await loadAppointments(currentAppointmentStatus);
         await loadHomeStats();
       } catch (err) {
-        alert('Failed to update status: ' + err.message);
+        window.showToast('Failed to update status: ' + err.message, 'error');
       }
     };
 
@@ -3233,7 +3233,7 @@
       const val = prompt('Enter a custom time (e.g. 13:45 or 19:00):');
       if (!val) return;
       const trimmed = val.trim();
-      if (!/^\d{2}:\d{2}$/.test(trimmed)) { alert('Please enter time in HH:MM format.'); return; }
+      if (!/^\d{2}:\d{2}$/.test(trimmed)) { window.showToast('Please enter time in HH:MM format.', 'error'); return; }
       const grid = document.getElementById('adminSlotGrid');
       // Check if already exists
       const existing = grid.querySelector(`[data-time="${trimmed}"]`);
@@ -3271,7 +3271,7 @@
         fb.style.display = 'block';
         setTimeout(() => fb.style.display = 'none', 3000);
       } catch (err) {
-        alert('Failed to save settings: ' + err.message);
+        window.showToast('Failed to save settings: ' + err.message, 'error');
       } finally {
         btn.textContent = 'Save Settings';
       }
@@ -3398,7 +3398,7 @@
                       if (titleEl) { titleEl.textContent = newName; titleEl.classList.add('visible'); }
                     }
                   } catch (err) {
-                    alert('Failed to rename. Please try again.');
+                    window.showToast('Failed to rename. Please try again.', 'error');
                     const fallbackEl = document.createElement('div');
                     fallbackEl.className = 'history-item-name';
                     fallbackEl.title = currentName;
@@ -3457,7 +3457,7 @@
                   sidebarContent.innerHTML = '<p class="text-muted" style="text-align: center;">No past conversations.</p>';
                 }
               } catch (err) {
-                alert('Failed to delete conversation.');
+                window.showToast('Failed to delete conversation.', 'error');
               }
             });
 
@@ -3769,7 +3769,7 @@
 
   async function downloadTemplate(e) {
     e.preventDefault();
-    try { window.api.downloadImportTemplate(); } catch (err) { alert(err.message); }
+    try { window.api.downloadImportTemplate(); } catch (err) { window.showToast(err.message, 'error'); }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -3807,7 +3807,7 @@
   function handleFileSelect(file) {
     if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
       if (window.showToast) showToast('Please select a valid CSV file.', 'error');
-      else alert('Please select a valid CSV file.');
+      else window.showToast('Please select a valid CSV file.', 'error');
       return;
     }
     window.selectedImportFile = file;
@@ -4515,7 +4515,7 @@ async function deleteStaff(id) {
     if (window.showToast) window.showToast('Staff member "' + name + '" removed successfully.');
     if (window.loadStaff) window.loadStaff();
   } catch (err) {
-    alert(err.message || 'Failed to remove staff member.');
+    window.showToast(err.message || 'Failed to remove staff member.', 'error');
   }
 }
 
@@ -4579,7 +4579,7 @@ document.getElementById('staffModal').addEventListener('click', function(e) {
       if (window.loadStaff) window.loadStaff();
     } catch (err) {
       if (errBox) { errBox.textContent = err.message || 'Failed to save staff member.'; errBox.style.display = 'block'; }
-      else { alert(err.message || 'Failed to save staff member.'); }
+      else { window.showToast(err.message || 'Failed to save staff member.', 'error'); }
     } finally {
       if (btn) btn.disabled = false;
       if (btnText) btnText.textContent = id ? 'Update Staff Member' : 'Save Staff Member';
@@ -5167,7 +5167,7 @@ window.submitUpgradePayment = async function() {
 
     const check = validateCardInputs(cardNum, cardExp, cardCvv, cardName);
     if (!check.valid) {
-      alert(check.message);
+      window.showToast(check.message, 'error');
       return;
     }
     cardPayload = {
@@ -5180,7 +5180,7 @@ window.submitUpgradePayment = async function() {
   } else {
     const upiId = document.getElementById('upgUpiId')?.value.trim() || '';
     if (!upiId || !upiId.includes('@')) {
-      alert('Please enter a valid UPI ID (e.g. doctor@okhdfcbank).');
+      window.showToast('Please enter a valid UPI ID (e.g. doctor@okhdfcbank, 'error').');
       return;
     }
     cardPayload = { payment_method: 'upi', upi_id: upiId };
@@ -5220,15 +5220,15 @@ window.submitUpgradePayment = async function() {
             if (overlay) overlay.style.display = 'none';
             if (verify.success) {
               closeDashboardUpgradeModal();
-              alert(`🎉 Payment Successful! Upgraded to ${verify.plan.toUpperCase()} plan with ${verify.credits.toLocaleString()} AI Credits!`);
+              window.showToast(`🎉 Payment Successful! Upgraded to ${verify.plan.toUpperCase(, 'success')} plan with ${verify.credits.toLocaleString()} AI Credits!`);
               if (window.loadCredits) window.loadCredits();
               loadBillingSettings();
             } else {
-              alert('Payment processing could not be completed.');
+              window.showToast('Payment processing could not be completed.', 'error');
             }
           } catch (err) {
             if (overlay) overlay.style.display = 'none';
-            alert(err.message || 'Payment verification failed.');
+            window.showToast(err.message || 'Payment verification failed.', 'error');
           }
         },
         theme: { color: '#2563eb' }
@@ -5237,7 +5237,7 @@ window.submitUpgradePayment = async function() {
       closeDashboardUpgradeModal();
       const rzp = new Razorpay(options);
       rzp.on('payment.failed', function(r) {
-        alert('Payment failed: ' + (r.error?.description || 'Declined'));
+        window.showToast('Payment failed: ' + (r.error?.description || 'Declined', 'error'));
       });
       rzp.open();
     } else {
@@ -5255,17 +5255,17 @@ window.submitUpgradePayment = async function() {
 
       if (verify.success) {
         closeDashboardUpgradeModal();
-        alert(`🎉 Payment Successful! Upgraded to ${verify.plan.toUpperCase()} plan with ${verify.credits.toLocaleString()} AI Credits!`);
+        window.showToast(`🎉 Payment Successful! Upgraded to ${verify.plan.toUpperCase(, 'success')} plan with ${verify.credits.toLocaleString()} AI Credits!`);
         if (window.loadCredits) window.loadCredits();
         loadBillingSettings();
       } else {
-        alert('Payment processing could not be completed.');
+        window.showToast('Payment processing could not be completed.', 'error');
       }
       if (overlay) overlay.style.display = 'none';
     }
   } catch (err) {
     if (overlay) overlay.style.display = 'none';
-    alert(err.message || 'Upgrade payment failed. Please try again.');
+    window.showToast(err.message || 'Upgrade payment failed. Please try again.', 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Pay & Upgrade Now';
@@ -5339,13 +5339,13 @@ window.submitTopupPurchase = async function() {
     cardName = 'Topup User';
     const check = validateCardInputs(cardNum, cardExp, cardCvv, cardName);
     if (!check.valid) {
-      alert(check.message);
+      window.showToast(check.message, 'error');
       return;
     }
   } else {
     const upiId = document.getElementById('topupUpiId')?.value.trim() || '';
     if (!upiId || !upiId.includes('@')) {
-      alert('Please enter a valid UPI ID (e.g. doctor@okhdfcbank).');
+      window.showToast('Please enter a valid UPI ID (e.g. doctor@okhdfcbank, 'error').');
       return;
     }
   }
@@ -5384,15 +5384,15 @@ window.submitTopupPurchase = async function() {
             if (overlay) overlay.style.display = 'none';
             if (verify.success) {
               closeDashboardTopupModal();
-              alert(`Top-up successful! ${(verify.credits_added || p.credits).toLocaleString()} AI Credits added to your balance.`);
+              window.showToast(`Top-up successful! ${(verify.credits_added || p.credits, 'success').toLocaleString()} AI Credits added to your balance.`);
               if (window.loadCredits) window.loadCredits();
               loadBillingSettings();
             } else {
-              alert('Top-up could not be completed.');
+              window.showToast('Top-up could not be completed.', 'error');
             }
           } catch (err) {
             if (overlay) overlay.style.display = 'none';
-            alert(err.message || 'Payment verification failed.');
+            window.showToast(err.message || 'Payment verification failed.', 'error');
           }
         },
         theme: { color: '#2563eb' }
@@ -5401,7 +5401,7 @@ window.submitTopupPurchase = async function() {
       closeDashboardTopupModal();
       const rzp = new Razorpay(options);
       rzp.on('payment.failed', function(r) {
-        alert('Payment failed: ' + (r.error?.description || 'Declined'));
+        window.showToast('Payment failed: ' + (r.error?.description || 'Declined', 'error'));
       });
       rzp.open();
     } else {
@@ -5415,17 +5415,17 @@ window.submitTopupPurchase = async function() {
 
       if (verify.success) {
         closeDashboardTopupModal();
-        alert(`Top-up successful! ${(verify.credits_added || p.credits).toLocaleString()} AI Credits added to your balance.`);
+        window.showToast(`Top-up successful! ${(verify.credits_added || p.credits, 'success').toLocaleString()} AI Credits added to your balance.`);
         if (window.loadCredits) window.loadCredits();
         loadBillingSettings();
       } else {
-        alert('Top-up could not be completed.');
+        window.showToast('Top-up could not be completed.', 'error');
       }
       if (overlay) overlay.style.display = 'none';
     }
   } catch (err) {
     if (overlay) overlay.style.display = 'none';
-    alert(err.message || 'Top-up purchase failed.');
+    window.showToast(err.message || 'Top-up purchase failed.', 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = `Pay ₹${p.price} & Add Credits`;
@@ -5518,7 +5518,7 @@ window.handleUpdateCardSubmit = async function(e) {
   const check = validateCardInputs(cardNum, cardExp, cardCvv, cardName);
   if (!check.valid) {
     if (errBox) { errBox.textContent = check.message; errBox.style.display = 'block'; }
-    else alert(check.message);
+    else window.showToast(check.message, 'error');
     return;
   }
 
@@ -5536,14 +5536,14 @@ window.handleUpdateCardSubmit = async function(e) {
 
     if (res.success) {
       closeDashboardUpdateCardModal();
-      alert('Card updated successfully!');
+      window.showToast('Card updated successfully!', 'success');
       loadBillingSettings();
     } else {
       if (errBox) { errBox.textContent = res.error || 'Card verification failed.'; errBox.style.display = 'block'; }
     }
   } catch (err) {
     if (errBox) { errBox.textContent = err.message || 'Failed to update card.'; errBox.style.display = 'block'; }
-    else alert(err.message || 'Failed to update card.');
+    else window.showToast(err.message || 'Failed to update card.', 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Save & Verify Card';
@@ -5591,10 +5591,10 @@ window.cancelSubscriptionPrompt = async function() {
   }
   try {
     await window.api.cancelSubscription();
-    alert('Your subscription has been canceled. You can reactivate anytime.');
+    window.showToast('Your subscription has been canceled. You can reactivate anytime.', 'error');
     loadBillingSettings();
   } catch (err) {
-    alert(err.message || 'Failed to cancel subscription.');
+    window.showToast(err.message || 'Failed to cancel subscription.', 'error');
   }
 };
 </script>

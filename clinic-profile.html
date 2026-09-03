@@ -282,7 +282,7 @@
       document.getElementById('loadingIndicator').style.display = 'none';
       document.getElementById('profileForm').style.display = 'block';
     } catch (e) {
-      alert('Failed to load profile data: ' + e.message);
+      window.showToast('Failed to load profile data: ' + e.message, 'error');
     }
   }
 
@@ -378,9 +378,9 @@
 
     try {
       await window.api.updateSettings(payload);
-      alert('Profile updated successfully!');
+      window.showToast('Profile updated successfully!', 'success');
     } catch (e) {
-      alert('Failed to save: ' + e.message);
+      window.showToast('Failed to save: ' + e.message, 'error');
     } finally {
       btn.textContent = 'Save Profile';
       btn.disabled = false;

@@ -463,7 +463,7 @@
   // ── Open Topup Modal ─────────────────────────────────────────────────────────
   window.buyPack = function(packId) {
     var pack = PACKS[packId];
-    if (!pack) { alert('Invalid pack selected.'); return; }
+    if (!pack) { window.showToast('Invalid pack selected.', 'error'); return; }
     currentPackId = packId;
     document.getElementById('topupModalTitle').textContent = pack.name;
     document.getElementById('topupModalCredits').textContent = pack.credits.toLocaleString() + ' AI Credits';
@@ -563,10 +563,10 @@
                     pack_id: currentPackId
                   });
                   closeTopupModal();
-                  alert((v.credits_added || pack.credits).toLocaleString() + ' AI Credits added to your account!');
+                  window.showToast((v.credits_added || pack.credits, 'success').toLocaleString() + ' AI Credits added to your account!');
                   loadData();
                 } catch(err) {
-                  alert(err.message || 'Payment verification failed.');
+                  window.showToast(err.message || 'Payment verification failed.', 'error');
                 }
               },
               theme: { color: '#2563eb' }
@@ -574,7 +574,7 @@
             window.closeTopupModal();
             var rzp = new Razorpay(opts);
             rzp.on('payment.failed', function(r) {
-              alert('Payment failed: ' + ((r.error && r.error.description) || 'Transaction declined'));
+              window.showToast('Payment failed: ' + ((r.error && r.error.description, 'error') || 'Transaction declined'));
             });
             rzp.open();
           } else {
@@ -586,7 +586,7 @@
               razorpay_signature:  'sim_verified'
             });
             window.closeTopupModal();
-            alert((v.credits_added || pack.credits).toLocaleString() + ' AI Credits added to your account!');
+            window.showToast((v.credits_added || pack.credits, 'success').toLocaleString() + ' AI Credits added to your account!');
             loadData();
           }
         } catch(err) {

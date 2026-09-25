@@ -15,9 +15,11 @@ const { body, validationResult } = require('express-validator');
 const supabase    = require('../lib/supabase');
 const { sendMail } = require('../lib/mailer');
 const requireAuth = require('../middleware/auth');
+const { auditLogger } = require('../middleware/audit');
 
 const router = express.Router();
 router.use(requireAuth);
+router.use(auditLogger('appointment'));
 
 function validate(req, res) {
   const errors = validationResult(req);

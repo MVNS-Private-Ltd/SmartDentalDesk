@@ -9,13 +9,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
 const express     = require('express');
 const { body, query, validationResult } = require('express-validator');
-const supabase    = require('../lib/supabase');
+const adminSupabase = require('../lib/supabase');
+const { createScopedClient } = require('../lib/supabaseScoped');
 const requireAuth = require('../middleware/auth');
+const { auditLogger } = require('../middleware/audit');
 const multer      = require('multer');
 const Papa        = require('papaparse');
 
 const router = express.Router();
 router.use(requireAuth); // All patient routes require auth
+router.use(auditLogger('patient')); // Audit all patient actions
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -27,6 +30,20 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error('Only CSV files are allowed for patient import.'));
+    }
+  }
+});
+
+// Multer for general patient files (X-Rays, PDFs, etc.)
+const uploadPatientFile = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB max
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/dicom'];
+    if (allowedTypes.includes(file.mimetype) || file.originalname.match(/\.(jpg|jpeg|png|pdf|dcm)$/i)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPG, PNG, and PDF are allowed.'));
     }
   }
 });
@@ -43,6 +60,7 @@ function validate(req, res) {
 // ── GET /api/patients ─────────────────────────────────────────────────────────
 router.get('/', async (req, res, next) => {
   try {
+    const supabase = createScopedClient(req.token);
     const { page = 1, limit = 50, search, type = 'all' } = req.query;
     const offset = (page - 1) * limit;
 
@@ -81,6 +99,7 @@ router.get('/', async (req, res, next) => {
 // ── GET /api/patients/search ──────────────────────────────────────────────────
 router.get('/search', [query('q').notEmpty()], async (req, res, next) => {
   try {
+    const supabase = createScopedClient(req.token);
     const { q } = req.query;
     const { data, error } = await supabase
       .from('patients')
@@ -205,6 +224,7 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
 
       // ── Duplicate check ───────────────────────────────────────────────────
       if (normalizedPhone) {
+        const supabase = createScopedClient(req.token);
         // Primary: match by phone
         const { data: existing } = await supabase
           .from('patients')
@@ -242,6 +262,7 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
         }
       }
 
+      const supabase = createScopedClient(req.token);
       const { error: insertErr } = await supabase
         .from('patients')
         .insert({
@@ -270,6 +291,7 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
 // ── GET /api/patients/:id ─────────────────────────────────────────────────────
 router.get('/:id', async (req, res, next) => {
   try {
+    const supabase = createScopedClient(req.token);
     const { data: patient, error } = await supabase
       .from('patients')
       .select('*')
@@ -301,6 +323,106 @@ router.get('/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── GET /api/patients/:id/files ────────────────────────────────────────────────
+router.get('/:id/files', async (req, res, next) => {
+  try {
+    const supabase = createScopedClient(req.token);
+    // Verify patient belongs to the clinic
+    const { data: patient, error: patientErr } = await supabase
+      .from('patients')
+      .select('id')
+      .eq('id', req.params.id)
+      .eq('clinic_id', req.clinicId)
+      .eq('is_deleted', false)
+      .single();
+
+    if (patientErr || !patient) return res.status(404).json({ error: 'Patient not found.' });
+
+    // Fetch metadata
+    const { data: files, error: filesErr } = await supabase
+      .from('patient_files')
+      .select('id, file_name, storage_path, file_type, file_size_bytes, created_at')
+      .eq('patient_id', req.params.id)
+      .eq('clinic_id', req.clinicId)
+      .order('created_at', { ascending: false });
+
+    if (filesErr) throw filesErr;
+
+    // Generate signed URLs for each file (60 seconds expiry)
+    // Use adminSupabase for storage because RLS on storage is bypassed by service role and we made it private.
+    // Or we can use scoped client if the scoped client has RLS access. But we blocked all public access. 
+    // And we didn't write an RLS policy for the scoped client to read storage objects, just patient_files metadata.
+    // So we use adminSupabase to generate the signed URL.
+    const filesWithUrls = await Promise.all(files.map(async (file) => {
+      const { data, error } = await adminSupabase.storage
+        .from('patient_files')
+        .createSignedUrl(file.storage_path, 60);
+      
+      return {
+        ...file,
+        url: data ? data.signedUrl : null
+      };
+    }));
+
+    res.json({ files: filesWithUrls });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/patients/:id/files ───────────────────────────────────────────────
+router.post('/:id/files', uploadPatientFile.single('file'), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const supabase = createScopedClient(req.token);
+    // Verify patient belongs to clinic
+    const { data: patient, error: patientErr } = await supabase
+      .from('patients')
+      .select('id')
+      .eq('id', req.params.id)
+      .eq('clinic_id', req.clinicId)
+      .eq('is_deleted', false)
+      .single();
+
+    if (patientErr || !patient) return res.status(404).json({ error: 'Patient not found.' });
+
+    const fileExt = req.file.originalname.split('.').pop();
+    const fileName = `${req.clinicId}/${req.params.id}/${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+    // Upload to Supabase Storage (bypassing RLS since we use service_role, but bucket is private)
+    const { data: uploadData, error: uploadErr } = await adminSupabase.storage
+      .from('patient_files')
+      .upload(fileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: false
+      });
+
+    if (uploadErr) throw uploadErr;
+
+    // Insert metadata
+    const { data: metaData, error: metaErr } = await supabase
+      .from('patient_files')
+      .insert({
+        clinic_id: req.clinicId,
+        patient_id: req.params.id,
+        file_name: req.file.originalname,
+        storage_path: uploadData.path,
+        file_type: req.file.mimetype,
+        file_size_bytes: req.file.size,
+        uploaded_by: req.user.id
+      })
+      .select()
+      .single();
+
+    if (metaErr) {
+      // Rollback storage upload if metadata fails
+      await adminSupabase.storage.from('patient_files').remove([uploadData.path]);
+      throw metaErr;
+    }
+
+    res.status(201).json({ message: 'File uploaded successfully', file: metaData });
+  } catch (err) { next(err); }
+});
+
 // ── POST /api/patients ────────────────────────────────────────────────────────
 const createRules = [
   body('name').trim().notEmpty().withMessage('Patient name is required'),
@@ -314,6 +436,8 @@ router.post('/', createRules, async (req, res, next) => {
   try {
     if (!validate(req, res)) return;
     const { name, phone, email, dob, gender, address, notes } = req.body;
+    
+    const supabase = createScopedClient(req.token);
 
     // ── Duplicate checks before insert ───────────────────────────────────────
     if (phone) {
@@ -351,6 +475,7 @@ router.put('/:id', async (req, res, next) => {
     const updates = {};
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
 
+    const supabase = createScopedClient(req.token);
     const { data, error } = await supabase
       .from('patients')
       .update({ ...updates, updated_at: new Date().toISOString() })
@@ -368,6 +493,7 @@ router.put('/:id', async (req, res, next) => {
 router.patch('/:id/star', async (req, res, next) => {
   try {
     const { is_starred } = req.body;
+    const supabase = createScopedClient(req.token);
 
     let targetStar = is_starred;
     if (targetStar === undefined) {
@@ -396,6 +522,7 @@ router.patch('/:id/star', async (req, res, next) => {
 // ── DELETE /api/patients/:id ──────────────────────────────────────────────────
 router.delete('/:id', async (req, res, next) => {
   try {
+    const supabase = createScopedClient(req.token);
     const { data, error } = await supabase
       .from('patients')
       .update({ is_deleted: true, updated_at: new Date().toISOString() })
@@ -417,6 +544,7 @@ router.delete('/', async (req, res, next) => {
       return res.status(400).json({ error: 'Provide an array of patient IDs to delete.' });
     }
 
+    const supabase = createScopedClient(req.token);
     const { error } = await supabase
       .from('patients')
       .update({ is_deleted: true, updated_at: new Date().toISOString() })
@@ -425,6 +553,52 @@ router.delete('/', async (req, res, next) => {
 
     if (error) throw error;
     res.json({ message: `${ids.length} patient(s) deleted.` });
+  } catch (err) { next(err); }
+});
+
+// ── DELETE /api/patients/:id/erase (Right to Erasure) ─────────────────────────
+router.delete('/:id/erase', async (req, res, next) => {
+  try {
+    if (req.userRole !== 'super_admin' && req.userRole !== 'admin') {
+      return res.status(403).json({ error: 'Admin privileges required to erase patients.' });
+    }
+
+    const supabase = createScopedClient(req.token);
+    
+    // Validate patient exists in clinic
+    const { data: patient, error: patientErr } = await supabase
+      .from('patients')
+      .select('id')
+      .eq('id', req.params.id)
+      .eq('clinic_id', req.clinicId)
+      .single();
+
+    if (patientErr || !patient) return res.status(404).json({ error: 'Patient not found.' });
+
+    // 1. Delete all patient files from Storage (metadata will cascade)
+    const { data: files } = await supabase
+      .from('patient_files')
+      .select('storage_path')
+      .eq('patient_id', req.params.id);
+
+    if (files && files.length > 0) {
+      const filePaths = files.map(f => f.storage_path);
+      await adminSupabase.storage.from('patient_files').remove(filePaths);
+    }
+
+    // 2. Delete from Postgres (Hard Delete). 
+    // This relies on ON DELETE CASCADE for appointments, treatments, invoices, patient_files.
+    // If some tables lack cascade, they will throw foreign key errors and abort the transaction.
+    const { error: deleteErr } = await supabase
+      .from('patients')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('clinic_id', req.clinicId);
+
+    if (deleteErr) throw deleteErr;
+
+    // The audit logger middleware will catch this and log 'PATIENT_ERASED' since we named the endpoint /erase
+    res.json({ message: 'Patient data securely erased.' });
   } catch (err) { next(err); }
 });
 

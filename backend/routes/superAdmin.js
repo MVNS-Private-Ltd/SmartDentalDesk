@@ -8,7 +8,6 @@ const supabase  = require('../lib/supabase');
 const requireSuperAdmin = require('../middleware/superAdmin');
 
 const router = express.Router();
-router.use(requireSuperAdmin); // All routes require Super Admin privileges
 
 function validate(req, res) {
   const errors = validationResult(req);
@@ -27,6 +26,14 @@ let activeBroadcast = {
   is_active: false,
   created_at: new Date().toISOString()
 };
+
+// ── Public / Clinic Broadcast Read ──────────────────────────────────────────
+// Allows all users (clinic owners, receptionists, super admin) to retrieve active broadcast banner
+router.get('/broadcast', (_req, res) => {
+  res.json({ broadcast: activeBroadcast });
+});
+
+router.use(requireSuperAdmin); // All routes below require Super Admin privileges
 
 // ── 1. GET /api/super-admin/overview ──────────────────────────────────────────
 // Returns top-level KPIs, 30-day growth trends, revenue metrics, and live stream
@@ -331,17 +338,21 @@ router.patch('/clinics/:id/plan', [
 });
 
 // ── 5. PATCH /api/super-admin/clinics/:id/status ───────────────────────────────
-// Update clinic active/suspended state
+// Update clinic active/suspended state.
+// Security source of truth: is_active, suspended_at, suspension_reason (direct columns).
+// settings.is_suspended is kept in sync for legacy UI compatibility only.
 router.patch('/clinics/:id/status', [
   param('id').isUUID().withMessage('Valid clinic ID is required'),
-  body('is_active').isBoolean().withMessage('is_active must be a boolean')
+  body('is_active').isBoolean().withMessage('is_active must be a boolean'),
+  body('reason').optional().trim()
 ], async (req, res, next) => {
   try {
     if (!validate(req, res)) return;
     const { id } = req.params;
-    const { is_active } = req.body;
+    const { is_active, reason } = req.body;
+    const now = new Date().toISOString();
 
-    // Fetch existing settings
+    // Fetch existing settings to preserve unrelated JSONB fields
     const { data: clinic, error: fetchErr } = await supabase
       .from('clinics')
       .select('settings, name')
@@ -353,29 +364,40 @@ router.patch('/clinics/:id/status', [
     }
 
     const currentSettings = clinic.settings || {};
-    const updatedSettings = {
-      ...currentSettings,
-      is_suspended: !is_active,
-      suspended_at: is_active ? null : new Date().toISOString()
-    };
 
+    // Write direct security columns AND legacy JSONB in one atomic UPDATE.
     const { data: updated, error: updateErr } = await supabase
       .from('clinics')
-      .update({ settings: updatedSettings, updated_at: new Date().toISOString() })
+      .update({
+        // ── Security columns (authoritative) ──────────────────────────────
+        is_active       : is_active,
+        suspended_at    : is_active ? null : now,
+        suspension_reason: is_active ? null : (reason || 'Suspended by platform admin'),
+        // ── Legacy JSONB (UI backward compatibility only) ─────────────────
+        settings        : {
+          ...currentSettings,
+          is_suspended: !is_active,
+          suspended_at: is_active ? null : now
+        },
+        updated_at: now
+      })
       .eq('id', id)
-      .select('id, name, settings')
+      .select('id, name, is_active, suspended_at, suspension_reason, settings')
       .single();
 
     if (updateErr) throw updateErr;
 
     res.json({
-      message: is_active ? `Clinic '${clinic.name}' has been activated.` : `Clinic '${clinic.name}' has been suspended.`,
+      message: is_active
+        ? `Clinic '${clinic.name}' has been activated.`
+        : `Clinic '${clinic.name}' has been suspended.`,
       clinic: updated
     });
   } catch (err) {
     next(err);
   }
 });
+
 
 // ── 6. POST /api/super-admin/clinics/:id/impersonate ──────────────────────────
 // Returns session payload allowing the SaaS Owner to launch dashboard.html for target clinic
@@ -612,6 +634,28 @@ router.get('/system-health', async (_req, res) => {
   });
 });
 
+// ── 12. POST /api/super-admin/broadcast ───────────────────────────────────────
+// Publish or clear global broadcast banner across all clinic dashboards
+router.post('/broadcast', [
+  body('message').optional().trim(),
+  body('type').optional().isIn(['info', 'warning', 'alert']).withMessage('Invalid broadcast type'),
+  body('is_active').isBoolean().withMessage('is_active must be a boolean')
+], (req, res) => {
+  if (!validate(req, res)) return;
+  const { message = '', type = 'info', is_active } = req.body;
+  activeBroadcast = {
+    id: 'broadcast-' + Date.now(),
+    message: is_active ? message : '',
+    type: type,
+    is_active: !!is_active,
+    updated_at: new Date().toISOString()
+  };
+  res.json({
+    message: is_active ? 'Platform broadcast banner published.' : 'Platform broadcast cleared.',
+    broadcast: activeBroadcast
+  });
+});
+
 // ── 14. POST /api/super-admin/ai/chat ─────────────────────────────────────────
 // Platform Owner AI Copilot grounded in real-time multi-tenant platform metrics
 router.post('/ai/chat', [
@@ -844,7 +888,7 @@ When asked to draft an announcement, provide:
         created_at: new Date().toISOString()
       },
       session_id: activeSessionId,
-      model_used: model,
+      model_used: usedModel,
       mode: mode
     });
 
@@ -1067,6 +1111,177 @@ router.get('/export/invoices', async (_req, res, next) => {
   }
 });
 
+// ── POST /api/super-admin/mfa/reset ──────────────────────────────────────────
+// Emergency MFA recovery — can ONLY be called by an authenticated super_admin.
+// Clears the TOTP secret, disables MFA, and revokes all refresh tokens for the
+// target admin account so they must sign in again with their password before
+// accessing the application.
+//
+// Security properties:
+//   • Requires valid super_admin Bearer JWT (enforced by requireSuperAdmin above).
+//   • Target user resolved by email only — secret is NEVER read or returned.
+//   • Old mfa_secret is overwritten with NULL (invalidated, not just disabled).
+//   • supabase.auth.admin.signOut(uid, {scope:'global'}) revokes ALL refresh
+//     tokens for the target user — they cannot silently obtain new access tokens.
+//     Note: already-issued access JWTs remain valid until their natural expiry
+//     (~1 h Supabase default). This is a platform constraint and cannot be
+//     shortened from application code without a self-hosted Supabase setup.
+//   • The super_admin's own session is never touched (we target by user ID).
+//   • The audit log records both the mfa_reset and sessions_revoked outcomes.
+router.post(
+  '/mfa/reset',
+  [body('target_email').isEmail().normalizeEmail().withMessage('Valid target_email is required')],
+  async (req, res, next) => {
+    try {
+      if (!validate(req, res)) return;
+
+      const { target_email } = req.body;
+      const superAdminId    = req.user.id;
+
+      // 1. Resolve the target auth.user by email via admin API (service role)
+      const { data: { users }, error: listErr } = await supabase.auth.admin.listUsers();
+      if (listErr) throw listErr;
+
+      const targetUser = users.find(u => u.email?.toLowerCase() === target_email.toLowerCase());
+      if (!targetUser) {
+        return res.status(404).json({ error: 'No Supabase Auth user found with that email.' });
+      }
+
+      // Guard: super_admin cannot use this route to reset their own MFA
+      // (they must use a second super_admin account or the manual DB procedure)
+      if (targetUser.id === superAdminId) {
+        return res.status(400).json({
+          error: 'You cannot reset your own MFA via this endpoint. Use a second super_admin account or the manual Supabase SQL procedure.'
+        });
+      }
+
+      // 2. Check that a user_security row actually exists for this user
+      const { data: security, error: secErr } = await supabase
+        .from('user_security')
+        .select('auth_user_id, mfa_enabled, mfa_verified')
+        .eq('auth_user_id', targetUser.id)
+        .maybeSingle();
+
+      if (secErr) throw secErr;
+      if (!security) {
+        return res.status(404).json({ error: 'No MFA record found for this user. They may never have enrolled.' });
+      }
+
+      if (!security.mfa_enabled && !security.mfa_verified) {
+        return res.status(400).json({ error: 'MFA is already disabled for this account. No action taken.' });
+      }
+
+      // 3. Resolve the clinic_id for the target user (needed for audit_logs FK)
+      const { data: clinic } = await supabase
+        .from('clinics')
+        .select('id')
+        .eq('owner_id', targetUser.id)
+        .maybeSingle();
+
+      const auditClinicId = clinic?.id || null;
+
+      // 4. Write INTENT audit log FIRST — before any mutation —
+      //    so the intent is captured even if subsequent steps fail.
+      if (auditClinicId) {
+        const { error: auditErr } = await supabase.from('audit_logs').insert({
+          clinic_id:  auditClinicId,
+          user_id:    superAdminId,
+          action:     'ADMIN_MFA_RESET',
+          entity:     'user_security',
+          entity_id:  targetUser.id,
+          ip_address: req.headers['x-forwarded-for']?.split(',')[0].trim()
+                      || req.socket?.remoteAddress
+                      || null,
+          metadata: {
+            target_email,
+            target_user_id: targetUser.id,
+            performed_by:   req.user.email,
+            stage:          'intent',
+            note:           'Emergency MFA reset initiated — admin lost authenticator device'
+          }
+        });
+        if (auditErr) {
+          console.error('[MFA Reset] Intent audit log write failed:', auditErr.message);
+        }
+      } else {
+        console.warn('[MFA Reset] Could not write audit row — target user has no clinic_id.',
+          { target_email, performed_by: req.user.email, at: new Date().toISOString() });
+      }
+
+      // 5. Overwrite the secret with NULL and disable MFA — single atomic update
+      const { error: updateErr } = await supabase
+        .from('user_security')
+        .update({
+          mfa_secret:   null,          // old TOTP secret destroyed, not just hidden
+          mfa_enabled:  false,
+          mfa_verified: false,
+          updated_at:   new Date().toISOString()
+        })
+        .eq('auth_user_id', targetUser.id);
+
+      if (updateErr) throw updateErr;
+
+      // 6. Revoke all refresh tokens for the target user globally.
+      //    This forces them to sign in again with their password.
+      //    The acting super_admin's session is NOT affected — we target by targetUser.id.
+      let sessionsRevoked = false;
+      let sessionRevokeNote = null;
+
+      const { error: signOutErr } = await supabase.auth.admin.signOut(targetUser.id, 'global');
+
+      if (signOutErr) {
+        // Non-fatal — MFA is already disabled; log the failure but don't roll back
+        sessionRevokeNote = `Session revocation failed: ${signOutErr.message}`;
+        console.error('[MFA Reset] Session revocation failed:', signOutErr.message);
+      } else {
+        sessionsRevoked = true;
+        sessionRevokeNote = 'All refresh tokens revoked via auth.admin.signOut(global). Existing access JWTs valid until natural expiry.';
+      }
+
+      // 7. Write OUTCOME audit log with session revocation result
+      if (auditClinicId) {
+        const { error: outcomeAuditErr } = await supabase.from('audit_logs').insert({
+          clinic_id:  auditClinicId,
+          user_id:    superAdminId,
+          action:     'ADMIN_MFA_RESET',
+          entity:     'user_security',
+          entity_id:  targetUser.id,
+          ip_address: req.headers['x-forwarded-for']?.split(',')[0].trim()
+                      || req.socket?.remoteAddress
+                      || null,
+          metadata: {
+            target_email,
+            target_user_id:   targetUser.id,
+            performed_by:     req.user.email,
+            stage:            'outcome',
+            mfa_secret_wiped: true,
+            mfa_enabled:      false,
+            mfa_verified:     false,
+            sessions_revoked: sessionsRevoked,
+            sessions_note:    sessionRevokeNote
+          }
+        });
+        if (outcomeAuditErr) {
+          console.error('[MFA Reset] Outcome audit log write failed:', outcomeAuditErr.message);
+        }
+      }
+
+      // 8. Respond — never echo the old secret, session IDs, or tokens
+      res.json({
+        message:          `MFA has been reset for ${target_email}. They must sign in again with their password before accessing the application.`,
+        target_user_id:   targetUser.id,
+        mfa_enabled:      false,
+        mfa_verified:     false,
+        sessions_revoked: sessionsRevoked,
+        sessions_note:    sessionRevokeNote
+      });
+
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+
 module.exports = router;
 module.exports.getActiveBroadcast = () => activeBroadcast;
-

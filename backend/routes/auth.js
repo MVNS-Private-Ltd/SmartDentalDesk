@@ -8,8 +8,49 @@
 const express   = require('express');
 const { body, validationResult } = require('express-validator');
 const supabase  = require('../lib/supabase');
+const { createAnonClient } = require('../lib/supabaseAuth');
 const requireAuth = require('../middleware/auth');
 const { isSuperAdminUser } = require('../middleware/superAdmin');
+const speakeasy = require('speakeasy');
+const qrcode = require('qrcode');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
+const { sendMail } = require('../lib/mailer');
+
+// ── Rate Limiters & Helpers ───────────────────────────────────────────────────
+const recoveryLimiterIP = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many recovery attempts from this IP. Please try again later.' }
+});
+
+const recoveryLimiterEmail = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  keyGenerator: (req) => req.body.email?.toLowerCase().trim() || 'unknown',
+  message: { error: 'Too many recovery attempts for this account. Please try again later.' }
+});
+
+function generateRecoveryCodes(count = 10) {
+  const codes = [];
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Excludes 0, O, 1, I, l
+  while (codes.length < count) {
+    let code = '';
+    while (code.length < 12) {
+      const bytes = crypto.randomBytes(12);
+      for (let i = 0; i < bytes.length; i++) {
+        if (code.length < 12) {
+          code += chars[bytes[i] % chars.length];
+        }
+      }
+    }
+    code = `${code.slice(0,4)}-${code.slice(4,8)}-${code.slice(8,12)}`;
+    codes.push(code);
+  }
+  return codes;
+}
 
 const router = express.Router();
 
@@ -187,6 +228,35 @@ router.post('/login', loginRules, async (req, res, next) => {
       staff = staffData;
     }
 
+    let userName = isSuperAdmin ? (clinic?.owner_name || 'Platform Super Admin') : (userRole === 'admin' ? (clinic?.owner_name || data.user.email) : (staff?.name || data.user.email));
+
+    // --- MFA CHECK ---
+    if (userRole === 'super_admin' || userRole === 'admin') {
+      const { data: security } = await supabase
+        .from('user_security')
+        .select('*')
+        .eq('auth_user_id', data.user.id)
+        .maybeSingle();
+
+      if (security && security.mfa_enabled && security.mfa_verified) {
+        // Issue temporary MFA token instead of full session
+        const mfaToken = jwt.sign(
+          { 
+            userId: data.user.id,
+            access_token: data.session.access_token, 
+            refresh_token: data.session.refresh_token,
+            role: userRole,
+            isSuperAdmin,
+            user: { id: data.user.id, email: data.user.email, name: userName },
+            clinic: clinic || null
+          }, 
+          process.env.JWT_SECRET, 
+          { expiresIn: '5m' }
+        );
+        return res.json({ mfa_required: true, mfa_token: mfaToken });
+      }
+    }
+
     res.json({
       message      : 'Signed in successfully!',
       access_token : data.session.access_token,
@@ -196,12 +266,52 @@ router.post('/login', loginRules, async (req, res, next) => {
       user: {
         id   : data.user.id,
         email: data.user.email,
-        name : isSuperAdmin ? (clinic?.owner_name || 'Platform Super Admin') : (userRole === 'admin' ? (clinic?.owner_name || data.user.email) : (staff?.name || data.user.email))
+        name : userName
       },
       clinic: clinic || null
     });
 
   } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/auth/login/mfa ──────────────────────────────────────────────────
+router.post('/login/mfa', async (req, res, next) => {
+  try {
+    const { mfa_token, code } = req.body;
+    if (!mfa_token || !code) return res.status(400).json({ error: 'Token and code required' });
+
+    const decoded = jwt.verify(mfa_token, process.env.JWT_SECRET);
+    
+    const { data: security } = await supabase
+      .from('user_security')
+      .select('mfa_secret')
+      .eq('auth_user_id', decoded.userId)
+      .single();
+
+    if (!security || !security.mfa_secret) return res.status(400).json({ error: 'MFA not configured' });
+
+    const verified = speakeasy.totp.verify({
+      secret: security.mfa_secret,
+      encoding: 'base32',
+      token: code,
+      window: 1
+    });
+
+    if (!verified) return res.status(401).json({ error: 'Invalid MFA code' });
+
+    res.json({
+      message: 'Signed in successfully!',
+      access_token: decoded.access_token,
+      refresh_token: decoded.refresh_token,
+      role: decoded.role,
+      is_super_admin: decoded.isSuperAdmin,
+      user: decoded.user,
+      clinic: decoded.clinic
+    });
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') return res.status(401).json({ error: 'MFA session expired. Please sign in again.' });
     next(err);
   }
 });
@@ -403,6 +513,313 @@ router.post('/refresh', async (req, res, next) => {
     }
 
     res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── GET /api/auth/mfa/setup ───────────────────────────────────────────────────
+router.get('/mfa/setup', requireAuth, async (req, res, next) => {
+  try {
+    const secret = speakeasy.generateSecret({ name: `SmartDentalDesk (${req.user.email})` });
+    
+    await supabase.from('user_security').upsert({
+      auth_user_id: req.user.id,
+      mfa_secret: secret.base32,
+      mfa_enabled: false,
+      mfa_verified: false,
+      updated_at: new Date().toISOString()
+    });
+
+    qrcode.toDataURL(secret.otpauth_url, (err, data_url) => {
+      if (err) throw err;
+      res.json({ secret: secret.base32, qrCode: data_url });
+    });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/auth/mfa/verify ─────────────────────────────────────────────────
+router.post('/mfa/verify', requireAuth, async (req, res, next) => {
+  try {
+    const { code } = req.body;
+    
+    const { data: security } = await supabase
+      .from('user_security')
+      .select('mfa_secret, mfa_enabled, mfa_verified')
+      .eq('auth_user_id', req.user.id)
+      .single();
+
+    if (!security || !security.mfa_secret) return res.status(400).json({ error: 'MFA not configured' });
+
+    const verified = speakeasy.totp.verify({
+      secret: security.mfa_secret,
+      encoding: 'base32',
+      token: code,
+      window: 1
+    });
+
+    if (!verified) return res.status(400).json({ error: 'Invalid MFA code' });
+
+    const isInitialEnrollment = !security.mfa_enabled;
+
+    await supabase.from('user_security').update({
+      mfa_enabled: true,
+      mfa_verified: true,
+      updated_at: new Date().toISOString()
+    }).eq('auth_user_id', req.user.id);
+
+    let recoveryCodes = undefined;
+    if (isInitialEnrollment) {
+      const plainCodes = generateRecoveryCodes(10);
+      recoveryCodes = plainCodes; // only return this once
+      
+      const insertData = plainCodes.map(c => {
+        const hash = bcrypt.hashSync(c, 10);
+        return {
+          auth_user_id: req.user.id,
+          code_hash: hash
+        };
+      });
+
+      // Insert hashes via service_role client to bypass RLS
+      const { error: insertErr } = await supabase.from('mfa_recovery_codes').insert(insertData);
+      if (insertErr) console.error('[MFA Setup] Error inserting recovery codes:', insertErr);
+
+      await sendMail({
+        to: req.user.email,
+        subject: 'MFA Enabled & Recovery Codes Generated',
+        text: 'Multi-Factor Authentication is now enabled for your account. Please ensure you have securely saved your new recovery codes. They will only be shown to you once.'
+      }).catch(err => console.error('[Email] Failed to send MFA enrollment email', err));
+    }
+
+    res.json({ 
+      message: 'MFA verified successfully!',
+      ...(recoveryCodes && { recoveryCodes })
+    });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/auth/login/recovery ─────────────────────────────────────────────
+router.post('/login/recovery', recoveryLimiterIP, recoveryLimiterEmail, [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+  body('password').notEmpty().withMessage('Password is required'),
+  body('code').notEmpty().trim().withMessage('Recovery code is required')
+], async (req, res, next) => {
+  const genericError = 'Invalid email, password, or recovery code, or MFA is disabled.';
+  try {
+    if (!validate(req, res)) return;
+    const { email, password, code } = req.body;
+
+    // 1. Verify email/password via a FRESH isolated anon client.
+    //    NEVER use the shared service-role supabase singleton for signInWithPassword:
+    //    calling it would overwrite the singleton's in-memory auth session, causing
+    //    all subsequent supabase.from() calls to run as the USER (RLS applies)
+    //    instead of as service_role (RLS bypassed).
+    const authClient = createAnonClient();
+    const { data: authData, error: authErr } = await authClient.auth.signInWithPassword({ email, password });
+    
+    // We do NOT return if authErr immediately; we must always respond generic
+    if (authErr) {
+      console.warn(`[Recovery Login] Credential failure for ${email}: ${authErr.message}`);
+      return res.status(401).json({ error: genericError });
+    }
+
+    const userId = authData.user.id;
+
+    // Helper to safely fail and sign out temp session
+    const failSafe = async (msg) => {
+      console.warn(`[Recovery Login] ${msg} for ${email}`);
+      await supabase.auth.admin.signOut(userId, 'global');
+      return res.status(401).json({ error: genericError });
+    };
+
+    // 2. Lookup and verify the recovery code hash
+    const { data: security } = await supabase
+      .from('user_security')
+      .select('mfa_enabled, mfa_verified')
+      .eq('auth_user_id', userId)
+      .maybeSingle();
+
+    if (!security || !security.mfa_enabled) {
+      return failSafe('MFA not enabled/enrolled');
+    }
+
+    // Fetch unused recovery codes via service role
+    const { data: codes, error: codesErr } = await supabase
+      .from('mfa_recovery_codes')
+      .select('id, code_hash')
+      .eq('auth_user_id', userId)
+      .is('used_at', null)
+      .is('revoked_at', null);
+
+    if (codesErr || !codes || codes.length === 0) {
+      return failSafe('No active recovery codes found');
+    }
+
+    let matchedCode = null;
+    for (const row of codes) {
+      if (bcrypt.compareSync(code, row.code_hash)) {
+        matchedCode = row;
+        break;
+      }
+    }
+
+    if (!matchedCode) {
+      return failSafe('Invalid recovery code provided');
+    }
+
+    // 3. Atomically mark code used and reset MFA
+    const { error: markErr } = await supabase
+      .from('mfa_recovery_codes')
+      .update({ used_at: new Date().toISOString() })
+      .eq('id', matchedCode.id)
+      .is('used_at', null); // Optimistic locking
+
+    if (markErr) {
+      return failSafe('Failed to atomic update code');
+    }
+
+    await supabase
+      .from('user_security')
+      .update({
+        mfa_secret: null,
+        mfa_enabled: false,
+        mfa_verified: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('auth_user_id', userId);
+
+    // 4. Revoke EVERY existing session globally
+    await supabase.auth.admin.signOut(userId, 'global');
+
+    // 5. Issue fresh final session using another isolated anon client.
+    //    Again: NEVER reuse the service-role singleton for signInWithPassword.
+    const finalAuthClient = createAnonClient();
+    const { data: finalAuth, error: finalAuthErr } = await finalAuthClient.auth.signInWithPassword({ email, password });
+    if (finalAuthErr) {
+      // Very unlikely since we just verified
+      console.error('[Recovery Login] Final session issue failed', finalAuthErr);
+      return res.status(500).json({ error: 'Failed to issue final session.' });
+    }
+
+    // Emit Audit Log
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket?.remoteAddress || null;
+    const { data: clinic } = await supabase.from('clinics').select('id').eq('owner_id', userId).maybeSingle();
+    const clinicId = clinic?.id || null;
+
+    if (clinicId) {
+      await supabase.from('audit_logs').insert({
+        clinic_id: clinicId,
+        user_id: userId,
+        action: 'MFA_RECOVERY_LOGIN',
+        entity: 'mfa_recovery_codes',
+        entity_id: matchedCode.id, // Only storing ID, NOT the code itself
+        ip_address: ip,
+        metadata: {
+          note: 'MFA reset via recovery code. Old sessions revoked.'
+        }
+      });
+    }
+
+    // Send email
+    await sendMail({
+      to: finalAuth.user.email,
+      subject: 'Security Alert: MFA Recovery Code Used',
+      text: 'A recovery code was just used to log into your account. Multi-Factor Authentication has been disabled, and all previous active sessions have been revoked. Please log in and re-enroll in MFA immediately.'
+    }).catch(err => console.error('[Email] Failed to send recovery email', err));
+
+    res.json({
+      message: 'Recovery successful. MFA has been disabled. All previous sessions revoked.',
+      user: finalAuth.user,
+      session: finalAuth.session // The fresh final session
+    });
+
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/auth/mfa/recovery-codes ─────────────────────────────────────────
+router.post('/mfa/recovery-codes', recoveryLimiterIP, requireAuth, [
+  body('code').notEmpty().withMessage('Current TOTP code is required for regeneration')
+], async (req, res, next) => {
+  try {
+    if (!validate(req, res)) return;
+    const { code } = req.body;
+    const userId = req.user.id;
+
+    // 1. Verify fresh TOTP proof
+    const { data: security } = await supabase
+      .from('user_security')
+      .select('mfa_secret, mfa_enabled')
+      .eq('auth_user_id', userId)
+      .single();
+
+    if (!security || !security.mfa_enabled || !security.mfa_secret) {
+      return res.status(400).json({ error: 'MFA is not enabled for this account' });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: security.mfa_secret,
+      encoding: 'base32',
+      token: code,
+      window: 1
+    });
+
+    if (!verified) {
+      return res.status(401).json({ error: 'Invalid MFA code' });
+    }
+
+    // 2. Atomically revoke old unused codes
+    await supabase
+      .from('mfa_recovery_codes')
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('auth_user_id', userId)
+      .is('used_at', null)
+      .is('revoked_at', null);
+
+    // 3. Generate and store 10 new codes
+    const plainCodes = generateRecoveryCodes(10);
+    const insertData = plainCodes.map(c => {
+      const hash = bcrypt.hashSync(c, 10);
+      return {
+        auth_user_id: userId,
+        code_hash: hash
+      };
+    });
+
+    const { error: insertErr } = await supabase.from('mfa_recovery_codes').insert(insertData);
+    if (insertErr) throw insertErr;
+
+    // Audit log
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket?.remoteAddress || null;
+    const clinicId = req.clinicId;
+    if (clinicId) {
+      await supabase.from('audit_logs').insert({
+        clinic_id: clinicId,
+        user_id: userId,
+        action: 'MFA_RECOVERY_REGENERATED',
+        entity: 'mfa_recovery_codes',
+        entity_id: userId, 
+        ip_address: ip,
+        metadata: {
+          note: 'New recovery codes generated. Old unused codes revoked.'
+        }
+      });
+    }
+
+    // Email
+    await sendMail({
+      to: req.user.email,
+      subject: 'MFA Recovery Codes Regenerated',
+      text: 'You have successfully generated a new set of MFA recovery codes. Your old unused codes have been revoked.'
+    }).catch(err => console.error('[Email] Failed to send regen email', err));
+
+    // Return once
+    res.json({
+      message: 'Recovery codes regenerated successfully',
+      recoveryCodes: plainCodes
+    });
   } catch (err) {
     next(err);
   }

@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  Smart Dental Desk — Express Server Entry Point
-// ─────────────────────────────────────────────────────────────────────────────
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 require('dotenv').config();
 
 const express  = require('express');
@@ -28,6 +29,7 @@ const billingRoutes     = require('./routes/billing');
 const creditsRoutes     = require('./routes/credits');
 const webhookRoutes     = require('./routes/webhooks');
 const cronRoutes        = require('./routes/cron');
+const crmRoutes         = require('./routes/crm');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -93,6 +95,7 @@ app.use('/api/super-admin',  superAdminRoutes);
 app.use('/api/billing',      billingRoutes);
 app.use('/api/credits',      creditsRoutes);
 app.use('/api/cron',         cronRoutes);
+app.use('/api/crm',          crmRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {

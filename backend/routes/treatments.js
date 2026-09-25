@@ -10,9 +10,12 @@ const express     = require('express');
 const { body, validationResult } = require('express-validator');
 const supabase    = require('../lib/supabase');
 const requireAuth = require('../middleware/auth');
+const { auditLogger } = require('../middleware/audit');
+const { createScopedClient } = require('../lib/supabaseScoped');
 
 const router = express.Router();
 router.use(requireAuth);
+router.use(auditLogger('treatment'));
 
 function validate(req, res) {
   const errors = validationResult(req);

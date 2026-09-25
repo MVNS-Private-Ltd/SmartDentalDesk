@@ -5180,7 +5180,7 @@ window.submitUpgradePayment = async function() {
   } else {
     const upiId = document.getElementById('upgUpiId')?.value.trim() || '';
     if (!upiId || !upiId.includes('@')) {
-      window.showToast('Please enter a valid UPI ID (e.g. doctor@okhdfcbank, 'error').');
+      window.showToast('Please enter a valid UPI ID (e.g. doctor@okhdfcbank).', 'error');
       return;
     }
     cardPayload = { payment_method: 'upi', upi_id: upiId };
@@ -5220,7 +5220,7 @@ window.submitUpgradePayment = async function() {
             if (overlay) overlay.style.display = 'none';
             if (verify.success) {
               closeDashboardUpgradeModal();
-              window.showToast(`🎉 Payment Successful! Upgraded to ${verify.plan.toUpperCase(, 'success')} plan with ${verify.credits.toLocaleString()} AI Credits!`);
+              window.showToast(`🎉 Payment Successful! Upgraded to ${verify.plan.toUpperCase()} plan with ${verify.credits.toLocaleString()} AI Credits!`, 'success');
               if (window.loadCredits) window.loadCredits();
               loadBillingSettings();
             } else {
@@ -5255,7 +5255,7 @@ window.submitUpgradePayment = async function() {
 
       if (verify.success) {
         closeDashboardUpgradeModal();
-        window.showToast(`🎉 Payment Successful! Upgraded to ${verify.plan.toUpperCase(, 'success')} plan with ${verify.credits.toLocaleString()} AI Credits!`);
+        window.showToast(`🎉 Payment Successful! Upgraded to ${verify.plan.toUpperCase()} plan with ${verify.credits.toLocaleString()} AI Credits!`, 'success');
         if (window.loadCredits) window.loadCredits();
         loadBillingSettings();
       } else {
@@ -5345,7 +5345,7 @@ window.submitTopupPurchase = async function() {
   } else {
     const upiId = document.getElementById('topupUpiId')?.value.trim() || '';
     if (!upiId || !upiId.includes('@')) {
-      window.showToast('Please enter a valid UPI ID (e.g. doctor@okhdfcbank, 'error').');
+      window.showToast('Please enter a valid UPI ID (e.g. doctor@okhdfcbank).', 'error');
       return;
     }
   }
@@ -5384,7 +5384,7 @@ window.submitTopupPurchase = async function() {
             if (overlay) overlay.style.display = 'none';
             if (verify.success) {
               closeDashboardTopupModal();
-              window.showToast(`Top-up successful! ${(verify.credits_added || p.credits, 'success').toLocaleString()} AI Credits added to your balance.`);
+              window.showToast(`Top-up successful! ${(verify.credits_added || p.credits).toLocaleString()} AI Credits added to your balance.`, 'success');
               if (window.loadCredits) window.loadCredits();
               loadBillingSettings();
             } else {
@@ -5415,7 +5415,7 @@ window.submitTopupPurchase = async function() {
 
       if (verify.success) {
         closeDashboardTopupModal();
-        window.showToast(`Top-up successful! ${(verify.credits_added || p.credits, 'success').toLocaleString()} AI Credits added to your balance.`);
+        window.showToast(`Top-up successful! ${(verify.credits_added || p.credits).toLocaleString()} AI Credits added to your balance.`, 'success');
         if (window.loadCredits) window.loadCredits();
         loadBillingSettings();
       } else {

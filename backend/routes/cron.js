@@ -1,8 +1,25 @@
 const express = require('express');
 const supabase = require('../lib/supabase');
 const { PLAN_CREDITS } = require('../lib/plans');
+const { sendAppointmentReminders } = require('../cron/reminders');
 
 const router = express.Router();
+
+// ── POST /api/cron/send-reminders ─────────────────────────────────────────────
+// Called by Render Cron Jobs (or any external cron scheduler) daily
+router.post('/send-reminders', async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    await sendAppointmentReminders();
+    res.json({ success: true, message: 'Reminder job complete.' });
+  } catch (err) {
+    console.error('[Cron /send-reminders Error]', err.message);
+    next(err);
+  }
+});
 
 router.post('/reset-credits', async (req, res, next) => {
   try {

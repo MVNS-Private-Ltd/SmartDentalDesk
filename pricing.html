@@ -1392,7 +1392,7 @@ window.submitPaidSubscription = async function() {
   } else {
     const upiId = document.getElementById('chkUpiId').value.trim();
     if (!upiId || !upiId.includes('@')) {
-      window.showToast('Please enter a valid UPI ID (e.g. yourname@okhdfcbank, 'error').');
+      window.showToast('Please enter a valid UPI ID (e.g. yourname@okhdfcbank).', 'error');
       document.getElementById('chkUpiId').focus();
       return;
     }

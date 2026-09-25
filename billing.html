@@ -563,7 +563,7 @@
                     pack_id: currentPackId
                   });
                   closeTopupModal();
-                  window.showToast((v.credits_added || pack.credits, 'success').toLocaleString() + ' AI Credits added to your account!');
+                  window.showToast(`${(v.credits_added || pack.credits).toLocaleString()} AI Credits added to your account!`, 'success');
                   loadData();
                 } catch(err) {
                   window.showToast(err.message || 'Payment verification failed.', 'error');
@@ -574,7 +574,7 @@
             window.closeTopupModal();
             var rzp = new Razorpay(opts);
             rzp.on('payment.failed', function(r) {
-              window.showToast('Payment failed: ' + ((r.error && r.error.description, 'error') || 'Transaction declined'));
+              window.showToast('Payment failed: ' + (r.error?.description || 'Transaction declined'), 'error');
             });
             rzp.open();
           } else {
@@ -586,7 +586,7 @@
               razorpay_signature:  'sim_verified'
             });
             window.closeTopupModal();
-            window.showToast((v.credits_added || pack.credits, 'success').toLocaleString() + ' AI Credits added to your account!');
+            window.showToast(`${(v.credits_added || pack.credits).toLocaleString()} AI Credits added to your account!`, 'success');
             loadData();
           }
         } catch(err) {

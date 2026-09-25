@@ -1127,11 +1127,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // If already active or trialing, redirect to dashboard
+  // Super admins should never be on pricing page
+  const role = localStorage.getItem('sdd_role') || sessionStorage.getItem('sdd_role');
+  if (role === 'super_admin') {
+    window.location.href = './super-admin.html';
+    return;
+  }
+
+  // If already active or trialing, redirect to dashboard (no need to re-select plan)
   try {
     const res = await window.api.getBillingStatus();
     if (res && res.subscription && ['trialing', 'active'].includes(res.subscription.status)) {
       window.location.href = './dashboard.html';
+      return;
     }
   } catch (e) {
     // No subscription found — user stays on pricing page

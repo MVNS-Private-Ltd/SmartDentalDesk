@@ -1921,7 +1921,12 @@
   }
 
   // Subscription Gate — redirect to pricing if no active/trialing subscription
+  // Super admins and impersonating sessions are ALWAYS exempt from this check
   (async function checkSubscription() {
+    const role = localStorage.getItem('sdd_role') || sessionStorage.getItem('sdd_role');
+    const isImpersonatingSession = localStorage.getItem('sdd_impersonation') === 'true' || sessionStorage.getItem('sdd_impersonation') === 'true';
+    if (role === 'super_admin' || isImpersonatingSession) return; // Super admins bypass billing gate
+
     try {
       const sub = await window.api.getBillingStatus();
       const status = sub?.subscription?.status;

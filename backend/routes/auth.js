@@ -153,7 +153,47 @@ router.post('/register', registerRules, async (req, res, next) => {
       throw clinicError;
     }
 
-    // 3. Sign in to get the session token (or just use the one we might have obtained)
+    // 3. Auto-provision 3-Month Free Trial subscription + credits for the new clinic
+    //    This ensures new signups never get stuck on pricing.html with no subscription.
+    try {
+      const trialStart = new Date();
+      const trialEnd = new Date();
+      trialEnd.setMonth(trialEnd.getMonth() + 3);
+
+      await supabase.from('subscriptions').upsert({
+        clinic_id:                clinic.id,
+        plan:                     'premium',
+        status:                   'trialing',
+        billing_cycle:            'monthly',
+        provider_subscription_id: `sub_trial_${clinic.id.slice(0, 8)}`,
+        trial_start_at:           trialStart.toISOString(),
+        trial_ends_at:            trialEnd.toISOString(),
+        current_period_start:     trialStart.toISOString(),
+        current_period_end:       trialEnd.toISOString(),
+        updated_at:               trialStart.toISOString()
+      }, { onConflict: 'clinic_id' });
+
+      await supabase.from('clinic_credits').upsert({
+        clinic_id:         clinic.id,
+        credits_allocated: 10000,
+        credits_used:      0,
+        period_start:      trialStart.toISOString(),
+        period_end:        trialEnd.toISOString(),
+        updated_at:        trialStart.toISOString()
+      }, { onConflict: 'clinic_id' });
+
+      // Update clinic plan to premium (trial)
+      await supabase.from('clinics').update({
+        subscription_plan:     'premium',
+        is_marketplace_listed: true
+      }).eq('id', clinic.id);
+
+    } catch (trialErr) {
+      // Non-fatal — log but don't fail registration
+      console.error('[Register] Failed to auto-provision trial:', trialErr.message);
+    }
+
+    // 4. Sign in to get the session token (or just use the one we might have obtained)
     const { data: session, error: signInError2 } = await supabase.auth.signInWithPassword({
       email,
       password

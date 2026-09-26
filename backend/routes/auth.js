@@ -383,6 +383,8 @@ router.post('/oauth-session', async (req, res, next) => {
     if (!clinic) {
       const googleName  = user.user_metadata?.full_name || user.user_metadata?.name || user.email.split('@')[0];
       const clinicName  = `${googleName}'s Dental Clinic`;
+      const crypto      = require('crypto');
+      const bookingSlug = crypto.randomBytes(3).toString('hex') + Math.random().toString(36).substring(2, 5);
 
       const { data: newClinic, error: insertErr } = await supabase
         .from('clinics')
@@ -391,6 +393,7 @@ router.post('/oauth-session', async (req, res, next) => {
           name             : clinicName,
           owner_name       : googleName,
           email            : user.email,
+          booking_slug     : bookingSlug,
           subscription_plan: 'free',
           appointment_settings: {
             slot_duration_minutes: 30,
@@ -407,11 +410,52 @@ router.post('/oauth-session', async (req, res, next) => {
         .single();
 
       if (insertErr) {
-        console.error('[OAuth Session] Failed to auto-provision clinic:', insertErr);
-        return res.status(500).json({ error: 'Could not set up clinic account. Please try again.' });
+        console.error('[OAuth Session] Failed to auto-provision clinic:', insertErr.message, insertErr.details, insertErr.code);
+        return res.status(500).json({
+          error: 'Could not set up clinic account. Please try again.',
+          detail: process.env.NODE_ENV === 'development' ? insertErr.message : undefined
+        });
       }
       clinic = newClinic;
+
+      // Auto-provision 3-month free trial (same as register route)
+      try {
+        const trialStart = new Date();
+        const trialEnd   = new Date();
+        trialEnd.setMonth(trialEnd.getMonth() + 3);
+
+        await supabase.from('subscriptions').upsert({
+          clinic_id                : clinic.id,
+          plan                     : 'premium',
+          status                   : 'trialing',
+          billing_cycle            : 'monthly',
+          provider_subscription_id : `sub_trial_${clinic.id.slice(0, 8)}`,
+          trial_start_at           : trialStart.toISOString(),
+          trial_ends_at            : trialEnd.toISOString(),
+          current_period_start     : trialStart.toISOString(),
+          current_period_end       : trialEnd.toISOString(),
+          updated_at               : trialStart.toISOString()
+        }, { onConflict: 'clinic_id' });
+
+        await supabase.from('clinic_credits').upsert({
+          clinic_id        : clinic.id,
+          credits_allocated: 10000,
+          credits_used     : 0,
+          period_start     : trialStart.toISOString(),
+          period_end       : trialEnd.toISOString(),
+          updated_at       : trialStart.toISOString()
+        }, { onConflict: 'clinic_id' });
+
+        await supabase.from('clinics').update({
+          subscription_plan    : 'premium',
+          is_marketplace_listed: true
+        }).eq('id', clinic.id);
+
+      } catch (trialErr) {
+        console.error('[OAuth Session] Failed to auto-provision trial:', trialErr.message);
+      }
     }
+
 
     const isSuperAdmin = isSuperAdminUser(user);
     const role = isSuperAdmin ? 'super_admin' : 'admin';

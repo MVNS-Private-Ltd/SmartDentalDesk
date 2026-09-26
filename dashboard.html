@@ -1237,6 +1237,7 @@
         <span id="sidebarPendingBadge" style="display:none; background:#d97706; color:#fff; font-size:0.7rem; font-weight:700; padding:1px 6px; border-radius:10px; line-height:1.2; margin-left:6px;">0</span>
       </button>
       <button class="sidebar-link" data-target="team">Team / Staff</button>
+      <button class="sidebar-link" data-target="reports">Reports</button>
       <a href="./clinic-profile.html" class="sidebar-link" style="text-decoration:none; display:block; box-sizing:border-box;">Clinic Profile (Marketplace)</a>
       <button class="sidebar-link" data-target="ai">AI Assistant</button>
       <button class="sidebar-link" data-target="settings">Settings</button>
@@ -1316,23 +1317,7 @@
       </div>
 
       <div class="charts-sub-grid">
-        <!-- 3. Monthly Revenue & Billing Chart -->
-        <div class="chart-box">
-          <div class="chart-box-header">
-            <div>
-              <h3 class="chart-box-title">Revenue &amp; Invoicing Performance</h3>
-              <p class="chart-box-desc">Collected revenue vs pending invoice balance (Past 6 Months)</p>
-            </div>
-            <div style="display:flex; gap:6px; align-items:center;">
-              <span class="chart-badge-pill" style="background:#ecfdf5; color:#059669; font-weight:700;">Collected: <span id="statRevenueCollected">₹0</span></span>
-              <span class="chart-badge-pill" style="background:#fff1f2; color:#e11d48; font-weight:700;">Pending: <span id="statRevenuePending">₹0</span></span>
-            </div>
-          </div>
-          <div class="chart-canvas-wrap">
-            <canvas id="revenueChart"></canvas>
-          </div>
-        </div>
-
+        <!-- 3. Monthly Revenue & Billing Chart has been moved to Reports page -->
         <!-- 4. Appointment Status Lifecycle Overview -->
         <div class="chart-box">
           <div class="chart-box-header">
@@ -1365,6 +1350,63 @@
         <div class="card card-pad hoverable" onclick="document.querySelector('[data-target=settings]').click()">
           <h3 style="font-size:var(--text-lg);color:var(--color-primary)">Settings &amp; Link</h3>
           <p class="text-muted mt-6" style="font-size:var(--text-sm)">Manage your unique booking link and auto-approve preferences.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: REPORTS -->
+    <section id="section-reports" class="dashboard-section">
+      <div class="dashboard-header" style="margin-bottom: 2rem;">
+        <div>
+          <h2 style="margin:0;">Clinic Reports & Analytics</h2>
+          <p class="text-muted" style="margin:4px 0 0; font-size:var(--text-sm);">Comprehensive insights into your clinic's performance.</p>
+        </div>
+      </div>
+      
+      <div class="module-grid" style="grid-template-columns: 1fr; gap: 1.5rem;">
+        <!-- Revenue Chart (Moved from Home) -->
+        <div class="chart-box" style="background: #fff; border: 1px solid var(--color-divider); border-radius: var(--radius-lg); padding: 1.5rem;">
+          <div class="chart-box-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+            <div>
+              <h3 class="chart-box-title" style="margin: 0; font-size: 1.1rem; color: var(--color-text);">Revenue &amp; Invoicing Performance</h3>
+              <p class="chart-box-desc" style="margin: 0; font-size: 0.85rem; color: var(--color-text-muted);">Collected revenue vs pending invoice balance (Past 6 Months)</p>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <span class="chart-badge-pill" style="background:#ecfdf5; color:#059669; font-weight:700; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">Collected: <span id="statRevenueCollected">₹0</span></span>
+              <span class="chart-badge-pill" style="background:#fff1f2; color:#e11d48; font-weight:700; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">Pending: <span id="statRevenuePending">₹0</span></span>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap" style="height: 300px; position: relative;">
+            <canvas id="revenueChart"></canvas>
+          </div>
+        </div>
+      </div>
+      
+      <div class="module-grid" style="grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+        <!-- Return Rate Chart -->
+        <div class="chart-box" style="background: #fff; border: 1px solid var(--color-divider); border-radius: var(--radius-lg); padding: 1.5rem;">
+          <div class="chart-box-header" style="margin-bottom: 1.5rem;">
+            <div>
+              <h3 class="chart-box-title" style="margin: 0; font-size: 1.1rem; color: var(--color-text);">Patient Return Rate</h3>
+              <p class="chart-box-desc" style="margin: 0; font-size: 0.85rem; color: var(--color-text-muted);">Percentage of returning vs new patients</p>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap" style="height: 250px; position: relative;">
+            <canvas id="returnRateChart"></canvas>
+          </div>
+        </div>
+
+        <!-- No Shows Chart -->
+        <div class="chart-box" style="background: #fff; border: 1px solid var(--color-divider); border-radius: var(--radius-lg); padding: 1.5rem;">
+          <div class="chart-box-header" style="margin-bottom: 1.5rem;">
+            <div>
+              <h3 class="chart-box-title" style="margin: 0; font-size: 1.1rem; color: var(--color-text);">No-Shows & Cancellations</h3>
+              <p class="chart-box-desc" style="margin: 0; font-size: 0.85rem; color: var(--color-text-muted);">Historical missed appointments</p>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap" style="height: 250px; position: relative;">
+            <canvas id="noShowsChart"></canvas>
+          </div>
         </div>
       </div>
     </section>
@@ -2098,6 +2140,8 @@
     let servicesChartInstance = null;
     let revenueChartInstance = null;
     let statusChartInstance = null;
+    let returnRateChartInstance = null;
+    let noShowsChartInstance = null;
 
     function getChartTheme() {
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -2411,6 +2455,74 @@
                   }
                 }
               }
+            }
+          }
+        });
+      }
+
+      // 5. Return Rate (Doughnut Chart)
+      const returnRateCanvas = document.getElementById('returnRateChart');
+      if (returnRateCanvas) {
+        const returnRateCtx = returnRateCanvas.getContext('2d');
+        if (returnRateChartInstance) returnRateChartInstance.destroy();
+        
+        // Mock data for return rate (using simple static distribution for now)
+        const returnData = [65, 35]; // Returning vs New
+        
+        returnRateChartInstance = new Chart(returnRateCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Returning Patients', 'New Patients'],
+            datasets: [{
+              data: returnData,
+              backgroundColor: ['#4f46e5', '#818cf8'],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+              legend: { position: 'bottom', labels: { boxWidth: 12, usePointStyle: true, font: { family: 'Inter' } } }
+            }
+          }
+        });
+      }
+
+      // 6. No Shows (Line Chart)
+      const noShowsCanvas = document.getElementById('noShowsChart');
+      if (noShowsCanvas) {
+        const noShowsCtx = noShowsCanvas.getContext('2d');
+        if (noShowsChartInstance) noShowsChartInstance.destroy();
+        
+        // Mock data for no shows over past 6 months
+        const noShowsLabels = analytics?.revenue_trends?.labels || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        const noShowsData = [12, 19, 8, 15, 10, 5];
+        
+        noShowsChartInstance = new Chart(noShowsCtx, {
+          type: 'line',
+          data: {
+            labels: noShowsLabels,
+            datasets: [{
+              label: 'No-Shows / Cancellations',
+              data: noShowsData,
+              borderColor: '#e11d48',
+              backgroundColor: 'rgba(225, 29, 72, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false }
+            },
+            scales: {
+              y: { beginAtZero: true, grid: { borderDash: [4, 4] } },
+              x: { grid: { display: false } }
             }
           }
         });

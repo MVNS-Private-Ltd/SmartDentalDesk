@@ -970,6 +970,22 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
+  /* Loading spinner */
+  .loading-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-top-color: var(--primary-light);
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+    vertical-align: middle;
+    margin-right: 4px;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
   /* Telemetry code snippet box */
   .code-box {
     background: #0d1117;
@@ -1249,7 +1265,7 @@
               </tr>
             </thead>
             <tbody id="clinicsTableBody">
-              <tr><td colspan="8" style="text-align:center; color: var(--text-dim); padding: 2rem;">Loading clinics fleet…</td></tr>
+              <tr><td colspan="8" style="text-align:center; color: var(--text-dim); padding: 2rem;"><span class="loading-spinner"></span> Loading clinics fleet…</td></tr>
             </tbody>
           </table>
         </div>
@@ -1301,7 +1317,7 @@
               </tr>
             </thead>
             <tbody id="staffTableBody">
-              <tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 2rem;">Loading staff directory…</td></tr>
+              <tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 2rem;"><span class="loading-spinner"></span> Loading staff directory…</td></tr>
             </tbody>
           </table>
         </div>
@@ -1689,8 +1705,11 @@
       document.getElementById('adminInitials').textContent = (userData.email[0] || 'S').toUpperCase();
     }
 
-    // Load initial data
+    // Load initial data — kick off all fetches in parallel so tabs are ready
     loadOverviewData();
+    loadClinicsData();
+    loadStaffData();
+    loadFinancialsData();
   })();
 
   // Sidebar navigation switching
@@ -1840,12 +1859,15 @@
   async function loadClinicsData() {
     const q = document.getElementById('clinicSearchInput').value.trim();
     const plan = document.getElementById('clinicPlanFilter').value;
+    const tbody = document.getElementById('clinicsTableBody');
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: var(--text-dim); padding: 2rem;"><span class="loading-spinner"></span> Loading clinics fleet…</td></tr>';
 
     try {
       const res = await window.api.getSuperAdminClinics({ q, plan });
       cachedClinics = res.clinics || [];
       renderClinicsTable(cachedClinics);
     } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: var(--accent-rose); padding: 2rem;">⚠️ ${err.message || 'Failed to load clinics'}</td></tr>`;
       showToast(err.message || 'Failed to load clinics', true);
     }
   }
@@ -2010,12 +2032,15 @@
   async function loadStaffData() {
     const q = document.getElementById('staffSearchInput').value.trim();
     const role = document.getElementById('staffRoleFilter').value;
+    const tbody = document.getElementById('staffTableBody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 2rem;"><span class="loading-spinner"></span> Loading staff directory…</td></tr>';
 
     try {
       const res = await window.api.getGlobalStaff({ q, role });
       cachedStaff = res.staff || [];
       renderStaffTable(cachedStaff);
     } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--accent-rose); padding: 2rem;">⚠️ ${err.message || 'Failed to load staff directory'}</td></tr>`;
       showToast(err.message || 'Failed to load staff directory', true);
     }
   }
@@ -2061,6 +2086,8 @@
   async function loadFinancialsData() {
     const q = document.getElementById('invoiceSearchInput').value.trim();
     const status = document.getElementById('invoiceStatusFilter').value;
+    const tbody = document.getElementById('invoicesTableBody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 2rem;"><span class="loading-spinner"></span> Loading financial ledger…</td></tr>';
 
     try {
       const data = await window.api.getSuperAdminFinancials({ q, status });
@@ -2071,7 +2098,7 @@
       document.getElementById('finPaidCount').textContent = `${m.paid_invoices_count || 0} invoices settled`;
       document.getElementById('finPendingDebt').textContent = `₹${(m.pending_debt || 0).toLocaleString()}`;
 
-      const tbody = document.getElementById('invoicesTableBody');
+
       if (!data.invoices || data.invoices.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 2rem;">No invoices recorded.</td></tr>';
         return;
@@ -2090,6 +2117,7 @@
       `).join('');
 
     } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--accent-rose); padding: 2rem;">⚠️ ${err.message || 'Failed to load financials'}</td></tr>`;
       showToast(err.message || 'Failed to load financials', true);
     }
   }

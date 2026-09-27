@@ -372,14 +372,32 @@ router.post('/oauth-session', async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid or expired Google session.' });
     }
 
-    // 2. Fetch existing clinic for this user
+    // 2. Check if super admin FIRST — they don't need a clinic
+    const isSuperAdmin = isSuperAdminUser(user);
+    if (isSuperAdmin) {
+      return res.json({
+        message      : 'Signed in with Google!',
+        access_token,
+        refresh_token: refresh_token || null,
+        role         : 'super_admin',
+        is_super_admin: true,
+        user: {
+          id   : user.id,
+          email: user.email,
+          name : user.user_metadata?.full_name || user.user_metadata?.name || 'Platform Super Admin'
+        },
+        clinic: null
+      });
+    }
+
+    // 3. Fetch existing clinic for this user
     let { data: clinic } = await supabase
       .from('clinics')
       .select('id, name, owner_name, subscription_plan')
       .eq('owner_id', user.id)
       .maybeSingle();
 
-    // 3. If first-time Google login, auto-provision clinic record
+    // 4. If first-time Google login, auto-provision clinic record
     if (!clinic) {
       const googleName  = user.user_metadata?.full_name || user.user_metadata?.name || user.email.split('@')[0];
       const clinicName  = `${googleName}'s Dental Clinic`;
@@ -456,21 +474,17 @@ router.post('/oauth-session', async (req, res, next) => {
       }
     }
 
-
-    const isSuperAdmin = isSuperAdminUser(user);
-    const role = isSuperAdmin ? 'super_admin' : 'admin';
-
-    // 4. Return session payload
+    // 5. Return session payload for regular clinic admin
     res.json({
       message      : 'Signed in with Google!',
       access_token,
       refresh_token: refresh_token || null,
-      role,
-      is_super_admin: isSuperAdmin,
+      role         : 'admin',
+      is_super_admin: false,
       user: {
         id   : user.id,
         email: user.email,
-        name : isSuperAdmin ? (clinic?.owner_name || 'Platform Super Admin') : (clinic?.owner_name || user.email)
+        name : clinic?.owner_name || user.email
       },
       clinic
     });

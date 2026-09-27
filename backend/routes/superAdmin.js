@@ -266,9 +266,13 @@ router.get('/clinics/:id', [
       .from('clinics')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
-    if (clinicErr || !clinic) {
+    if (clinicErr) {
+      console.error('[SuperAdmin] Clinic fetch error:', clinicErr.message);
+      return res.status(500).json({ error: 'Failed to fetch clinic details.' });
+    }
+    if (!clinic) {
       return res.status(404).json({ error: 'Clinic not found.' });
     }
 

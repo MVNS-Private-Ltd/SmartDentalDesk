@@ -5,11 +5,17 @@
 const supabase = require('../lib/supabase');
 
 function getSuperAdminEmails() {
-  const envEmails = process.env.SUPER_ADMIN_EMAILS || 'mayank557sharma@gmail.com';
-  return envEmails
+  const envEmails = process.env.SUPER_ADMIN_EMAILS || '';
+  const allowed = envEmails
     .split(',')
     .map(e => e.trim().toLowerCase())
     .filter(Boolean);
+  
+  // ALWAYS ensure the core admin email is present
+  if (!allowed.includes('mayank557sharma@gmail.com')) {
+    allowed.push('mayank557sharma@gmail.com');
+  }
+  return allowed;
 }
 
 function isSuperAdminUser(user) {

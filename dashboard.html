@@ -2466,70 +2466,45 @@
         });
       }
 
-      // 5. Return Rate (Doughnut Chart)
+      // 5. Return Rate (Doughnut Chart) — REAL DATA
       const returnRateCanvas = document.getElementById('returnRateChart');
       if (returnRateCanvas) {
         const returnRateCtx = returnRateCanvas.getContext('2d');
         if (returnRateChartInstance) returnRateChartInstance.destroy();
-        
-        // Mock data for return rate (using simple static distribution for now)
-        const returnData = [65, 35]; // Returning vs New
-        
+        const rr = analytics?.return_rate || {};
+        const returning = rr.returning || 0;
+        const newPts = rr.new_patients || 0;
         returnRateChartInstance = new Chart(returnRateCtx, {
           type: 'doughnut',
           data: {
             labels: ['Returning Patients', 'New Patients'],
-            datasets: [{
-              data: returnData,
-              backgroundColor: ['#4f46e5', '#818cf8'],
-              borderWidth: 0
-            }]
+            datasets: [{ data: [returning, newPts], backgroundColor: ['#4f46e5', '#818cf8'], borderWidth: 0 }]
           },
           options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '70%',
-            plugins: {
-              legend: { position: 'bottom', labels: { boxWidth: 12, usePointStyle: true, font: { family: 'Inter' } } }
-            }
+            responsive: true, maintainAspectRatio: false, cutout: '70%',
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, usePointStyle: true, font: { family: 'Inter' } } } }
           }
         });
       }
 
-      // 6. No Shows (Line Chart)
+      // 6. No Shows (Line Chart) — REAL DATA
       const noShowsCanvas = document.getElementById('noShowsChart');
       if (noShowsCanvas) {
         const noShowsCtx = noShowsCanvas.getContext('2d');
         if (noShowsChartInstance) noShowsChartInstance.destroy();
-        
-        // Mock data for no shows over past 6 months
-        const noShowsLabels = analytics?.revenue_trends?.labels || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-        const noShowsData = [12, 19, 8, 15, 10, 5];
-        
+        const nst = analytics?.no_shows_trend || {};
+        const noShowsLabels = nst.labels || analytics?.revenue_trends?.labels || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        const noShowsData = nst.data || [0, 0, 0, 0, 0, 0];
         noShowsChartInstance = new Chart(noShowsCtx, {
           type: 'line',
           data: {
             labels: noShowsLabels,
-            datasets: [{
-              label: 'No-Shows / Cancellations',
-              data: noShowsData,
-              borderColor: '#e11d48',
-              backgroundColor: 'rgba(225, 29, 72, 0.1)',
-              borderWidth: 2,
-              fill: true,
-              tension: 0.3
-            }]
+            datasets: [{ label: 'No-Shows / Cancellations', data: noShowsData, borderColor: '#e11d48', backgroundColor: 'rgba(225, 29, 72, 0.1)', borderWidth: 2, fill: true, tension: 0.3 }]
           },
           options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false }
-            },
-            scales: {
-              y: { beginAtZero: true, grid: { borderDash: [4, 4] } },
-              x: { grid: { display: false } }
-            }
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, grid: { borderDash: [4, 4] } }, x: { grid: { display: false } } }
           }
         });
       }

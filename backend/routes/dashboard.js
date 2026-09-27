@@ -66,7 +66,7 @@ router.get('/stats', async (req, res, next) => {
     // 5. Fetch recent appointments (last 60 days to next 30 days) for analytics charts
     const { data: recentAppointments, error: err5 } = await supabase
       .from('appointments')
-      .select('id, date, status, service, created_at')
+      .select('id, date, status, service, created_at, patient_id')
       .eq('clinic_id', req.clinicId)
       .order('date', { ascending: true });
     if (err5) throw err5;
@@ -136,6 +136,27 @@ router.get('/stats', async (req, res, next) => {
       revenueMonthlyPending.push(mPending);
     }
 
+    // 5e. Patient Return Rate (patients with more than 1 appointment = returning)
+    const patientApptCount = {};
+    appts.forEach(a => {
+      if (a.patient_id) patientApptCount[a.patient_id] = (patientApptCount[a.patient_id] || 0) + 1;
+    });
+    const returningPatients = Object.values(patientApptCount).filter(c => c > 1).length;
+    const newPatients = Object.values(patientApptCount).filter(c => c === 1).length;
+
+    // 5f. Monthly No-Shows & Cancellations (Past 6 Months)
+    const noShowsMonthlyData = [];
+    for (let i = 5; i >= 0; i--) {
+      const mDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const yearMonth = mDate.toISOString().slice(0, 7);
+      const count = appts.filter(a =>
+        (a.status === 'cancelled' || a.status === 'no_show') &&
+        (a.date || a.created_at || '').startsWith(yearMonth)
+      ).length;
+      noShowsMonthlyData.push(count);
+    }
+
+
     res.json({
       today_appointments: todayAppointments || 0,
       total_patients: totalPatients || 0,
@@ -160,6 +181,14 @@ router.get('/stats', async (req, res, next) => {
           labels: revenueMonthlyLabels,
           paid: revenueMonthlyPaid,
           pending: revenueMonthlyPending
+        },
+        return_rate: {
+          returning: returningPatients,
+          new_patients: newPatients
+        },
+        no_shows_trend: {
+          labels: revenueMonthlyLabels,
+          data: noShowsMonthlyData
         }
       }
     });

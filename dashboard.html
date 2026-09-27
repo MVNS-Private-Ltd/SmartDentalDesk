@@ -1969,6 +1969,12 @@
     const isImpersonatingSession = localStorage.getItem('sdd_impersonation') === 'true' || sessionStorage.getItem('sdd_impersonation') === 'true';
     if (role === 'super_admin' || isImpersonatingSession) return; // Super admins bypass billing gate
 
+    // Hard-coded email bypass — platform owner is NEVER sent to pricing
+    try {
+      const _u = JSON.parse(localStorage.getItem('sdd_user') || sessionStorage.getItem('sdd_user') || '{}');
+      if (_u.email && _u.email.toLowerCase() === 'mayank557sharma@gmail.com') return;
+    } catch(_) {}
+
     try {
       const sub = await window.api.getBillingStatus();
       const status = sub?.subscription?.status;

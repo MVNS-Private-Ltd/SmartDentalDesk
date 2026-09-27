@@ -1884,7 +1884,7 @@
 
     tbody.innerHTML = clinics.map(c => {
       const plan = c.subscription_plan || 'free';
-      const isSuspended = c.settings?.is_suspended;
+      const isSuspended = c.is_active === false;
       return `
         <tr>
           <td>

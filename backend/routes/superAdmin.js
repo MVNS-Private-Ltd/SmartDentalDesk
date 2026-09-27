@@ -356,38 +356,17 @@ router.patch('/clinics/:id/status', [
     const { is_active, reason } = req.body;
     const now = new Date().toISOString();
 
-    // Fetch existing settings to preserve unrelated JSONB fields
-    const { data: clinic, error: fetchErr } = await supabase
-      .from('clinics')
-      .select('settings, name')
-      .eq('id', id)
-      .maybeSingle();
-
-    if (fetchErr) throw fetchErr;
-    if (!clinic) {
-      return res.status(404).json({ error: 'Clinic not found.' });
-    }
-
-    const currentSettings = clinic.settings || {};
-
-    // Write direct security columns AND legacy JSONB in one atomic UPDATE.
+    // Write direct security columns in one atomic UPDATE.
     const { data: updated, error: updateErr } = await supabase
       .from('clinics')
       .update({
-        // ── Security columns (authoritative) ──────────────────────────────
         is_active       : is_active,
         suspended_at    : is_active ? null : now,
         suspension_reason: is_active ? null : (reason || 'Suspended by platform admin'),
-        // ── Legacy JSONB (UI backward compatibility only) ─────────────────
-        settings        : {
-          ...currentSettings,
-          is_suspended: !is_active,
-          suspended_at: is_active ? null : now
-        },
         updated_at: now
       })
       .eq('id', id)
-      .select('id, name, is_active, suspended_at, suspension_reason, settings')
+      .select('id, name, is_active, suspended_at, suspension_reason')
       .maybeSingle();
 
     if (updateErr) {
@@ -397,8 +376,8 @@ router.patch('/clinics/:id/status', [
 
     res.json({
       message: is_active
-        ? `Clinic '${clinic.name}' has been activated.`
-        : `Clinic '${clinic.name}' has been suspended.`,
+        ? `Clinic '${updated.name}' has been activated.`
+        : `Clinic '${updated.name}' has been suspended.`,
       clinic: updated
     });
   } catch (err) {

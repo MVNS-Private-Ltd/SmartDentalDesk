@@ -361,9 +361,10 @@ router.patch('/clinics/:id/status', [
       .from('clinics')
       .select('settings, name')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
-    if (fetchErr || !clinic) {
+    if (fetchErr) throw fetchErr;
+    if (!clinic) {
       return res.status(404).json({ error: 'Clinic not found.' });
     }
 
@@ -387,9 +388,12 @@ router.patch('/clinics/:id/status', [
       })
       .eq('id', id)
       .select('id, name, is_active, suspended_at, suspension_reason, settings')
-      .single();
+      .maybeSingle();
 
-    if (updateErr) throw updateErr;
+    if (updateErr) {
+      console.error('[SuperAdmin] Clinic status update error:', updateErr.message);
+      throw updateErr;
+    }
 
     res.json({
       message: is_active
@@ -416,9 +420,10 @@ router.post('/clinics/:id/impersonate', [
       .from('clinics')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
-    if (error || !clinic) {
+    if (error) throw error;
+    if (!clinic) {
       return res.status(404).json({ error: 'Clinic not found.' });
     }
 

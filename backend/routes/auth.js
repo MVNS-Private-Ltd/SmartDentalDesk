@@ -96,7 +96,8 @@ router.post('/register', registerRules, async (req, res, next) => {
     if (signUpError) {
       if (signUpError.message.includes('already registered')) {
         // Attempt to self-heal orphaned accounts
-        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+        const authClient = createAnonClient();
+        const { data: signInData, error: signInErr } = await authClient.auth.signInWithPassword({
           email,
           password
         });
@@ -194,7 +195,8 @@ router.post('/register', registerRules, async (req, res, next) => {
     }
 
     // 4. Sign in to get the session token (or just use the one we might have obtained)
-    const { data: session, error: signInError2 } = await supabase.auth.signInWithPassword({
+    const authClient = createAnonClient();
+    const { data: session, error: signInError2 } = await authClient.auth.signInWithPassword({
       email,
       password
     });
@@ -228,7 +230,8 @@ router.post('/login', loginRules, async (req, res, next) => {
 
     const { email, password } = req.body;
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const authClient = createAnonClient();
+    const { data, error } = await authClient.auth.signInWithPassword({ email, password });
 
     if (error) {
       if (error.message.includes('Invalid login credentials')) {

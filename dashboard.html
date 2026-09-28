@@ -462,20 +462,42 @@
     font-size: 13px;
     line-height: 1.5;
   }
-  .email-action-card .eac-body-preview {
-    color: var(--color-text-muted);
-    font-size: 12px;
-    line-height: 1.55;
-    max-height: 72px;
-    overflow: hidden;
-    position: relative;
+  .email-action-card .eac-body-textarea {
+    color: var(--color-text);
+    font-size: 13px;
+    line-height: 1.6;
+    width: 100%;
+    min-height: 110px;
+    max-height: 240px;
+    resize: vertical;
+    border: 1.5px solid var(--color-divider);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: var(--color-bg, #f8f9fa);
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+    outline: none;
   }
-  .email-action-card .eac-body-preview::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 24px;
-    background: linear-gradient(transparent, var(--color-surface));
+  .email-action-card .eac-body-textarea:focus {
+    border-color: var(--color-primary);
+  }
+  .email-action-card .eac-subject-input {
+    color: var(--color-text);
+    font-size: 13px;
+    line-height: 1.5;
+    width: 100%;
+    border: 1.5px solid var(--color-divider);
+    border-radius: 8px;
+    padding: 7px 12px;
+    background: var(--color-bg, #f8f9fa);
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .email-action-card .eac-subject-input:focus {
+    border-color: var(--color-primary);
   }
   .email-action-card .eac-divider {
     border: none;
@@ -3683,10 +3705,12 @@
 
                 const card = document.createElement('div');
                 card.className = 'email-action-card';
+                const bodyFull = (pBody || '').replace(/\\n/g, '\n');
+                const subjectSafe = pSubject.replace(/"/g, '&quot;');
                 card.innerHTML = `
                   <div class="eac-header">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                    Ready to send patient email
+                    Review &amp; send patient email
                     <span class="eac-badge">Automation</span>
                   </div>
                   <div class="eac-field">
@@ -3695,11 +3719,11 @@
                   </div>
                   <div class="eac-field">
                     <span class="eac-label">Subject</span>
-                    <span class="eac-value">${pSubject || '—'}</span>
+                    <input class="eac-subject-input" id="eacSubjectInput" type="text" value="${subjectSafe}" placeholder="Email subject" />
                   </div>
                   <div class="eac-field">
-                    <span class="eac-label">Message</span>
-                    <div class="eac-body-preview">${bodyPreview}</div>
+                    <span class="eac-label">Message — review and edit before sending</span>
+                    <textarea class="eac-body-textarea" id="eacBodyTextarea" placeholder="Message body">${bodyFull}</textarea>
                   </div>
                   <hr class="eac-divider">
                   <div class="eac-actions">
@@ -3714,15 +3738,17 @@
                 loadDiv.appendChild(card);
                 chatHistory.scrollTop = chatHistory.scrollHeight;
 
-                // Send Now
                 card.querySelector('#eacSendBtn').addEventListener('click', async () => {
                   const sendBtn2 = card.querySelector('#eacSendBtn');
                   const cancelBtn = card.querySelector('#eacCancelBtn');
+                  // Read live values from the editable fields
+                  const finalSubject = card.querySelector('#eacSubjectInput')?.value?.trim() || parsed.subject;
+                  const finalBody    = card.querySelector('#eacBodyTextarea')?.value?.trim() || parsed.body;
                   sendBtn2.disabled = true;
                   sendBtn2.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg> Sending...`;
                   cancelBtn.disabled = true;
                   try {
-                    const result = await window.api.sendPatientEmail(parsed.patient_name, parsed.subject, parsed.body);
+                    const result = await window.api.sendPatientEmail(parsed.patient_name, finalSubject, finalBody);
                     card.querySelector('.eac-actions').innerHTML = `
                       <div class="eac-status success">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>

@@ -742,6 +742,8 @@ router.post('/chat', chatRules, async (req, res, next) => {
     for (const testModel of modelCandidates) {
       usedModel = testModel;
       try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 25000); // 25s per-model timeout
         openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -756,7 +758,9 @@ router.post('/chat', chatRules, async (req, res, next) => {
             max_tokens:  2048,
             temperature: mode === 'automation' ? 0.1 : 0.7,
           }),
+          signal: ctrl.signal,
         });
+        clearTimeout(timer);
 
         if (openRouterRes.ok) break;
 
@@ -902,6 +906,8 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
     for (const testModel of modelCandidates) {
       usedModel = testModel;
       try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 25000); // 25s per-model timeout
         openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -917,7 +923,9 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
             temperature: mode === 'automation' ? 0.1 : 0.7,
             stream:      true,
           }),
+          signal: ctrl.signal,
         });
+        clearTimeout(timer);
 
         if (openRouterRes.ok) break;
 

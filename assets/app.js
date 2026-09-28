@@ -209,7 +209,7 @@ window.api = (function() {
       activeChatController = controller;
 
       // Wait up to 90s for first response (Render free tier can cold-start in 50-60s)
-      const timeout = setTimeout(() => controller.abort(), 90000);
+      const timeout = setTimeout(() => controller.abort(), 35000);
 
       const res = await fetch(`${BASE_URL}/ai/chat/stream`, {
         method: 'POST',
@@ -232,13 +232,13 @@ window.api = (function() {
       const decoder = new TextDecoder();
       let buffer = '';
       // Reset timeout for each chunk — abort if 90s of silence mid-stream
-      let chunkTimeout = setTimeout(() => controller.abort(), 90000);
+      let chunkTimeout = setTimeout(() => controller.abort(), 35000);
 
       while (true) {
         const { done, value } = await reader.read();
         clearTimeout(chunkTimeout);
         if (done) break;
-        chunkTimeout = setTimeout(() => controller.abort(), 90000);
+        chunkTimeout = setTimeout(() => controller.abort(), 35000);
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop();

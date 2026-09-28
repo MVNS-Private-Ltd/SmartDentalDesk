@@ -3668,13 +3668,12 @@
             if (activeMode === 'automation' && accumulated) {
               let parsed = null;
               try {
-                // Strip any accidental markdown code fences more robustly
-                const clean = accumulated.trim()
-                  .replace(/^```[a-zA-Z]*\s*\n?/, '')
-                  .replace(/\n?```$/, '')
-                  .trim();
-                parsed = JSON.parse(clean);
-              } catch { /* not JSON — display as plain text */ }
+                const start = accumulated.indexOf('{');
+                const end = accumulated.lastIndexOf('}');
+                if (start !== -1 && end !== -1 && end > start) {
+                  parsed = JSON.parse(accumulated.slice(start, end + 1));
+                }
+              } catch { /* not JSON */ }
 
               let isSendEmail = false;
               let pName = '';

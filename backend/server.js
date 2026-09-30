@@ -30,6 +30,7 @@ const creditsRoutes     = require('./routes/credits');
 const webhookRoutes     = require('./routes/webhooks');
 const cronRoutes        = require('./routes/cron');
 const crmRoutes         = require('./routes/crm');
+const messageRoutes     = require('./routes/messages');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -96,6 +97,7 @@ app.use('/api/billing',      billingRoutes);
 app.use('/api/credits',      creditsRoutes);
 app.use('/api/cron',         cronRoutes);
 app.use('/api/crm',          crmRoutes);
+app.use('/api/messages',     messageRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {

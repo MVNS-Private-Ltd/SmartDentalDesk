@@ -192,6 +192,7 @@ window.api = (function() {
     completeAppointmentCheckout: (id, payload) => request(`/appointments/${id}/checkout`, { method: 'POST', body: JSON.stringify(payload) }),
     getSettings: () => request('/clinics/settings'),
     updateSettings: (payload) => request('/clinics/settings', { method: 'PUT', body: JSON.stringify(payload) }),
+    estimateAiCost: (message, mode = 'thinking') => request('/ai/estimate', { method: 'POST', body: JSON.stringify({ message, mode }) }),
     sendChatMessage: async (message, mode = 'thinking', context = '', session_id = null) => {
       const payload = { message, mode, context };
       if (session_id) payload.session_id = session_id;
@@ -223,6 +224,17 @@ window.api = (function() {
 
       clearTimeout(timeout);
       if (!res.ok) {
+        if (res.status === 401) {
+          try {
+            await refreshAccessToken();
+            return window.api.streamChatMessage(message, mode, context, session_id, { onDelta, onMeta, onDone, onError });
+          } catch (err) {
+            localStorage.removeItem('sdd_token');
+            localStorage.removeItem('sdd_refresh_token');
+            window.location.href = './login.html';
+            return;
+          }
+        }
         let errMessage = `Stream error: ${res.status}`;
         try { const errData = await res.json(); errMessage = errData.error || errMessage; } catch {}
         throw new Error(errMessage);
@@ -266,6 +278,9 @@ window.api = (function() {
     deleteChatSession: (session_id) => request(`/ai/sessions/${session_id}`, { method: 'DELETE' }),
     renameChatSession: (session_id, name) => request(`/ai/sessions/${session_id}/rename`, { method: 'PUT', body: JSON.stringify({ name }) }),
     sendPatientEmail: (patient_name, subject, body) => request('/email/send-patient', { method: 'POST', body: JSON.stringify({ patient_name, subject, body }) }),
+    scheduleMessage: (payload) => request('/messages/schedule', { method: 'POST', body: JSON.stringify(payload) }),
+    getScheduledMessages: (status = '') => request(`/messages/scheduled${status ? '?status=' + status : ''}`),
+    cancelScheduledMessage: (id) => request(`/messages/scheduled/${id}`, { method: 'DELETE' }),
     importPatients: async (file) => {
       const formData = new FormData();
       formData.append('file', file);

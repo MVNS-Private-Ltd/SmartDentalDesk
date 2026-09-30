@@ -50,28 +50,24 @@
   .sidebar-header p { color: #64748b; font-size: 0.9rem; }
   
   .balance-circle {
-    background: conic-gradient(from 180deg at 50% 50%, #eff6ff 0deg, #dbeafe 176deg, #2563eb 360deg);
-    border-radius: 50%;
-    width: 200px; height: 200px;
-    margin: 0 auto 2rem;
+    width: 160px; height: 160px;
+    margin: 0 auto 1.5rem;
     display: flex;
     align-items: center; justify-content: center;
     position: relative;
-    box-shadow: 0 8px 30px rgba(37,99,235,0.2);
   }
-  .balance-circle::after {
-    content: '';
-    position: absolute; inset: 10px;
-    background: #fff;
-    border-radius: 50%;
-  }
+  .balance-circle::after { display: none; }  /* remove old white disc */
+  .usage-ring-svg { display: block; }
   .balance-content {
-    position: relative; z-index: 2;
+    position: absolute; z-index: 2;
     text-align: center;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
   }
-  .balance-content .label { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 0.05em; margin-bottom: 0.2rem; }
-  .balance-content .value { font-size: 2.2rem; font-weight: 800; font-family: 'Fraunces', serif; color: var(--brand-blue); line-height: 1; margin-bottom: 0.25rem; }
-  .balance-content .unit { font-size: 0.85rem; color: #94a3b8; font-weight: 600; }
+  .balance-content .label { font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 0.05em; margin-bottom: 0.15rem; }
+  .balance-content .value { font-size: 2rem; font-weight: 800; font-family: 'Fraunces', serif; color: var(--brand-blue); line-height: 1; margin-bottom: 0.2rem; }
+  .balance-content .unit { font-size: 0.78rem; color: #94a3b8; font-weight: 600; }
 
   .breakdown-row {
     display: flex; justify-content: space-between; align-items: center;
@@ -199,43 +195,78 @@
   <!-- LEFT SIDEBAR: Balances -->
   <aside class="sidebar-card">
     <div class="sidebar-header">
-      <h1>Credits</h1>
-      <p>Your AI intelligence balance</p>
+      <h1>AI Usage</h1>
+      <p>Your AI credit consumption this period</p>
     </div>
-    
-    <div class="balance-circle">
-      <div class="balance-content">
-        <div class="label">Available</div>
-        <div class="value" id="valTotal">...</div>
-        <div class="unit">Credits</div>
+
+    <!-- Overall usage ring (percentage only) -->
+    <div class="balance-circle" id="usageRingWrap">
+      <svg class="usage-ring-svg" viewBox="0 0 120 120" style="width:120px;height:120px;">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#e2e8f0" stroke-width="10"/>
+        <circle id="usageRingArc" cx="60" cy="60" r="50" fill="none" stroke="#3b82f6" stroke-width="10"
+          stroke-linecap="round"
+          stroke-dasharray="314"
+          stroke-dashoffset="314"
+          transform="rotate(-90 60 60)"
+          style="transition:stroke-dashoffset 0.8s cubic-bezier(.4,0,.2,1), stroke 0.4s;"/>
+      </svg>
+      <div class="balance-content" style="position:absolute;">
+        <div class="label">Used</div>
+        <div class="value" id="valUsedPct" style="font-size:2rem;">0%</div>
+        <div class="unit" id="usageRingLabel">of monthly</div>
       </div>
     </div>
 
-    <div class="breakdown">
-      <div class="breakdown-row">
-        <div class="label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-          Monthly Allocation
-        </div>
-        <div class="val" id="valMonthly">...</div>
+    <!-- Monthly bar -->
+    <div style="margin-top:1.25rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+        <span style="font-size:0.78rem;color:#64748b;font-weight:600;display:flex;align-items:center;gap:0.4rem;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Monthly Plan
+        </span>
+        <span id="valMonthlyPct" style="font-size:0.78rem;font-weight:700;color:#0f172a;">–%</span>
       </div>
-      <div class="breakdown-row">
-        <div class="label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-          Top-up Balance
-        </div>
-        <div class="val" id="valTopup">...</div>
+      <div style="width:100%;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden;">
+        <div id="barMonthly" style="height:100%;width:0%;background:#3b82f6;border-radius:4px;transition:width 0.8s cubic-bezier(.4,0,.2,1);"></div>
       </div>
+      <div id="valMonthly" style="font-size:0.72rem;color:#94a3b8;margin-top:0.3rem;text-align:right;">...</div>
     </div>
-    
+
+    <!-- Top-up bar -->
+    <div style="margin-top:1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+        <span style="font-size:0.78rem;color:#64748b;font-weight:600;display:flex;align-items:center;gap:0.4rem;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Top-up Credits
+        </span>
+        <span id="valTopupPct" style="font-size:0.78rem;font-weight:700;color:#0f172a;">–%</span>
+      </div>
+      <div style="width:100%;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden;">
+        <div id="barTopup" style="height:100%;width:0%;background:#8b5cf6;border-radius:4px;transition:width 0.8s cubic-bezier(.4,0,.2,1);"></div>
+      </div>
+      <div id="valTopup" style="font-size:0.72rem;color:#94a3b8;margin-top:0.3rem;text-align:right;">...</div>
+    </div>
+
     <div style="margin-top:1.5rem;background:#f8fafc;border:1px solid #e2e8f0;padding:1rem;border-radius:12px;font-size:0.75rem;color:#64748b;line-height:1.5;">
-      <strong>Note:</strong> Monthly credits reset at the start of your billing cycle. Top-up credits never expire for 12 months and are only used after monthly credits run out.
+      <strong>Note:</strong> Monthly credits reset at the start of your billing cycle. Top-up credits are valid for 12 months and are used only after monthly credits run out.
     </div>
   </aside>
 
   <!-- RIGHT MAIN AREA -->
   <main class="main-content">
     
+    <!-- WARNING BANNERS -->
+    <div id="creditWarnings" style="display:none; flex-direction:column; gap:1rem; margin-bottom:1rem;"></div>
+
+    <!-- USAGE BREAKDOWN -->
+    <div class="section-card" id="usageSection" style="display:none;">
+      <div class="section-header">
+        <h3>Usage Breakdown</h3>
+        <p>Credits consumed this billing period by AI feature.</p>
+      </div>
+      <div id="usageChartContainer" style="display:flex; gap:1rem; margin-top:1rem; flex-wrap:wrap;"></div>
+    </div>
+
     <!-- PLAN BANNER -->
     <div class="plan-banner">
       <div class="plan-banner-left">
@@ -401,13 +432,140 @@
         }
       }
     } catch(e) { console.warn('Could not load subscription:', e.message); }
+      var cred = subRes.credits;
+      if (cred) {
+        var monthlyAllocated = cred.monthly_allocated || 0;
+        var monthlyUsed      = monthlyAllocated - (cred.monthly_remaining || 0);
+        var monthlyPct       = monthlyAllocated > 0 ? Math.min(100, Math.round((monthlyUsed / monthlyAllocated) * 100)) : 0;
 
-    try {
-      var bal = await window.api.getCreditsBalance();
-      document.getElementById('valTotal').textContent = (bal.total_remaining || 0).toLocaleString();
-      document.getElementById('valMonthly').textContent = Math.max(0, (bal.monthly && bal.monthly.credits_allocated ? bal.monthly.credits_allocated - (bal.monthly.credits_used || 0) : 0)).toLocaleString();
-      document.getElementById('valTopup').textContent = (bal.topup || 0).toLocaleString();
-    } catch(e) { console.warn('Could not load credits:', e.message); }
+        var topupAllocated   = cred.topup_allocated || 0;
+        var topupUsed        = topupAllocated - (cred.topup_remaining || 0);
+        var topupPct         = topupAllocated > 0 ? Math.min(100, Math.round((topupUsed / topupAllocated) * 100)) : 0;
+
+        // ── Animated SVG ring (overall monthly usage) ────────────────────
+        var arc    = document.getElementById('usageRingArc');
+        var pctEl  = document.getElementById('valUsedPct');
+        var CIRCUMFERENCE = 314; // 2π × 50
+        var offset = CIRCUMFERENCE - (monthlyPct / 100) * CIRCUMFERENCE;
+        // Colour shifts: green → amber → red
+        var ringColor = monthlyPct < 60 ? '#3b82f6' : monthlyPct < 80 ? '#f59e0b' : '#ef4444';
+        if (arc) {
+          arc.style.stroke           = ringColor;
+          arc.style.strokeDashoffset = offset;
+        }
+        if (pctEl) {
+          pctEl.textContent  = monthlyPct + '%';
+          pctEl.style.color  = ringColor;
+        }
+
+        // ── Monthly bar ──────────────────────────────────────────────────
+        var barColor = monthlyPct < 60 ? '#3b82f6' : monthlyPct < 80 ? '#f59e0b' : '#ef4444';
+        document.getElementById('barMonthly').style.width      = monthlyPct + '%';
+        document.getElementById('barMonthly').style.background = barColor;
+        document.getElementById('valMonthlyPct').textContent   = monthlyPct + '% used';
+        document.getElementById('valMonthlyPct').style.color   = barColor;
+        document.getElementById('valMonthly').textContent      =
+          monthlyPct < 100
+            ? 'About ' + (100 - monthlyPct) + '% remaining this cycle'
+            : 'Monthly allocation fully used';
+
+        // ── Top-up bar ───────────────────────────────────────────────────
+        if (topupAllocated > 0) {
+          document.getElementById('barTopup').style.width     = topupPct + '%';
+          document.getElementById('valTopupPct').textContent  = topupPct + '% used';
+          document.getElementById('valTopup').textContent     =
+            topupPct < 100
+              ? 'About ' + (100 - topupPct) + '% of top-up remaining'
+              : 'Top-up credits fully used';
+        } else {
+          document.getElementById('valTopupPct').textContent = 'None';
+          document.getElementById('valTopup').textContent    = 'No top-up credits purchased';
+        }
+
+        // ── Warning banners (based on % consumed) ──────────────────────
+        var warningsContainer = document.getElementById('creditWarnings');
+        warningsContainer.innerHTML = '';
+        var totalAvailable = (cred.monthly_allocated || 0) + (cred.topup_remaining || 0);
+        var totalUsed      = totalAvailable - (cred.total || 0);
+        var overallPct     = totalAvailable > 0 ? Math.round((totalUsed / totalAvailable) * 100) : 0;
+
+        if (overallPct >= 100) {
+          warningsContainer.style.display = 'flex';
+          warningsContainer.innerHTML += `
+            <div style="background:#fef2f2; border:1px solid #fecaca; border-left:4px solid #ef4444; padding:1rem; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <strong style="color:#991b1b; display:block; margin-bottom:0.25rem;">AI credits exhausted</strong>
+                <span style="color:#b91c1c; font-size:0.9rem;">You've used 100% of your AI credits for this billing period.</span>
+              </div>
+              <div style="display:flex; gap:0.5rem;">
+                <button onclick="document.querySelector('.store-grid').scrollIntoView({behavior:'smooth'})" style="background:#ef4444; color:white; border:none; padding:0.5rem 1rem; border-radius:6px; font-size:0.85rem; cursor:pointer; font-weight:600;">Top up</button>
+                <a href="./pricing.html" style="background:white; color:#ef4444; border:1px solid #fca5a5; padding:0.5rem 1rem; border-radius:6px; font-size:0.85rem; text-decoration:none; font-weight:600;">See plans</a>
+              </div>
+            </div>`;
+        } else if (overallPct >= 80) {
+          warningsContainer.style.display = 'flex';
+          warningsContainer.innerHTML += `
+            <div style="background:#fffbeb; border:1px solid #fde68a; border-left:4px solid #f59e0b; padding:1rem; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <strong style="color:#92400e; display:block; margin-bottom:0.25rem;">Low on AI credits – ${100 - overallPct}% remaining</strong>
+                <span style="color:#b45309; font-size:0.9rem;">You've used ${overallPct}% of your credits this period. Consider topping up.</span>
+              </div>
+              <div style="display:flex; gap:0.5rem;">
+                <button onclick="document.querySelector('.store-grid').scrollIntoView({behavior:'smooth'})" style="background:#f59e0b; color:white; border:none; padding:0.5rem 1rem; border-radius:6px; font-size:0.85rem; cursor:pointer; font-weight:600;">Top up</button>
+                <a href="./pricing.html" style="background:white; color:#f59e0b; border:1px solid #fcd34d; padding:0.5rem 1rem; border-radius:6px; font-size:0.85rem; text-decoration:none; font-weight:600;">Upgrade plan</a>
+              </div>
+            </div>`;
+        }
+
+        // Show upgrade card if fully exhausted and not on a high plan
+        if (overallPct >= 100 && (sub && sub.plan !== 'premium' && sub.plan !== 'enterprise')) {
+           warningsContainer.style.display = 'flex';
+           warningsContainer.innerHTML += `
+            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-left:4px solid #3b82f6; padding:1rem; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <strong style="color:#1e3a8a; display:block; margin-bottom:0.25rem;">Using a lot of AI?</strong>
+                <span style="color:#1d4ed8; font-size:0.9rem;">Your usage suggests a higher plan could save you money.</span>
+              </div>
+              <a href="./pricing.html" style="background:#3b82f6; color:white; border:none; padding:0.5rem 1rem; border-radius:6px; font-size:0.85rem; text-decoration:none; cursor:pointer; font-weight:600;">Compare plans</a>
+            </div>`;
+        }
+
+        // Render Usage Chart
+        if (cred.usage_breakdown && Object.keys(cred.usage_breakdown).length > 0) {
+          var usageSection = document.getElementById('usageSection');
+          var chartContainer = document.getElementById('usageChartContainer');
+          usageSection.style.display = 'block';
+          chartContainer.innerHTML = '';
+          
+          var maxVal = Math.max(...Object.values(cred.usage_breakdown));
+          
+          Object.keys(cred.usage_breakdown).forEach(function(mode) {
+            var val = cred.usage_breakdown[mode];
+            var pct = Math.max(5, (val / maxVal) * 100);
+            
+            var barWrap = document.createElement('div');
+            barWrap.style.flex = '1';
+            barWrap.style.minWidth = '120px';
+            barWrap.style.background = '#f8fafc';
+            barWrap.style.border = '1px solid #e2e8f0';
+            barWrap.style.borderRadius = '12px';
+            barWrap.style.padding = '1rem';
+            
+            var title = mode.charAt(0).toUpperCase() + mode.slice(1);
+            if (title === 'Data') title = 'Data Queries';
+            if (title === 'Thinking') title = 'Thinking / Analysis';
+            
+            barWrap.innerHTML = `
+              <div style="font-size:0.85rem; color:#64748b; font-weight:600; margin-bottom:0.5rem;">${title}</div>
+              <div style="font-family:'Fraunces',serif; font-size:1.5rem; font-weight:700; color:#0f172a; margin-bottom:0.75rem;">${val.toLocaleString()} <span style="font-size:0.8rem; color:#94a3b8; font-weight:500; font-family:'Inter',sans-serif;">credits</span></div>
+              <div style="width:100%; height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                <div style="width:${pct}%; height:100%; background:var(--brand-blue); border-radius:4px;"></div>
+              </div>
+            `;
+            chartContainer.appendChild(barWrap);
+          });
+        }
+      }
 
     try {
       var history = await window.api.getCreditsHistory();
@@ -563,7 +721,8 @@
                     pack_id: currentPackId
                   });
                   closeTopupModal();
-                  window.showToast(`${(v.credits_added || pack.credits).toLocaleString()} AI Credits added to your account!`, 'success');
+                  var expiryStr = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
+                  window.showToast(`Top-up successful – ${(v.credits_added || pack.credits).toLocaleString()} credits added to your account. These credits will expire on ${expiryStr}.`, 'success');
                   loadData();
                 } catch(err) {
                   window.showToast(err.message || 'Payment verification failed.', 'error');
@@ -586,7 +745,8 @@
               razorpay_signature:  'sim_verified'
             });
             window.closeTopupModal();
-            window.showToast(`${(v.credits_added || pack.credits).toLocaleString()} AI Credits added to your account!`, 'success');
+            var expiryStrSim = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
+            window.showToast(`Top-up successful – ${(v.credits_added || pack.credits).toLocaleString()} credits added to your account. These credits will expire on ${expiryStrSim}.`, 'success');
             loadData();
           }
         } catch(err) {

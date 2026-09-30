@@ -1261,6 +1261,11 @@
       <button class="sidebar-link" data-target="team">Team / Staff</button>
       <button class="sidebar-link" data-target="reports">Reports</button>
       <a href="./clinic-profile.html" class="sidebar-link" style="text-decoration:none; display:block; box-sizing:border-box;">Clinic Profile (Marketplace)</a>
+            <button class="sidebar-link" data-target="scheduled-messages">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Scheduled Messages
+        <span id="sidebarPendingMsgBadge" style="display:none;background:#6366f1;color:#fff;font-size:0.7rem;font-weight:700;padding:1px 6px;border-radius:10px;line-height:1.2;margin-left:auto;">0</span>
+      </button>
       <button class="sidebar-link" data-target="ai">AI Assistant</button>
       <button class="sidebar-link" data-target="settings">Settings</button>
     </nav>
@@ -1280,7 +1285,7 @@
         
         <div class="credits-widget" style="display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 6px 12px; border-radius: 20px; border: 1px solid #e2e8f0; font-size: 0.85rem; font-weight: 600;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          <span style="color: #475569;">Credits:</span>
+          <span style="color: #475569;">Credits Remaining:</span>
           <span id="creditBalanceVal" style="color: #0f172a; font-weight: 700;">Loading...</span>
           <button onclick="window.location.href='./billing.html'" style="margin-left: 4px; background: #eef2ff; color: #4f46e5; border: none; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">Top up</button>
         </div>
@@ -1524,6 +1529,30 @@
             <tr><td colspan="5" style="text-align:center;">Loading appointments...</td></tr>
           </tbody>
         </table>
+      </div>
+    </section>
+
+    <!-- SECTION: SCHEDULED MESSAGES -->
+    <section id="section-scheduled-messages" class="dashboard-section">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h2 style="margin:0;">Scheduled Messages</h2>
+          <p class="text-muted" style="margin:4px 0 0;">Schedule emails to patients for a future date &amp; time.</p>
+        </div>
+        <button class="btn btn-primary" id="openScheduleMsgBtn" style="display:flex;align-items:center;gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Schedule a Message
+        </button>
+      </div>
+      <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;flex-wrap:wrap;" id="msgFilterTabs">
+        <button class="msg-filter-btn active" data-filter="">All</button>
+        <button class="msg-filter-btn" data-filter="pending">Pending</button>
+        <button class="msg-filter-btn" data-filter="sent">Sent</button>
+        <button class="msg-filter-btn" data-filter="failed">Failed</button>
+        <button class="msg-filter-btn" data-filter="cancelled">Cancelled</button>
+      </div>
+      <div id="scheduledMsgList" style="display:flex;flex-direction:column;gap:0.75rem;min-height:200px;">
+        <div style="text-align:center;padding:3rem;color:#94a3b8;"><p style="margin:0;font-weight:600;">Loading scheduled messages...</p></div>
       </div>
     </section>
 
@@ -1954,8 +1983,11 @@
         const data = await window.api.getCreditsBalance();
         const el = document.getElementById('creditBalanceVal');
         if (el) {
-          el.textContent = data.total_remaining.toLocaleString();
-          if (data.total_remaining < 100) {
+          const alloc = data.monthly ? (data.monthly.credits_allocated || 1) : 1;
+          const used = data.monthly ? (data.monthly.credits_used || 0) : 0;
+          const pct = Math.max(0, Math.min(100, Math.round(((alloc - used) / alloc) * 100)));
+          el.textContent = `${pct}%`;
+          if (pct < 10) {
             el.style.color = '#dc2626'; // red warning
           } else {
             el.style.color = '#0f172a';
@@ -4045,6 +4077,144 @@
       btn.disabled = false;
     }
   }
+// ── SCHEDULED MESSAGES LOGIC ───────────────────────────────────────
+let currentMsgFilter = '';
+
+async function loadScheduledMessages() {
+  const list = document.getElementById('scheduledMsgList');
+  if(!list) return;
+  try {
+    const res = await window.api.getScheduledMessages(currentMsgFilter);
+    const msgs = res.messages;
+    
+    if(!msgs || msgs.length === 0) {
+      list.innerHTML = `<div style="text-align:center;padding:3rem;color:#94a3b8;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:0.75rem;opacity:0.5;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <p style="margin:0;font-weight:600;">No scheduled messages found.</p>
+        </div>`;
+      
+      const badge = document.getElementById('sidebarPendingMsgBadge');
+      if(badge) badge.style.display = 'none';
+      return;
+    }
+    
+    let pendingCount = 0;
+    list.innerHTML = msgs.map(m => {
+      if(m.status === 'pending') pendingCount++;
+      const d = new Date(m.scheduled_at);
+      const formattedDate = d.toLocaleDateString('en-IN', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      const statusClass = `status-${m.status}`;
+      return `
+        <div class="scheduled-msg-card">
+          <div class="scheduled-msg-info">
+            <h4>To: ${m.recipient_name} <span style="font-weight:400;color:#64748b;font-size:0.9rem;">(${m.recipient_email})</span></h4>
+            <p><strong>Subject:</strong> ${m.subject}</p>
+            <p style="margin-top:4px;"><strong>Scheduled for:</strong> ${formattedDate}</p>
+            <span class="status-badge ${statusClass}">${m.status.toUpperCase()}</span>
+            ${m.error_message ? `<p style="color:#dc2626;font-size:0.75rem;margin-top:4px;">Error: ${m.error_message}</p>` : ''}
+          </div>
+          <div>
+            ${m.status === 'pending' ? `<button class="btn btn-secondary" onclick="cancelScheduledMessage('${m.id}')" style="color:#dc2626;border-color:#fca5a5;padding:0.4rem 0.8rem;font-size:0.8rem;">Cancel</button>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    // Update badge in sidebar
+    const badge = document.getElementById('sidebarPendingMsgBadge');
+    if(badge) {
+      if(pendingCount > 0 && currentMsgFilter === '') {
+        badge.textContent = pendingCount;
+        badge.style.display = 'inline-block';
+      } else if (currentMsgFilter === '') {
+        badge.style.display = 'none';
+      }
+    }
+    
+  } catch(err) {
+    list.innerHTML = `<p style="color:#dc2626;">Error loading messages: ${err.message}</p>`;
+  }
+}
+
+window.cancelScheduledMessage = async function(id) {
+  if(!confirm('Are you sure you want to cancel this scheduled email?')) return;
+  try {
+    await window.api.cancelScheduledMessage(id);
+    window.showToast('Message cancelled successfully.', 'success');
+    loadScheduledMessages();
+  } catch(err) {
+    window.showToast(err.message, 'error');
+  }
+};
+
+const openScheduleBtn = document.getElementById('openScheduleMsgBtn');
+if(openScheduleBtn) {
+  openScheduleBtn.addEventListener('click', () => {
+    document.getElementById('scheduleMsgForm').reset();
+    // Default time to 1 hr from now
+    const now = new Date();
+    now.setHours(now.getHours() + 1);
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('schedMsgTime').value = now.toISOString().slice(0, 16);
+    document.getElementById('scheduleMsgModal').style.display = 'flex';
+  });
+}
+
+const schedMsgForm = document.getElementById('scheduleMsgForm');
+if(schedMsgForm) {
+  schedMsgForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('schedMsgSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Scheduling...';
+    try {
+      await window.api.scheduleMessage({
+        recipient_name: document.getElementById('schedMsgName').value,
+        recipient_email: document.getElementById('schedMsgEmail').value,
+        subject: document.getElementById('schedMsgSubject').value,
+        body: document.getElementById('schedMsgBody').value,
+        scheduled_at: new Date(document.getElementById('schedMsgTime').value).toISOString()
+      });
+      document.getElementById('scheduleMsgModal').style.display = 'none';
+      window.showToast('Email scheduled successfully.', 'success');
+      loadScheduledMessages();
+    } catch(err) {
+      window.showToast(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Schedule Email';
+    }
+  });
+}
+
+const filterTabs = document.querySelectorAll('.msg-filter-btn');
+filterTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    filterTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentMsgFilter = tab.dataset.filter;
+    loadScheduledMessages();
+  });
+});
+
+// Hook into section switching logic
+const originalSwitchFunc = window.switchSection;
+if(typeof originalSwitchFunc === 'function' && !window.hookedSwitchMsg) {
+  window.hookedSwitchMsg = true;
+  window.switchSection = function(sectionId) {
+    originalSwitchFunc(sectionId);
+    if(sectionId === 'section-scheduled-messages') {
+      loadScheduledMessages();
+    }
+  };
+}
+
+// Initial load if starting on that section
+if(document.getElementById('section-scheduled-messages')?.classList.contains('active')) {
+  loadScheduledMessages();
+}
+
+
 </script>
 
 <!-- Import Patients Modal (Redesigned) -->
@@ -5145,12 +5315,15 @@ window.loadBillingSettings = async function() {
     const topupEl = document.getElementById('billingTopupLots');
     const fillEl = document.getElementById('billingCreditsFill');
 
-    if (totalEl) totalEl.textContent = (credits.total || 0).toLocaleString();
-    if (quotaEl) quotaEl.textContent = (credits.monthly_allocated || 0).toLocaleString();
-    if (usedEl) usedEl.textContent = (credits.monthly_used || 0).toLocaleString();
-    if (topupEl) topupEl.textContent = (credits.topup_remaining || 0).toLocaleString();
+    const pct = credits.monthly_allocated > 0 ? Math.min(100, Math.max(0, Math.round(((credits.monthly_allocated - (credits.monthly_used || 0)) / credits.monthly_allocated) * 100))) : 100;
+    
+    if (totalEl) totalEl.textContent = `${pct}%`;
+    
+    // Hide the raw numbers underneath the progress bar
+    if (quotaEl && quotaEl.parentElement.parentElement) {
+      quotaEl.parentElement.parentElement.style.display = 'none';
+    }
 
-    const pct = credits.monthly_allocated > 0 ? Math.min(100, Math.round(((credits.monthly_allocated - (credits.monthly_used || 0)) / credits.monthly_allocated) * 100)) : 100;
     if (fillEl) fillEl.style.width = `${pct}%`;
 
     // 3. Saved Card Info
@@ -5721,5 +5894,40 @@ window.cancelSubscriptionPrompt = async function() {
   }
 };
 </script>
+<!-- Scheduled Message Modal -->
+<div id="scheduleMsgModal" class="modal-overlay">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <h3>Schedule Email to Patient</h3>
+      <button class="btn-close" onclick="document.getElementById('scheduleMsgModal').style.display='none'">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="scheduleMsgForm" style="display:flex;flex-direction:column;gap:1rem;">
+        <div>
+          <label>Recipient Name</label>
+          <input type="text" id="schedMsgName" class="form-input" required placeholder="e.g. John Doe">
+        </div>
+        <div>
+          <label>Recipient Email</label>
+          <input type="email" id="schedMsgEmail" class="form-input" required placeholder="john@example.com">
+        </div>
+        <div>
+          <label>Subject</label>
+          <input type="text" id="schedMsgSubject" class="form-input" required placeholder="Follow-up regarding your treatment">
+        </div>
+        <div>
+          <label>Message Body</label>
+          <textarea id="schedMsgBody" class="form-input" required style="min-height:100px;" placeholder="Dear John..."></textarea>
+        </div>
+        <div>
+          <label>Scheduled Date &amp; Time</label>
+          <input type="datetime-local" id="schedMsgTime" class="form-input" required>
+        </div>
+        <button type="submit" class="btn btn-primary" id="schedMsgSubmitBtn" style="margin-top:0.5rem;">Schedule Email</button>
+      </form>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

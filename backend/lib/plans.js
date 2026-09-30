@@ -12,10 +12,25 @@ const PLAN_PRICES_PAISE = {
   enterprise: 0        // custom
 };
 
-const CREDIT_COSTS = {
-  data:       1,
-  thinking:   3,
-  automation: 2,
+// Token-based Billing configuration
+const TOKENS_PER_CREDIT = parseInt(process.env.TOKENS_PER_CREDIT || '500', 10);
+
+let envModelFactors = {};
+try {
+  if (process.env.MODEL_FACTORS) {
+    envModelFactors = JSON.parse(process.env.MODEL_FACTORS);
+  }
+} catch (err) {
+  console.error('[Config Error] Failed to parse MODEL_FACTORS from env. Ensure it is valid JSON. Falling back to defaults.');
+}
+
+const MODEL_FACTORS = {
+  'nvidia/nemotron-3-super-120b-a12b:free': 2,
+  'openrouter/free': 1,
+  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': 1,
+  'minimax/minimax-m3:free': 1,
+  // Extendable via JSON string in env
+  ...envModelFactors
 };
 
 const PLAN_FEATURES = {
@@ -31,4 +46,4 @@ const TOPUP_PACKS = [
   { id: 'power_pack',   name: 'Power Pack',   credits: 5000, price_paise: 59900, price_display: '₹599' },
 ];
 
-module.exports = { PLAN_CREDITS, PLAN_PRICES_PAISE, CREDIT_COSTS, PLAN_FEATURES, TOPUP_PACKS };
+module.exports = { PLAN_CREDITS, PLAN_PRICES_PAISE, TOKENS_PER_CREDIT, MODEL_FACTORS, PLAN_FEATURES, TOPUP_PACKS };

@@ -17,7 +17,7 @@ const { body, validationResult } = require('express-validator');
 const { CLINIC_INTELLIGENCE } = require('../lib/clinic_intelligence');
 const supabase    = require('../lib/supabase');
 const requireAuth = require('../middleware/auth');
-const { CREDIT_COSTS } = require('../lib/plans');
+const { PLAN_FEATURES, TOKENS_PER_CREDIT, MODEL_FACTORS } = require('../lib/plans');
 const { trackAiUsage } = require('../lib/credits');
 
 const router = express.Router();
@@ -720,18 +720,38 @@ router.post('/chat', chatRules, async (req, res, next) => {
       { role: 'user', content: context ? `${context}\n\n${message}` : message },
     ];
 
-    // 5.5 Deduct Credits & Reserve
-    const cost = CREDIT_COSTS[mode] || 1;
-    const { data: deductRes, error: deductErr } = await supabase.rpc('deduct_ai_credits', {
-      p_clinic_id: req.clinicId,
-      p_cost: cost,
-      p_ai_mode: mode
-    });
-    if (deductErr) throw deductErr;
-    if (!deductRes.success) {
-      return res.status(402).json({ error: 'Insufficient AI credits. Please purchase a top-up.' });
+    // 5.5 Check Credits (Soft check before API call)
+    const { data: creditCheck, error: creditCheckErr } = await supabase
+      .from('clinic_credits')
+      .select('credits_allocated, credits_used')
+      .eq('clinic_id', req.clinicId)
+      .single();
+
+    if (creditCheckErr) throw creditCheckErr;
+    
+    // Check if they have topups
+    const { data: topupCheck } = await supabase
+      .from('credit_topup_lots')
+      .select('credits_remaining')
+      .eq('clinic_id', req.clinicId)
+      .gt('expires_at', new Date().toISOString());
+
+    const topupRemaining = (topupCheck || []).reduce((acc, row) => acc + (row.credits_remaining || 0), 0);
+    const monthlyRemaining = (creditCheck.credits_allocated - creditCheck.credits_used);
+    
+    // Strict Mode: Estimate max cost to prevent uncontrolled negative balances
+    const maxOutputTokens = 2048; // Matches max_tokens in API call
+    const estimatedInputTokens = Math.ceil(JSON.stringify(messages).length / 4);
+    const estimatedTotal = estimatedInputTokens + maxOutputTokens;
+    const factor = MODEL_FACTORS[model] || 1;
+    const estimatedMaxCost = Math.ceil((estimatedTotal / TOKENS_PER_CREDIT) * factor);
+
+    if (Math.max(0, monthlyRemaining) + topupRemaining < estimatedMaxCost) {
+      return res.status(402).json({ 
+        error: `Insufficient AI credits. Estimated cost: ${estimatedMaxCost} credits. Please purchase a top-up.` 
+      });
     }
-    const txnId = deductRes.out_txn_id;
+
 
     // 6. Call OpenRouter API with fallback cascade
     let openRouterRes;
@@ -774,8 +794,6 @@ router.post('/chat', chatRules, async (req, res, next) => {
     }
 
     if (!openRouterRes || !openRouterRes.ok) {
-      // Release reservation
-      await supabase.rpc('release_reservation', { p_txn_id: txnId });
       console.error('[OpenRouter Error] All models failed:', lastError);
       throw new Error(lastError || 'All AI models failed to respond.');
     }
@@ -784,9 +802,28 @@ router.post('/chat', chatRules, async (req, res, next) => {
     const replyText = aiData?.choices?.[0]?.message?.content?.trim();
 
     if (!replyText) {
-      await supabase.rpc('release_reservation', { p_txn_id: txnId });
       throw new Error('Empty response from AI model.');
     }
+
+    const inputTokens = aiData?.usage?.prompt_tokens || Math.ceil(JSON.stringify(messages).length / 4);
+    const outputTokens = aiData?.usage?.completion_tokens || Math.ceil(replyText.length / 4);
+    const totalTokens = inputTokens + outputTokens;
+    const usedFactor = MODEL_FACTORS[usedModel] || 1;
+    
+    const cost = Math.max(1, Math.ceil((totalTokens / TOKENS_PER_CREDIT) * usedFactor));
+
+    // Deduct usage post-call
+    const { data: deductRes } = await supabase.rpc('deduct_ai_usage', {
+      p_clinic_id: req.clinicId,
+      p_cost: cost,
+      p_ai_mode: mode,
+      p_input_tokens: inputTokens,
+      p_output_tokens: outputTokens,
+      p_total_tokens: totalTokens,
+      p_model: usedModel
+    });
+    
+    const txnId = deductRes?.out_txn_id || null;
 
     // 7. Save assistant reply to DB
     const { data: aiMsg, error: saveErr } = await supabase.from('ai_chats').insert({
@@ -797,19 +834,14 @@ router.post('/chat', chatRules, async (req, res, next) => {
       model_used:   usedModel,
       session_id:   activeSessionId,
       session_name: activeSessionName,
-      credits_cost: CREDIT_COSTS[mode] || 1,
+      credits_cost: cost,
       credit_txn_id: txnId,
     }).select().single();
 
     if (saveErr) {
-       // We deducted but failed to save chat. Don't refund as API was consumed, but log.
        console.error('Failed to save AI chat:', saveErr);
-       // We mark it consumed anyway to clear the active reservation
-       await supabase.rpc('consume_reservation', { p_txn_id: txnId, p_ai_chat_id: null });
        throw saveErr;
     }
-
-    await supabase.rpc('consume_reservation', { p_txn_id: txnId, p_ai_chat_id: aiMsg.id });
 
     res.json({
       reply:        aiMsg,
@@ -885,18 +917,38 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
       { role: 'user', content: context ? `${context}\n\n${message}` : message },
     ];
 
-    // Deduct & Reserve for stream
-    const cost = CREDIT_COSTS[mode] || 1;
-    const { data: deductRes, error: deductErr } = await supabase.rpc('deduct_ai_credits', {
-      p_clinic_id: req.clinicId,
-      p_cost: cost,
-      p_ai_mode: mode
-    });
-    if (deductErr) throw deductErr;
-    if (!deductRes.success) {
-      return res.status(402).json({ error: 'Insufficient AI credits. Please purchase a top-up.' });
+    // 5.5 Check Credits (Strict check before API call)
+    const { data: creditCheck, error: creditCheckErr } = await supabase
+      .from('clinic_credits')
+      .select('credits_allocated, credits_used')
+      .eq('clinic_id', req.clinicId)
+      .single();
+
+    if (creditCheckErr) throw creditCheckErr;
+    
+    // Check if they have topups
+    const { data: topupCheck } = await supabase
+      .from('credit_topup_lots')
+      .select('credits_remaining')
+      .eq('clinic_id', req.clinicId)
+      .gt('expires_at', new Date().toISOString());
+
+    const topupRemaining = (topupCheck || []).reduce((acc, row) => acc + (row.credits_remaining || 0), 0);
+    const monthlyRemaining = (creditCheck.credits_allocated - creditCheck.credits_used);
+    
+    // Strict Mode: Estimate max cost for stream to prevent uncontrolled negative balances
+    const maxOutputTokens = 2048; // Matches max_tokens in API call
+    const estimatedInputTokens = Math.ceil(JSON.stringify(messages).length / 4);
+    const estimatedTotal = estimatedInputTokens + maxOutputTokens;
+    const factor = MODEL_FACTORS[model] || 1;
+    const estimatedMaxCost = Math.ceil((estimatedTotal / TOKENS_PER_CREDIT) * factor);
+
+    if (Math.max(0, monthlyRemaining) + topupRemaining < estimatedMaxCost) {
+      return res.status(402).json({ 
+        error: `Insufficient AI credits. Estimated cost: ${estimatedMaxCost} credits. Please purchase a top-up.` 
+      });
     }
-    const txnId = deductRes.out_txn_id;
+
 
     let openRouterRes;
     let usedModel = model;
@@ -939,7 +991,6 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
     }
 
     if (!openRouterRes || !openRouterRes.ok) {
-      await supabase.rpc('release_reservation', { p_txn_id: txnId });
       throw new Error(lastError || 'All models failed to respond.');
     }
 
@@ -987,8 +1038,28 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
       }
     }
 
-    // Save full reply to DB
+    // Save full reply to DB and Deduct Tokens
     try {
+      const inputTokens = Math.ceil(JSON.stringify(messages).length / 4);
+      const outputTokens = Math.ceil(fullReply.length / 4);
+      const totalTokens = inputTokens + outputTokens;
+      const usedFactor = MODEL_FACTORS[usedModel] || 1;
+      
+      const cost = Math.max(1, Math.ceil((totalTokens / TOKENS_PER_CREDIT) * usedFactor));
+  
+      // Deduct usage post-call
+      const { data: deductRes } = await supabase.rpc('deduct_ai_usage', {
+        p_clinic_id: req.clinicId,
+        p_cost: cost,
+        p_ai_mode: mode,
+        p_input_tokens: inputTokens,
+        p_output_tokens: outputTokens,
+        p_total_tokens: totalTokens,
+        p_model: usedModel
+      });
+      
+      const txnId = deductRes?.out_txn_id || null;
+
       const { data: aiMsg, error: saveErr } = await supabase.from('ai_chats').insert({
         clinic_id:    req.clinicId,
         role:         'assistant',
@@ -1002,11 +1073,8 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
       }).select('id').single();
 
       if (saveErr) throw saveErr;
-      
-      await supabase.rpc('consume_reservation', { p_txn_id: txnId, p_ai_chat_id: aiMsg.id });
     } catch (saveErr) {
-      console.error('[AI Stream] Failed to save reply:', saveErr);
-      await supabase.rpc('consume_reservation', { p_txn_id: txnId, p_ai_chat_id: null });
+      console.error('[AI Stream] Failed to save reply or deduct tokens:', saveErr);
     }
 
     res.write(`data: ${JSON.stringify({ type: 'done', session_id: activeSessionId, session_name: activeSessionName })}\n\n`);
@@ -1016,6 +1084,44 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
     if (!res.headersSent) return next(err);
     res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
     res.end();
+  }
+});
+
+// ── POST /api/ai/estimate ─────────────────────────────────────────────────────
+// Preview the estimated cost of an AI action before running it.
+router.post('/estimate', [
+  body('message').trim().notEmpty().withMessage('Message is required'),
+  body('mode').optional({ nullable: true, checkFalsy: true }).isIn(['data', 'thinking', 'automation'])
+], async (req, res, next) => {
+  try {
+    if (!validate(req, res)) return;
+    
+    const { message, mode: requestedMode = 'thinking' } = req.body;
+    const subscriptionPlan = req.clinic?.subscription_plan || 'basic';
+    const { model, mode } = getModel(subscriptionPlan, requestedMode);
+
+    // Build mock messages array to estimate input size
+    const messages = [
+      { role: 'system', content: buildSystemPrompt(mode, 'MOCK_CONTEXT_BLOCK', false) },
+      { role: 'user', content: message },
+    ];
+    
+    const maxOutputTokens = 2048;
+    const estimatedInputTokens = Math.ceil(JSON.stringify(messages).length / 4);
+    const estimatedTotal = estimatedInputTokens + maxOutputTokens;
+    const factor = MODEL_FACTORS[model] || 1;
+    
+    const maxCredits = Math.max(1, Math.ceil((estimatedTotal / TOKENS_PER_CREDIT) * factor));
+    const minCredits = Math.max(1, Math.ceil(((estimatedInputTokens + 100) / TOKENS_PER_CREDIT) * factor)); // Assume at least 100 output
+
+    res.json({
+      mode,
+      model,
+      estimated_input_tokens: estimatedInputTokens,
+      estimated_cost_range: { min: minCredits, max: maxCredits }
+    });
+  } catch (err) {
+    next(err);
   }
 });
 

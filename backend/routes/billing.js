@@ -605,7 +605,7 @@ router.post('/cancel-subscription', requireAuth, async (req, res, next) => {
 });
 
 // ── GET /api/billing/status ───────────────────────────────────────────────────
-// Returns complete subscription, card details, and credits summary
+// Returns complete subscription, card details, credits summary, and usage breakdown
 router.get('/status', requireAuth, async (req, res, next) => {
   try {
     const [subRes, creditsRes, topupsRes] = await Promise.all([
@@ -615,10 +615,24 @@ router.get('/status', requireAuth, async (req, res, next) => {
     ]);
 
     const sub = subRes.data;
-    const credits = creditsRes.data || { credits_allocated: 0, credits_used: 0 };
+    const credits = creditsRes.data || { credits_allocated: 0, credits_used: 0, period_start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString() };
     const topupTotal = (topupsRes.data || []).reduce((acc, row) => acc + (row.credits_remaining || 0), 0);
     const monthlyRemaining = Math.max(0, credits.credits_allocated - credits.credits_used);
     const totalCredits = monthlyRemaining + topupTotal;
+
+    // Fetch usage breakdown for current period
+    const { data: usageTxns } = await supabase
+      .from('credit_transactions')
+      .select('amount, ai_mode')
+      .eq('clinic_id', req.clinicId)
+      .eq('type', 'usage')
+      .gte('created_at', credits.period_start || new Date(0).toISOString());
+
+    const usageBreakdown = (usageTxns || []).reduce((acc, txn) => {
+      const mode = txn.ai_mode || 'other';
+      acc[mode] = (acc[mode] || 0) + Math.abs(txn.amount);
+      return acc;
+    }, {});
 
     res.json({
       subscription: sub || null,
@@ -637,10 +651,12 @@ router.get('/status', requireAuth, async (req, res, next) => {
         monthly_allocated: credits.credits_allocated,
         monthly_used: credits.credits_used,
         monthly_remaining: monthlyRemaining,
-        topup_remaining: topupTotal
+        topup_remaining: topupTotal,
+        usage_breakdown: usageBreakdown
       }
     });
   } catch (err) { next(err); }
 });
 
 module.exports = router;
+

@@ -1,0 +1,61 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "src": "/401",
+      "dest": "/401.html",
+      "status": 401
+    },
+    {
+      "src": "/401\\.html",
+      "dest": "/401.html",
+      "status": 401
+    },
+    {
+      "src": "/403",
+      "dest": "/403.html",
+      "status": 403
+    },
+    {
+      "src": "/403\\.html",
+      "dest": "/403.html",
+      "status": 403
+    },
+    {
+      "src": "/500",
+      "dest": "/500.html",
+      "status": 500
+    },
+    {
+      "src": "/500\\.html",
+      "dest": "/500.html",
+      "status": 500
+    },
+    {
+      "src": "/404",
+      "dest": "/404.html",
+      "status": 404
+    },
+    {
+      "src": "/404\\.html",
+      "dest": "/404.html",
+      "status": 404
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}

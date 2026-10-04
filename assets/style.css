@@ -856,3 +856,43 @@ input,textarea,select{font:inherit;color:inherit}
   font-family: monospace;
   font-size: var(--text-sm);
 }
+
+/* ── Accessibility: comprehensive reduced-motion support ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Performance: prevent layout shift for images ── */
+img {
+  height: auto;
+  max-width: 100%;
+}
+img[loading="lazy"] {
+  content-visibility: auto;
+}
+
+/* ── Accessibility: skip-to-content link ── */
+.skip-to-content {
+  position: absolute;
+  top: -40px;
+  left: 1rem;
+  background: var(--color-primary, #2563eb);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 0 0 var(--radius-sm, 4px) var(--radius-sm, 4px);
+  font-weight: 600;
+  z-index: 10000;
+  transition: top 0.15s;
+  text-decoration: none;
+}
+.skip-to-content:focus {
+  top: 0;
+}
+

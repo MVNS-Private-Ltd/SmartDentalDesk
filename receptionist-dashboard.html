@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard · Smart Dental Clinic</title>
+<title>Receptionist Dashboard | Smart Dental Desk</title>
+<meta name="description" content="Receptionist tools for Smart Dental Desk.">
+  <link rel="canonical" href="https://smart-dental-desk.vercel.app/receptionist-dashboard.html">
+
+  <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=General+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1026,12 +1030,12 @@
 <body>
 <div class="dashboard-layout">
   <aside class="sidebar">
-    <a href="./index.html" class="brand" aria-label="Smart Dental Clinic home">
+    <a href="./index.html" class="brand" aria-label="Smart Dental Desk home">
       <svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true">
         <rect width="32" height="32" rx="8" fill="#2563eb"/>
         <path d="M16 8c-2.8 0-5 1.9-5 4.6 0 1.7.6 2.7 1.2 3.9.7 1.4 1.4 3 1.6 6.1.1 1.4 1 2.4 2.2 2.4s2.1-1 2.2-2.4c.2-3.1.9-4.7 1.6-6.1.6-1.2 1.2-2.2 1.2-3.9C21 9.9 18.8 8 16 8Z" fill="#fff"/>
       </svg>
-      <span class="brand-name">Smart Dental Clinic</span>
+      <span class="brand-name">Smart Dental Desk</span>
     </a>
     
     <nav class="sidebar-nav" id="sidebarNav">
@@ -1209,6 +1213,11 @@
         </div>
 
         <div class="chat-main-wrapper" style="display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; position: relative;">
+          <!-- AI Disclaimer -->
+          <div style="background:#fffbeb; border-bottom:1px solid #fde68a; padding:0.5rem 1rem; font-size:0.78rem; color:#92400e; display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <strong>AI Assistance Only:</strong>&nbsp;Smart Dental Desk AI may be inaccurate or incomplete. It does not diagnose, prescribe, or replace professional clinical judgment. A qualified dental professional must review all AI-generated content before use.
+          </div>
           <!-- Main Chat Area -->
           <div class="chat-history" id="chatHistory" style="flex: 1;">
             <div class="ai-greeting" id="aiGreeting"></div>
@@ -2141,7 +2150,7 @@
 
     // ── Receipt Modal Handlers ───────────────────────────────────────────────
     window.openReceiptModal = function(data) {
-      const clinicName = data.clinic?.name || localStorage.getItem('sdd_clinic_name') || 'Smart Dental Clinic';
+      const clinicName = data.clinic?.name || localStorage.getItem('sdd_clinic_name') || 'Smart Dental Desk';
       const clinicAddress = data.clinic?.address || 'Dental Care & Implant Center';
       const clinicContact = data.clinic?.email ? `Contact: ${data.clinic.email}` : (data.clinic?.phone ? `Phone: ${data.clinic.phone}` : '');
       
@@ -2799,9 +2808,9 @@
         } else {
           streamBubble.className = 'chat-bubble';
           if (firstToken) {
-            streamBubble.innerHTML = `smart dental clinic ai was terminated`;
+            streamBubble.innerHTML = `Smart Dental Desk AI was terminated`;
           } else {
-            streamBubble.innerHTML += `<br><br>[smart dental clinic ai was terminated]`;
+            streamBubble.innerHTML += `<br><br>[Smart Dental Desk AI was terminated]`;
           }
         }
       } finally {
@@ -3323,7 +3332,7 @@
         <div>
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
             <div style="width:24px; height:24px; border-radius:6px; background:#2563eb; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:bold;">✦</div>
-            <h2 id="rcptClinicName" style="margin:0; font-size:1.25rem; font-weight:800; color:#0f172a;">Smart Dental Clinic</h2>
+            <h2 id="rcptClinicName" style="margin:0; font-size:1.25rem; font-weight:800; color:#0f172a;">Smart Dental Desk</h2>
           </div>
           <p id="rcptClinicAddress" style="margin:0; font-size:0.78rem; color:#64748b;">Dental Care &amp; Implant Center</p>
           <p id="rcptClinicContact" style="margin:2px 0 0; font-size:0.75rem; color:#64748b;">Contact: clinic@smartdental.com</p>

@@ -191,11 +191,17 @@ router.post('/login', loginRules, async (req, res, next) => {
     if (!validate(req, res)) return;
 
     const { email, password } = req.body;
+    const { logAuditEvent, trackAndHalt } = require('../lib/auditLogger');
 
     const authClient = createAnonClient();
     const { data, error } = await authClient.auth.signInWithPassword({ email, password });
 
     if (error) {
+      logAuditEvent('auth.login_failed', { email, ip: req.ip, reason: error.message });
+      if (trackAndHalt('auth_brute_force', req.ip, 10, 15 * 60 * 1000)) {
+        return res.status(429).json({ error: 'Too many failed login attempts. Please try again later.' });
+      }
+
       if (error.message.includes('Invalid login credentials')) {
         return res.status(401).json({ error: 'Incorrect email or password.' });
       }

@@ -87,8 +87,31 @@ router.put('/settings', requireAuth, updateRules, async (req, res, next) => {
       .single();
 
     if (error) throw error;
+    
+    const { logAuditEvent } = require('../lib/auditLogger');
+    logAuditEvent('clinic.profile_updated', { clinicId: req.clinicId, userId: req.user.id });
+    
     res.json({ message: 'Profile updated successfully.', settings: data });
   } catch (err) { next(err); }
+});
+
+// ── POST /api/clinics/request-deletion ────────────────────────────────────────
+// Request account deletion (logged for security and manual processing)
+router.post('/request-deletion', requireAuth, [
+  body('reason').optional().trim().isLength({ max: 500 })
+], async (req, res, next) => {
+  try {
+    if (!validate(req, res)) return;
+    const { reason } = req.body;
+    
+    const { logAuditEvent } = require('../lib/auditLogger');
+    logAuditEvent('clinic.deletion_requested', { clinicId: req.clinicId, userId: req.user.id, reason });
+    
+    // In a real flow, this might insert into an admin tasks table or send an email.
+    res.json({ message: 'Account deletion request submitted. Our team will process this shortly.' });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;

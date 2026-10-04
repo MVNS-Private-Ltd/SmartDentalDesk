@@ -17,6 +17,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 const supabase = require('../lib/supabase');
 const { isSuperAdminUser } = require('./superAdmin');
+const { logAuditEvent, trackAndHalt } = require('../lib/auditLogger');
 
 // Generic denial — reveals nothing about why the request was denied.
 const ACCESS_DENIED = { error: 'Access denied.' };
@@ -60,6 +61,7 @@ module.exports = async function requireAuth(req, res, next) {
     if (clinic) {
       // Gate: clinic must be active and unsuspended.
       if (clinic.is_active === false || clinic.suspended_at !== null) {
+        logAuditEvent('auth.clinic_suspended', { clinicId: clinic.id, userId: user.id, reason: clinic.suspension_reason });
         return res.status(403).json(ACCESS_DENIED);
       }
 
@@ -83,6 +85,7 @@ module.exports = async function requireAuth(req, res, next) {
 
     // 4a. Staff row exists but is offboarded/revoked — deny, no auto-provision.
     if (staff && staff.is_active === false) {
+      logAuditEvent('auth.staff_revoked', { userId: user.id, clinicId: staff.clinic_id });
       return res.status(403).json(ACCESS_DENIED);
     }
 
@@ -90,6 +93,7 @@ module.exports = async function requireAuth(req, res, next) {
     if (staff && staff.is_active === true) {
       const staffClinic = staff.clinics;
       if (!staffClinic || staffClinic.is_active === false || staffClinic.suspended_at !== null) {
+        logAuditEvent('auth.staff_clinic_suspended', { userId: user.id, clinicId: staff.clinic_id });
         return res.status(403).json(ACCESS_DENIED);
       }
 
@@ -106,10 +110,13 @@ module.exports = async function requireAuth(req, res, next) {
 
     // 4d. No staff row at all — deny. requireAuth never auto-provisions.
     //     POST /api/auth/register is the only route that creates a clinic.
+    logAuditEvent('auth.unauthorized_access', { userId: user.id, reason: 'No staff row or clinic owned', ip: req.ip });
     return res.status(403).json(ACCESS_DENIED);
 
   } catch (err) {
     console.error('[Auth Middleware Error]', err.message);
+    const { logAuditEvent } = require('../lib/auditLogger');
+    logAuditEvent('auth.middleware_error', { ip: req.ip, reason: err.message });
     return res.status(500).json({ error: 'Authentication check failed.' });
   }
 };

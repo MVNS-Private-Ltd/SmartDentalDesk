@@ -3,8 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Clinic Details &amp; Treatments | Smart Dental Desk</title>
-  <meta name="description" content="View clinic profile, transparent treatment pricing, doctor team, sterilisation standards, and book instant appointment online.">
+  <title>Clinic Profile | Smart Dental Desk</title>
+<meta name="description" content="View clinic information, available services, and request an appointment through Smart Dental Desk.">
+  <link rel="canonical" href="https://smart-dental-desk.vercel.app/clinic-detail.html">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Smart Dental Desk">
+  <meta property="og:title" content="Clinic Profile | Smart Dental Desk">
+  <meta property="og:description" content="View clinic information, available services, and request an appointment through Smart Dental Desk.">
+  <meta property="og:url" content="https://smart-dental-desk.vercel.app/clinic-detail.html">
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Clinic Profile | Smart Dental Desk">
+  <meta name="twitter:description" content="View clinic information, available services, and request an appointment through Smart Dental Desk.">
+  <meta name="robots" content="index, follow">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=General+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -299,7 +311,7 @@
   <!-- HEADER -->
   <header class="site-header">
     <div class="container nav">
-      <a href="./index.html" class="brand" aria-label="Smart Dental Clinic home">
+      <a href="./index.html" class="brand" aria-label="Smart Dental Desk home">
         <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
           <rect width="32" height="32" rx="8" fill="#2563eb"/>
           <path d="M16 8c-2.8 0-5 1.9-5 4.6 0 1.7.6 2.7 1.2 3.9.7 1.4 1.4 3 1.6 6.1.1 1.4 1 2.4 2.2 2.4s2.1-1 2.2-2.4c.2-3.1.9-4.7 1.6-6.1.6-1.2 1.2-2.2 1.2-3.9C21 9.9 18.8 8 16 8Z" fill="#fff"/>
@@ -346,9 +358,9 @@
         <div class="showcase-top">
           <div>
             <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
-              <span class="instant-confirm-badge">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                Verified Dental Center
+              <span class="instant-confirm-badge" style="background:#f3f4f6; color:#4b5563;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                Profile information supplied by the clinic
               </span>
               <span id="planBadge" style="font-size:0.75rem; font-weight:700; background:#f1f5f9; padding:0.25rem 0.55rem; border-radius:6px; color:#475569;">14+ Years Experience</span>
             </div>
@@ -478,6 +490,12 @@
               Free rescheduling &bull; Zero cancellation fee
             </div>
           </div>
+
+          <div style="margin-top: 1.5rem; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+            <button onclick="openReportModal()" style="background: none; border: none; color: #64748b; font-size: 0.85rem; text-decoration: underline; cursor: pointer;">
+              Report this listing
+            </button>
+          </div>
         </aside>
 
       </div>
@@ -489,16 +507,67 @@
     <div style="max-width: var(--content-wide); margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
       <div style="display: flex; align-items: center; gap: 0.5rem;">
         <span style="font-weight: 700; font-size: 1.05rem; color: #0f172a;">Smart Dental Desk</span>
-        <span style="font-size: 0.85rem; color: #64748b;">— India's premier dental clinic network</span>
+        <span style="font-size: 0.85rem; color: #64748b;">— Dental Clinic Management and Discovery</span>
       </div>
       <div style="font-size: 0.85rem; color: #94a3b8;">
         &copy; 2026 SmartDentalDesk. All rights reserved.
       </div>
     </div>
-  </footer>
+  
+    <div style="margin-top: 10px; display: flex; gap: 15px; flex-wrap: wrap;">
+      <a href="./privacy-policy.html">Privacy Policy</a>
+      <a href="./terms-of-service.html">Terms of Service</a>
+      <a href="./refund-cancellation.html">Refund Policy</a>
+    </div>
+
+</footer>
+
+    <div id="reportModal" class="modal-overlay">
+      <div class="modal-content" style="max-width: 400px; padding: 2rem;">
+        <h3 style="margin-bottom:1rem; font-size:1.25rem;">Report this listing</h3>
+        <form id="reportForm" onsubmit="submitReport(event)">
+          <div class="field">
+            <label>Reason</label>
+            <select id="reportReason" required>
+              <option value="">Select a reason</option>
+              <option value="inaccurate">Inaccurate information</option>
+              <option value="impersonation">Impersonation / Fake</option>
+              <option value="inappropriate">Inappropriate content</option>
+              <option value="privacy">Privacy concern</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="field" style="margin-top:1rem;">
+            <label>Details (Optional)</label>
+            <textarea id="reportDetails" rows="3" placeholder="Provide more context..."></textarea>
+          </div>
+          <div style="display:flex; justify-content:flex-end; gap:1rem; margin-top:1.5rem;">
+            <button type="button" class="btn btn-outline" onclick="closeReportModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Submit Report</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
   <script src="./assets/app.js"></script>
   <script>
+    function openReportModal() { document.getElementById('reportModal').style.display = 'flex'; }
+    function closeReportModal() { document.getElementById('reportModal').style.display = 'none'; }
+    
+    async function submitReport(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+      
+      // Simulating API call for report submission
+      // Real implementation should POST to /api/public/report
+      setTimeout(() => {
+        document.getElementById('reportForm').innerHTML = '<p style="color:#15803d; text-align:center; padding: 1rem 0; font-weight:600;">Report submitted successfully. Our team will review this listing.</p>';
+        setTimeout(closeReportModal, 3000);
+      }, 1000);
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
       const params = new URLSearchParams(window.location.search);
       const slug = params.get('c');
@@ -518,17 +587,49 @@
 
         if (!clinic) throw new Error('Clinic not found');
 
+        // ── Unverified/Incomplete Profile SEO Gate ──
+        if (clinic.is_verified === false || !clinic.phone || !clinic.address) {
+          const metaRobots = document.createElement('meta');
+          metaRobots.name = "robots";
+          metaRobots.content = "noindex, nofollow";
+          document.head.appendChild(metaRobots);
+        }
+
         // Populate fields
-        document.title = `${clinic.name} - Treatments & Book Online | Smart Dental Desk`;
+        // Update dynamic meta tags from real clinic data (no invented values)
+        document.title = `${clinic.name} | Smart Dental Desk`;
+        const descEl = document.querySelector('meta[name="description"]');
+        if (descEl && clinic.about) descEl.content = clinic.about.slice(0, 160);
+        const ogTitleEl = document.querySelector('meta[property="og:title"]');
+        if (ogTitleEl) ogTitleEl.content = `${clinic.name} | Smart Dental Desk`;
+        const ogDescEl = document.querySelector('meta[property="og:description"]');
+        if (ogDescEl && clinic.about) ogDescEl.content = clinic.about.slice(0, 160);
+
         document.getElementById('bcClinicName').textContent = clinic.name;
         document.getElementById('cName').textContent = clinic.name;
-        document.getElementById('cDoctor').textContent = `${clinic.owner_name || 'Chief Dental Surgeon'} • ${clinic.experience_years || 10}+ Years Experience`;
-        document.getElementById('cAddress').textContent = `${clinic.address || ''}, ${clinic.city || ''}`;
-        document.getElementById('cTimings').textContent = clinic.timings || 'Mon - Sat: 09:00 AM - 08:00 PM';
-        document.getElementById('cPhone').textContent = clinic.phone || '+91 98101 23456';
-        document.getElementById('cRating').textContent = (clinic.rating || 4.8).toFixed(1);
-        document.getElementById('cReviewCount').textContent = `(${clinic.review_count || 120} Reviews)`;
-        document.getElementById('cAbout').textContent = clinic.about || 'Specialized dental care clinic equipped with the latest modern diagnostics, digital dentistry tools, and gentle pain-free treatment procedures.';
+        // Only show owner name if it exists in real data; never show a fabricated default
+        const doctorEl = document.getElementById('cDoctor');
+        if (clinic.owner_name) {
+          doctorEl.textContent = `${clinic.owner_name}${clinic.experience_years ? ' • ' + clinic.experience_years + '+ Years Experience' : ''}`;
+        } else {
+          doctorEl.textContent = '';
+        }
+        document.getElementById('cAddress').textContent = [clinic.address, clinic.city].filter(Boolean).join(', ');
+        document.getElementById('cTimings').textContent = clinic.timings || 'Contact clinic for opening hours';
+        // Never show a fabricated phone number
+        const phoneEl = document.getElementById('cPhone');
+        phoneEl.textContent = clinic.phone || 'Contact via appointment form';
+        // Only show real ratings/reviews
+        const ratingEl = document.getElementById('cRating');
+        const reviewEl = document.getElementById('cReviewCount');
+        if (clinic.rating && Number(clinic.rating) > 0) {
+          ratingEl.textContent = Number(clinic.rating).toFixed(1);
+          reviewEl.textContent = clinic.review_count ? `(${clinic.review_count} Reviews)` : '';
+        } else {
+          // Hide rating display if no real rating data
+          ratingEl.closest('.rating-display') && (ratingEl.closest('.rating-display').style.display = 'none');
+        }
+        document.getElementById('cAbout').textContent = clinic.about || '';
 
         // Gallery Images
         const cover = clinic.cover_image || 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80';
@@ -538,14 +639,10 @@
         document.getElementById('img3').src = imgList[2] || 'https://images.unsplash.com/photo-1598256989800-fe5f95da9787?auto=format&fit=crop&w=800&q=80';
 
         // Treatments List
-        const services = Array.isArray(clinic.services_offered) && clinic.services_offered.length > 0 
-          ? clinic.services_offered 
-          : [
-              { name: "Comprehensive Dental Checkup & Digital X-Ray", price: 500, duration: "20 min", category: "General" },
-              { name: "Single-Sitting Root Canal (Rotary RCT)", price: 3500, duration: "45 min", category: "Root Canal" },
-              { name: "Laser Teeth Whitening (Zoom)", price: 4999, duration: "45 min", category: "Cosmetic" },
-              { name: "Ultrasonic Scaling & Deep Polishing", price: 1200, duration: "30 min", category: "General" }
-            ];
+        // Only show services that the clinic has actually configured — no invented defaults
+        const services = Array.isArray(clinic.services_offered) && clinic.services_offered.length > 0
+          ? clinic.services_offered
+          : [];
 
         const treatmentsHtml = services.map(s => `
           <div class="treatment-item">

@@ -17,6 +17,11 @@ router.use(requireAuth);
 // Only clinic admins/owners (and super admins) may modify staff
 function adminOnly(req, res, next) {
   if (req.userRole !== 'admin' && req.userRole !== 'super_admin') {
+    const { logAuditEvent, trackAndHalt } = require('../lib/auditLogger');
+    logAuditEvent('auth.role_escalation_attempt', { userId: req.user.id, clinicId: req.clinicId, currentRole: req.userRole });
+    if (trackAndHalt('role_escalation', req.clinicId, 3, 60 * 60 * 1000)) {
+      return res.status(403).json({ error: 'Repeated unauthorized access attempts. Action blocked.' });
+    }
     return res.status(403).json({ error: 'Only clinic administrators can manage staff.' });
   }
   next();

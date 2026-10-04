@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In Required | Smart Dental Desk</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=General+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'General Sans', -apple-system, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+.legal-footer { margin-top: 3rem; font-size: 0.78rem; color: #94a3b8; text-align: center; }
+.legal-footer a { color: #64748b; text-decoration: none; margin: 0 0.4rem; }
+.legal-footer a:hover { text-decoration: underline; }
+.error-card { text-align: center; max-width: 480px; }
+.error-code { font-family: 'Fraunces', Georgia, serif; font-size: clamp(5rem, 15vw, 8rem); line-height: 1; color: #e2e8f0; font-weight: 600; margin-bottom: 1rem; }
+h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; }
+p { color: #64748b; line-height: 1.6; margin-bottom: 2rem; }
+.btn { display: inline-block; padding: 0.75rem 1.75rem; background: #0f172a; color: white; text-decoration: none; border-radius: 9999px; font-size: 0.9rem; font-weight: 600; margin: 0.25rem; transition: background 0.2s; }
+.btn:hover { background: #1e293b; }
+.btn-outline { background: white; color: #0f172a; border: 2px solid #e2e8f0; }
+.btn-outline:hover { background: #f1f5f9; }
+.brand { font-family: 'Fraunces', Georgia, serif; font-size: 1.1rem; font-weight: 600; color: #0f172a; text-decoration: none; display: block; margin-bottom: 3rem; }
+</style>
+</head>
+<body>
+<a href="/" class="brand">Smart Dental Desk</a>
+<div class="error-card">
+  <div class="error-code">401</div>
+  <h1>Sign in required</h1>
+  <p>You need to sign in to access this page. Please log in with your clinic account to continue.</p>
+  <a href="/login.html" class="btn">Sign In</a>
+  <a href="/" class="btn btn-outline">Go to Homepage</a>
+</div>
+<footer class="legal-footer">
+  <a href="/privacy-policy.html">Privacy Policy</a> |
+  <a href="/terms-of-service.html">Terms of Service</a> |
+  <a href="/refund-cancellation.html">Refund &amp; Cancellation</a>
+</footer>
+</body>
+</html>

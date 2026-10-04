@@ -300,7 +300,28 @@ router.get('/:id', async (req, res, next) => {
       .eq('is_deleted', false)
       .single();
 
-    if (error || !patient) return res.status(404).json({ error: 'Patient not found.' });
+    if (error || !patient) {
+      // Check if it's a cross-tenant violation
+      const { data: globalPatient } = await adminSupabase
+        .from('patients')
+        .select('id, clinic_id')
+        .eq('id', req.params.id)
+        .maybeSingle();
+
+      if (globalPatient && globalPatient.clinic_id !== req.clinicId) {
+        const { logAuditEvent, trackAndHalt } = require('../lib/auditLogger');
+        logAuditEvent('tenant_violation', { 
+          clinicId: req.clinicId, 
+          userId: req.user.id, 
+          resourceType: 'patient', 
+          resourceId: req.params.id 
+        });
+        if (trackAndHalt('tenant_violation', req.clinicId, 3, 60 * 60 * 1000)) {
+          return res.status(403).json({ error: 'Repeated cross-tenant violations detected. Account suspended.' });
+        }
+      }
+      return res.status(404).json({ error: 'Patient not found.' });
+    }
 
     // Also fetch appointments and treatments
     const { data: appointments } = await supabase

@@ -11,6 +11,7 @@ router.post('/', async (req, res) => {
     const rawBody = req.body;
     const signature = req.headers['x-razorpay-signature'];
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const { logAuditEvent, trackAndHalt } = require('../lib/auditLogger');
 
     if (!secret) {
       console.warn('⚠️ Webhook secret not configured, skipping validation');
@@ -23,7 +24,10 @@ router.post('/', async (req, res) => {
                                     .digest('hex');
 
     if (expectedSignature !== signature) {
-      console.error('❌ Webhook signature mismatch');
+      logAuditEvent('webhook.signature_failed', { ip: req.ip });
+      if (trackAndHalt('webhook_signature_failure', req.ip, 5, 10 * 60 * 1000)) {
+        return res.status(429).send('Too many invalid signatures');
+      }
       return res.status(400).send('Invalid signature');
     }
 
@@ -42,20 +46,24 @@ router.post('/', async (req, res) => {
       .maybeSingle();
 
     if (existingEvent) {
-      console.log(`[Webhook] Event ${eventId} already processed, skipping.`);
+      logAuditEvent('webhook.duplicate_event', { providerEventId: eventId });
+      trackAndHalt('webhook_duplicate', req.ip, 10, 10 * 60 * 1000); // just track
       return res.status(200).send('OK (Idempotent)');
     }
 
     // 4. Handle events
     if (eventType.startsWith('subscription.')) {
       await handleSubscriptionEvent(eventType, payload.payload.subscription.entity, eventId, payload);
+    } else if (eventType.startsWith('payment.failed')) {
+      logAuditEvent('webhook.payment_failed', { providerEventId: eventId });
     } else if (eventType.startsWith('payment.')) {
       // Topup payments handled here later
     }
 
     res.status(200).send('OK');
   } catch (err) {
-    console.error('[Webhook] Error processing webhook:', err);
+    const { logAuditEvent } = require('../lib/auditLogger');
+    logAuditEvent('webhook.processing_error', { reason: err.message });
     res.status(500).send('Internal Error');
   }
 });

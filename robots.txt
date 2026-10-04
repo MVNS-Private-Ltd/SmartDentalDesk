@@ -1,0 +1,13 @@
+User-agent: *
+Disallow: /dashboard.html
+Disallow: /receptionist-dashboard.html
+Disallow: /super-admin.html
+Disallow: /billing.html
+Disallow: /login.html
+Disallow: /register.html
+Disallow: /reset-password.html
+Disallow: /book.html
+
+Allow: /
+
+Sitemap: https://smart-dental-desk.vercel.app/sitemap.xml

@@ -208,26 +208,26 @@ router.get('/clinics', [
       return {
         id: c.id,
         name: c.name,
-        owner_name: c.owner_name,
+        owner_name: c.owner_name || null,
         email: c.email,
-        phone: c.phone,
-        address: c.address,
-        city: c.city || 'Delhi NCR',
-        area: c.area || 'Central',
+        phone: c.phone || null,
+        address: c.address || null,
+        city: c.city || null,
+        area: c.area || null,
         pincode: c.pincode,
-        rating: Number(c.rating || 4.8),
-        review_count: Number(c.review_count || 0),
+        rating: c.rating && Number(c.rating) > 0 ? Number(c.rating) : null,
+        review_count: c.review_count && Number(c.review_count) > 0 ? Number(c.review_count) : null,
         booking_slug: c.booking_slug,
-        about: c.about,
-        cover_image: c.cover_image || 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80',
+        about: c.about || null,
+        cover_image: c.cover_image || null,
         images: c.images || [],
         specialties: c.specialties || [],
         services_offered: services,
         min_price: minPrice,
-        timings: c.timings || 'Mon - Sat: 09:00 AM - 08:00 PM',
-        experience_years: c.experience_years || 8,
-        price_range: c.price_range || '₹₹',
-        is_verified: c.is_verified !== false,
+        timings: c.timings || null,
+        experience_years: c.experience_years || null,
+        price_range: c.price_range || null,
+        is_verified: c.is_verified === true,
         is_featured: c.is_featured === true,
         amenities: c.amenities || []
       };
@@ -591,6 +591,34 @@ router.post('/book', bookingLimiter, [
       appointment,
       auto_approved: autoApprove
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/public/report ───────────────────────────────────────────────────
+// Submit a report against a clinic listing
+const reportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many reports submitted. Please try again later.' }
+});
+
+router.post('/report', reportLimiter, [
+  body('clinic_id').isUUID().withMessage('Valid clinic ID is required'),
+  body('reason').trim().notEmpty().withMessage('Reason is required'),
+  body('details').optional().trim().isLength({ max: 1000 })
+], async (req, res, next) => {
+  try {
+    if (!validate(req, res)) return;
+    const { clinic_id, reason, details } = req.body;
+    
+    const { logAuditEvent } = require('../lib/auditLogger');
+    logAuditEvent('public.listing_report', { clinicId: clinic_id, ip: req.ip, reason, details: (details || '').slice(0, 50) });
+
+    res.json({ success: true, message: 'Report submitted successfully' });
   } catch (err) {
     next(err);
   }

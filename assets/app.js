@@ -277,7 +277,7 @@ window.api = (function() {
     getChatSessions: () => request('/ai/sessions'),
     deleteChatSession: (session_id) => request(`/ai/sessions/${session_id}`, { method: 'DELETE' }),
     renameChatSession: (session_id, name) => request(`/ai/sessions/${session_id}/rename`, { method: 'PUT', body: JSON.stringify({ name }) }),
-    sendPatientEmail: (patient_name, subject, body) => request('/email/send-patient', { method: 'POST', body: JSON.stringify({ patient_name, subject, body }) }),
+    sendPatientEmail: (patient_name, subject, body, reviewed) => request('/email/send-patient', { method: 'POST', body: JSON.stringify({ patient_name, subject, body, reviewed }) }),
     scheduleMessage: (payload) => request('/messages/schedule', { method: 'POST', body: JSON.stringify(payload) }),
     getScheduledMessages: (status = '') => request(`/messages/scheduled${status ? '?status=' + status : ''}`),
     cancelScheduledMessage: (id) => request(`/messages/scheduled/${id}`, { method: 'DELETE' }),

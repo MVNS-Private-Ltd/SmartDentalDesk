@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>System Monitoring | Smart Dental Desk Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+  <script src="config.js"></script>
+  <style>
+    /* Premium aesthetics */
+    body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    .status-ok { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.5); }
+    .status-warn { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.5); }
+    .status-error { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.5); }
+    
+    .table-row { border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    .table-row:last-child { border-bottom: none; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="glass-card m-4 p-4 flex justify-between items-center sticky top-4 z-50">
+    <div class="flex items-center gap-3">
+      <div class="bg-blue-600 p-2 rounded-lg">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">System Monitoring</h1>
+        <p class="text-xs text-slate-400">Security & Operational Alerts</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <a href="super-admin.html" class="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        Back to Dashboard
+      </a>
+      <button onclick="logout()" class="text-sm text-slate-400 hover:text-white">Logout</button>
+    </div>
+  </header>
+
+  <main class="flex-grow p-4 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto w-full">
+    
+    <!-- Left Column: Status Overview -->
+    <div class="space-y-6">
+      
+      <!-- System Health -->
+      <div class="glass-card p-6">
+        <h2 class="text-lg font-semibold mb-4 text-slate-200 border-b border-slate-700 pb-2">Platform Health</h2>
+        <div class="space-y-4" id="health-container">
+          <div class="animate-pulse flex space-x-4">
+            <div class="flex-1 space-y-4 py-1">
+              <div class="h-2 bg-slate-700 rounded w-3/4"></div>
+              <div class="h-2 bg-slate-700 rounded"></div>
+              <div class="h-2 bg-slate-700 rounded w-5/6"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Audit Logs -->
+    <div class="md:col-span-2 space-y-6">
+      
+      <!-- Security Alerts -->
+      <div class="glass-card p-6">
+        <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+          <h2 class="text-lg font-semibold text-slate-200">Recent Security Alerts</h2>
+          <button onclick="fetchMonitoringData()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1 rounded transition">Refresh</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="text-slate-400">
+              <tr>
+                <th class="pb-3 font-medium">Timestamp</th>
+                <th class="pb-3 font-medium">Event Type</th>
+                <th class="pb-3 font-medium">Details</th>
+              </tr>
+            </thead>
+            <tbody id="security-events-tbody" class="text-slate-300">
+              <tr><td colspan="3" class="py-4 text-center text-slate-500">Loading events...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Operational Failures (Payments & Emails) -->
+      <div class="glass-card p-6">
+        <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+          <h2 class="text-lg font-semibold text-slate-200">Operational Failures (Webhooks & Emails)</h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="text-slate-400">
+              <tr>
+                <th class="pb-3 font-medium">Timestamp</th>
+                <th class="pb-3 font-medium">Event Type</th>
+                <th class="pb-3 font-medium">Details</th>
+              </tr>
+            </thead>
+            <tbody id="operational-events-tbody" class="text-slate-300">
+              <tr><td colspan="3" class="py-4 text-center text-slate-500">Loading events...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'login.html';
+
+    async function fetchMonitoringData() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/super-admin/monitoring`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            alert('Unauthorized. Super Admin access required.');
+            window.location.href = 'login.html';
+            return;
+          }
+          throw new Error('Failed to fetch monitoring data');
+        }
+
+        const data = await response.json();
+        renderHealthStatus(data);
+        renderEvents(data.security_events || [], 'security-events-tbody');
+        
+        const opEvents = [...(data.failed_payments || []), ...(data.email_failures || [])].sort((a,b) => new Date(b.ts) - new Date(a.ts));
+        renderEvents(opEvents, 'operational-events-tbody');
+
+      } catch (err) {
+        console.error('Error fetching monitoring data:', err);
+        document.getElementById('health-container').innerHTML = `<p class="text-red-400 text-sm">Error loading data.</p>`;
+      }
+    }
+
+    function renderHealthStatus(data) {
+      const emailStatus = data.email_status;
+      const paymentStatus = data.payment_webhook_configured;
+      
+      const emailBadge = emailStatus.api_key_present && emailStatus.from_domain_configured
+        ? `<span class="status-badge status-ok">Configured (${emailStatus.mode})</span>`
+        : `<span class="status-badge status-error">Incomplete</span>`;
+        
+      const paymentBadge = paymentStatus
+        ? `<span class="status-badge status-ok">Configured</span>`
+        : `<span class="status-badge status-error">Missing Secret</span>`;
+
+      const healthHtml = `
+        <div class="flex justify-between items-center py-2">
+          <span class="text-slate-400 text-sm">System Status</span>
+          <span class="status-badge status-ok">Online</span>
+        </div>
+        <div class="flex justify-between items-center py-2 border-t border-slate-700/50">
+          <span class="text-slate-400 text-sm">Email Service</span>
+          ${emailBadge}
+        </div>
+        <div class="flex justify-between items-center py-2 border-t border-slate-700/50">
+          <span class="text-slate-400 text-sm">Payment Webhooks</span>
+          ${paymentBadge}
+        </div>
+        <div class="flex justify-between items-center py-2 border-t border-slate-700/50">
+          <span class="text-slate-400 text-sm">Recent Security Events</span>
+          <span class="text-slate-200 font-mono text-sm">${(data.security_events || []).length}</span>
+        </div>
+        <div class="flex justify-between items-center py-2 border-t border-slate-700/50">
+          <span class="text-slate-400 text-sm">Listing Reports</span>
+          <span class="text-slate-200 font-mono text-sm">${(data.listing_reports || []).length}</span>
+        </div>
+      `;
+      document.getElementById('health-container').innerHTML = healthHtml;
+    }
+
+    function renderEvents(events, tbodyId) {
+      const tbody = document.getElementById(tbodyId);
+      if (events.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" class="py-4 text-center text-slate-500 text-sm italic">No recent events recorded.</td></tr>`;
+        return;
+      }
+
+      let html = '';
+      events.forEach(ev => {
+        const date = new Date(ev.ts).toLocaleString();
+        
+        let badgeClass = 'status-warn';
+        if (ev.event.includes('fail') || ev.event.includes('error') || ev.event.includes('halt') || ev.event.includes('violation')) {
+          badgeClass = 'status-error';
+        }
+
+        // Filter out ts and event for details
+        const { ts, event, ...details } = ev;
+        const detailsStr = Object.keys(details).length > 0 
+          ? Object.entries(details).map(([k,v]) => `<span class="text-slate-400">${k}:</span> ${v}`).join(', ')
+          : '-';
+
+        html += `
+          <tr class="table-row">
+            <td class="py-3 text-slate-400 text-xs whitespace-nowrap">${date}</td>
+            <td class="py-3 pr-4">
+              <span class="status-badge ${badgeClass} text-[11px] leading-tight px-2 py-1">${ev.event}</span>
+            </td>
+            <td class="py-3 text-slate-300 font-mono text-[11px] break-all">${detailsStr}</td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = 'login.html';
+    }
+
+    // Initialize
+    fetchMonitoringData();
+    // Refresh every 30 seconds
+    setInterval(fetchMonitoringData, 30000);
+  </script>
+</body>
+</html>

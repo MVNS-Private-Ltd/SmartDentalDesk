@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard · Smart Dental Clinic</title>
+<title>Dashboard | Smart Dental Desk</title>
+<meta name="description" content="Manage your dental clinic operations.">
+  <link rel="canonical" href="https://smart-dental-desk.vercel.app/dashboard.html">
+
+  <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=General+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1243,12 +1247,12 @@
 
 <div class="dashboard-layout">
   <aside class="sidebar">
-    <a href="./index.html" class="brand" aria-label="Smart Dental Clinic home">
+    <a href="./index.html" class="brand" aria-label="Smart Dental Desk home">
       <svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true">
         <rect width="32" height="32" rx="8" fill="#2563eb"/>
         <path d="M16 8c-2.8 0-5 1.9-5 4.6 0 1.7.6 2.7 1.2 3.9.7 1.4 1.4 3 1.6 6.1.1 1.4 1 2.4 2.2 2.4s2.1-1 2.2-2.4c.2-3.1.9-4.7 1.6-6.1.6-1.2 1.2-2.2 1.2-3.9C21 9.9 18.8 8 16 8Z" fill="#fff"/>
       </svg>
-      <span class="brand-name">Smart Dental Clinic</span>
+      <span class="brand-name">Smart Dental Desk</span>
     </a>
     
     <nav class="sidebar-nav" id="sidebarNav">
@@ -1655,6 +1659,9 @@
               </svg>
             </button>
           </form>
+          <div style="font-size: 0.75rem; color: var(--color-text-muted); text-align: center; margin-top: 8px; padding: 0 10px;">
+            AI assistance only: Smart Dental Desk AI may be inaccurate or incomplete. It does not diagnose, prescribe, or replace professional clinical judgment. A qualified dental professional must review all AI-generated content before using, saving, or sharing it with a patient.
+          </div>
 
           <div class="ai-suggestions">
             <button type="button" class="ai-suggestion-btn" data-prompt="Summarize today's appointments">
@@ -1856,7 +1863,7 @@
               <div class="billing-card-sub" id="billingPlanDesc">₹999 / month · Monthly Billing</div>
               
               <ul style="margin:1rem 0; padding-left:1.2rem; font-size:0.82rem; color:var(--color-text-muted); display:flex; flex-direction:column; gap:0.4rem;" id="billingPlanFeaturesList">
-                <li>2,500 Monthly AI Credits</li>
+                <li>1,000 Monthly AI Credits</li>
                 <li>Public Marketplace Listing</li>
                 <li>SEO Public Booking Page</li>
               </ul>
@@ -1875,7 +1882,7 @@
                 <h4 class="billing-card-title">AI Credits Balance</h4>
                 <span class="status-pill-badge active" style="background:#e0e7ff; color:#3730a3; border-color:#c7d2fe;">Instant AI</span>
               </div>
-              <div class="billing-card-val" id="billingTotalCreditsVal">2,500</div>
+              <div class="billing-card-val" id="billingTotalCreditsVal">1,000</div>
               <div class="billing-card-sub">Available for AI chats, prescriptions &amp; automations</div>
               
               <div class="credits-progress-bar">
@@ -3156,7 +3163,7 @@
 
     // ── Receipt Modal Handlers ───────────────────────────────────────────────
     window.openReceiptModal = function(data) {
-      const clinicName = data.clinic?.name || localStorage.getItem('sdd_clinic_name') || 'Smart Dental Clinic';
+      const clinicName = data.clinic?.name || localStorage.getItem('sdd_clinic_name') || 'Smart Dental Desk';
       const clinicAddress = data.clinic?.address || 'Dental Care & Implant Center';
       const clinicContact = data.clinic?.email ? `Contact: ${data.clinic.email}` : (data.clinic?.phone ? `Phone: ${data.clinic.phone}` : '');
       
@@ -3732,10 +3739,12 @@
                 const bodyFull = (pBody || '').replace(/\\n/g, '\n');
                 const subjectSafe = pSubject.replace(/"/g, '&quot;');
                 card.innerHTML = `
-                  <div class="eac-header">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                    Review &amp; send patient email
-                    <span class="eac-badge">Automation</span>
+                  <div class="eac-header" style="display:flex; justify-content:space-between;">
+                    <div>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                      Review &amp; send patient email
+                    </div>
+                    <span class="eac-badge" style="background:#fef3c7; color:#d97706; padding:2px 6px; font-size:10px; border-radius:4px;">AI-generated draft</span>
                   </div>
                   <div class="eac-field">
                     <span class="eac-label">To</span>
@@ -3749,9 +3758,15 @@
                     <span class="eac-label">Message — review and edit before sending</span>
                     <textarea class="eac-body-textarea" id="eacBodyTextarea" placeholder="Message body">${bodyFull}</textarea>
                   </div>
+                  <div style="margin-top: 10px; font-size: 0.8rem; display: flex; align-items: start; gap: 8px;">
+                    <input type="checkbox" id="eacReviewCheckbox" style="margin-top: 3px;" />
+                    <label for="eacReviewCheckbox" style="color: var(--color-text-muted);">
+                      I have reviewed this AI-generated content and confirm it is clinically appropriate to send to the patient.
+                    </label>
+                  </div>
                   <hr class="eac-divider">
                   <div class="eac-actions">
-                    <button class="eac-send-btn" id="eacSendBtn">
+                    <button class="eac-send-btn" id="eacSendBtn" disabled style="opacity:0.5; cursor:not-allowed;">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                       Send Now
                     </button>
@@ -3761,6 +3776,20 @@
 
                 loadDiv.appendChild(card);
                 chatHistory.scrollTop = chatHistory.scrollHeight;
+
+                const reviewCheck = card.querySelector('#eacReviewCheckbox');
+                const sendBtnEl = card.querySelector('#eacSendBtn');
+                reviewCheck.addEventListener('change', (e) => {
+                  if (e.target.checked) {
+                    sendBtnEl.disabled = false;
+                    sendBtnEl.style.opacity = '1';
+                    sendBtnEl.style.cursor = 'pointer';
+                  } else {
+                    sendBtnEl.disabled = true;
+                    sendBtnEl.style.opacity = '0.5';
+                    sendBtnEl.style.cursor = 'not-allowed';
+                  }
+                });
 
                 card.querySelector('#eacSendBtn').addEventListener('click', async () => {
                   const sendBtn2 = card.querySelector('#eacSendBtn');
@@ -3772,7 +3801,7 @@
                   sendBtn2.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg> Sending...`;
                   cancelBtn.disabled = true;
                   try {
-                    const result = await window.api.sendPatientEmail(parsed.patient_name, finalSubject, finalBody);
+                    const result = await window.api.sendPatientEmail(parsed.patient_name, finalSubject, finalBody, true);
                     card.querySelector('.eac-actions').innerHTML = `
                       <div class="eac-status success">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -3817,9 +3846,9 @@
         } else {
           streamBubble.className = 'chat-bubble';
           if (firstToken) {
-            streamBubble.innerHTML = `smart dental clinic ai was terminated`;
+            streamBubble.innerHTML = `Smart Dental Desk AI was terminated`;
           } else {
-            streamBubble.innerHTML += `<br><br>[smart dental clinic ai was terminated]`;
+            streamBubble.innerHTML += `<br><br>[Smart Dental Desk AI was terminated]`;
           }
         }
       } finally {
@@ -4479,7 +4508,7 @@ if(document.getElementById('section-scheduled-messages')?.classList.contains('ac
         <div>
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
             <div style="width:24px; height:24px; border-radius:6px; background:#2563eb; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:bold;">✦</div>
-            <h2 id="rcptClinicName" style="margin:0; font-size:1.25rem; font-weight:800; color:#0f172a;">Smart Dental Clinic</h2>
+            <h2 id="rcptClinicName" style="margin:0; font-size:1.25rem; font-weight:800; color:#0f172a;">Smart Dental Desk</h2>
           </div>
           <p id="rcptClinicAddress" style="margin:0; font-size:0.78rem; color:#64748b;">Dental Care &amp; Implant Center</p>
           <p id="rcptClinicContact" style="margin:2px 0 0; font-size:0.75rem; color:#64748b;">Contact: clinic@smartdental.com</p>
@@ -4697,7 +4726,7 @@ if(document.getElementById('section-scheduled-messages')?.classList.contains('ac
 </script>
 
 <script>
-// ── Staff Management Global Functions (always available, no DOMContentLoaded dependency) ──
+// ── Staff Management Global Functions (, no DOMContentLoaded dependency) ──
 // These are defined as true globals so onclick= attributes always find them.
 
 function _getStaffModal() { return document.getElementById('staffModal'); }
@@ -4891,7 +4920,7 @@ document.getElementById('staffModal').addEventListener('click', function(e) {
       <div onclick="selectUpgradePlan('starter')" id="upgPlan_starter" style="border:2px solid #e2e8f0; border-radius:12px; padding:12px; cursor:pointer; transition:all 0.2s; text-align:center;">
         <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Starter</div>
         <div style="font-size:1.25rem; font-weight:800; color:#0f172a; margin:4px 0;">₹599<span style="font-size:0.75rem; font-weight:500; color:#64748b;">/mo</span></div>
-        <div style="font-size:0.72rem; color:#64748b;">1,000 Credits · 2 Staff</div>
+        <div style="font-size:0.72rem; color:#64748b;">300 Credits · 2 Staff</div>
       </div>
 
       <!-- Growth -->
@@ -4899,14 +4928,14 @@ document.getElementById('staffModal').addEventListener('click', function(e) {
         <span style="position:absolute; top:-9px; left:50%; transform:translateX(-50%); background:#2563eb; color:#fff; font-size:0.62rem; font-weight:800; padding:1px 6px; border-radius:10px; text-transform:uppercase;">Popular</span>
         <div style="font-size:0.75rem; font-weight:700; color:#1e40af; text-transform:uppercase;">Growth</div>
         <div style="font-size:1.25rem; font-weight:800; color:#1e40af; margin:4px 0;">₹999<span style="font-size:0.75rem; font-weight:500; color:#64748b;">/mo</span></div>
-        <div style="font-size:0.72rem; color:#1e40af;">2,500 Credits · Directory</div>
+        <div style="font-size:0.72rem; color:#1e40af;">1,000 Credits · Directory</div>
       </div>
 
       <!-- Premium -->
       <div onclick="selectUpgradePlan('premium')" id="upgPlan_premium" style="border:2px solid #e2e8f0; border-radius:12px; padding:12px; cursor:pointer; transition:all 0.2s; text-align:center;">
         <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Premium</div>
         <div style="font-size:1.25rem; font-weight:800; color:#0f172a; margin:4px 0;">₹1,499<span style="font-size:0.75rem; font-weight:500; color:#64748b;">/mo</span></div>
-        <div style="font-size:0.72rem; color:#64748b;">10,000 Credits · Priority</div>
+        <div style="font-size:0.72rem; color:#64748b;">2,000 Credits · Priority</div>
       </div>
     </div>
 
@@ -5127,7 +5156,7 @@ document.getElementById('staffModal').addEventListener('click', function(e) {
 
       <div style="background:#f8fafc; border-radius:8px; padding:12px 16px; margin-bottom:18px; font-size:0.82rem;">
         <div style="font-size:0.7rem; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:2px;">Billed To (Clinic)</div>
-        <div id="subRcptClinicName" style="font-weight:700; font-size:0.95rem; color:#0f172a;">Smart Dental Clinic</div>
+        <div id="subRcptClinicName" style="font-weight:700; font-size:0.95rem; color:#0f172a;">Smart Dental Desk</div>
         <div id="subRcptPaymentMethod" style="color:#64748b;">Payment Method: Visa •••• 4242</div>
       </div>
 
@@ -5236,9 +5265,9 @@ let activeTopupMethod = 'card';
 
 // Plan metadata
 const UPGRADE_PLANS = {
-  starter: { name: 'Starter Plan', price: 599, credits: 1000, desc: 'Core Practice & Online Booking for Solo Dentists' },
-  growth:  { name: 'Growth Plan',  price: 999, credits: 2500, desc: 'Marketplace Directory & 2,500 Monthly AI Credits' },
-  premium: { name: 'Premium Plan', price: 1499, credits: 10000, desc: '10,000 AI Credits, Priority Directory & 24/7 SLA' }
+  starter: { name: 'Starter Plan', price: 599, credits: 300, desc: 'Core Practice & Online Booking for Solo Dentists' },
+  growth:  { name: 'Growth Plan',  price: 999, credits: 1000, desc: 'Marketplace Directory & 1,000 Monthly AI Credits' },
+  premium: { name: 'Premium Plan', price: 1499, credits: 2000, desc: '2,000 AI Credits, Priority Directory & 24/7 SLA' }
 };
 
 const TOPUP_PACKS = {
@@ -5289,9 +5318,9 @@ window.loadBillingSettings = async function() {
 
     const planNames = { starter: 'Starter Plan', growth: 'Growth Plan', premium: 'Premium Plan' };
     const planDescriptions = {
-      starter: '₹599 / month · 1,000 AI Credits',
-      growth: '₹999 / month · 2,500 AI Credits',
-      premium: '₹1,499 / month · 10,000 AI Credits'
+      starter: '₹599 / month · 300 AI Credits',
+      growth: '₹999 / month · 1,000 AI Credits',
+      premium: '₹1,499 / month · 2,000 AI Credits'
     };
 
     const isTrial = status === 'trialing';
@@ -5856,7 +5885,7 @@ window.viewSubReceipt = function(invoiceId) {
   if (invNo) invNo.textContent = inv.invoice_number;
   if (rDate) rDate.textContent = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   
-  const clinicName = localStorage.getItem('sdd_clinic_name') || 'Smart Dental Clinic';
+  const clinicName = localStorage.getItem('sdd_clinic_name') || 'Smart Dental Desk';
   if (rClinic) rClinic.textContent = clinicName;
   if (rMethod) rMethod.textContent = `Payment Method: Card •••• ${inv.card_last4 || '4242'}`;
   if (rItem) rItem.textContent = `${inv.plan.toUpperCase()} Plan Subscription`;

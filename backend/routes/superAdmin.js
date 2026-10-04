@@ -622,6 +622,37 @@ router.get('/system-health', async (_req, res) => {
   });
 });
 
+// ── 12. GET /api/super-admin/monitoring ───────────────────────────────────────
+// Provides active security, operational events, and system alerts
+router.get('/monitoring', async (_req, res, next) => {
+  try {
+    const { getEmailMode, getEmailConfig } = require('../lib/emailGate');
+    const { getRecentEvents } = require('../lib/auditLogger');
+    const emailCfg = getEmailConfig();
+
+    const recentEvents = getRecentEvents();
+
+    const status = {
+      system_health: 'online',
+      payment_webhook_configured: !!process.env.RAZORPAY_WEBHOOK_SECRET,
+      email_status: {
+        mode: getEmailMode(),
+        api_key_present: emailCfg.apiKeyPresent,
+        from_domain_configured: emailCfg.fromDomainConfigured
+      },
+      events: recentEvents.filter(e => !e.event.startsWith('system.health')),
+      failed_payments: recentEvents.filter(e => e.event === 'webhook.payment_failed' || e.event === 'payment.processing_failed'),
+      email_failures: recentEvents.filter(e => e.event === 'email.blocked' || e.event === 'email.send_failed'),
+      security_events: recentEvents.filter(e => e.event.startsWith('auth.') || e.event === 'tenant_violation' || e.event === 'system.halt_triggered'),
+      listing_reports: recentEvents.filter(e => e.event === 'public.listing_report')
+    };
+
+    res.json(status);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── 12. POST /api/super-admin/broadcast ───────────────────────────────────────
 // Publish or clear global broadcast banner across all clinic dashboards
 router.post('/broadcast', [

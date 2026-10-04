@@ -35,6 +35,28 @@ const messageRoutes     = require('./routes/messages');
 const app  = express();
 const PORT = process.env.PORT || 3001;
 
+// ── Startup Safety Checks ─────────────────────────────────────────────────────
+const isProd = process.env.NODE_ENV === 'production';
+if (!process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID.includes('REPLACE')) {
+  if (isProd) {
+    console.error('CRITICAL: Missing valid RAZORPAY_KEY_ID in production.');
+    process.exit(1);
+  } else {
+    console.warn('WARNING: Running without valid RAZORPAY_KEY_ID (test mode or disabled payments).');
+  }
+} else if (process.env.RAZORPAY_KEY_ID.startsWith('rzp_test_')) {
+  if (isProd) {
+    console.error('CRITICAL: Test Razorpay key found in production environment.');
+    process.exit(1);
+  } else {
+    console.info('INFO: Running in Payment Test Mode (rzp_test_).');
+  }
+}
+if (!process.env.RAZORPAY_WEBHOOK_SECRET && isProd) {
+  console.error('CRITICAL: Missing RAZORPAY_WEBHOOK_SECRET in production.');
+  process.exit(1);
+}
+
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(helmet());
 
@@ -71,12 +93,48 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // ── Health check ──────────────────────────────────────────────────────────────
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', async (_req, res) => {
+  let dbStatus = 'ok';
+  try {
+    const supabase = require('./lib/supabase');
+    const { error } = await supabase.from('clinics').select('id').limit(1);
+    if (error) throw error;
+  } catch (err) {
+    dbStatus = 'error';
+  }
+
+  const { getEmailMode, getEmailConfig } = require('./lib/emailGate');
+  const emailCfg = getEmailConfig();
+
   res.json({
-    status  : 'ok',
-    service : 'SmartDentalDesk API',
-    version : '1.0.0',
-    time    : new Date().toISOString()
+    status: 'ok',
+    uptime: process.uptime(),
+    version: '1.0.0',
+    database_connectivity: dbStatus,
+    email_configuration_status: {
+      mode: getEmailMode(),
+      api_key_present: emailCfg.apiKeyPresent,
+      from_domain_configured: emailCfg.fromDomainConfigured
+    },
+    payment_webhook_configuration_status: !!process.env.RAZORPAY_WEBHOOK_SECRET ? 'configured' : 'missing',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// ── Public legal config (non-secret, served from env vars) ───────────────────
+app.get('/api/config', (_req, res) => {
+  // None of these values are secrets — they are legal contact/address details.
+  // They live in env vars so they are never hardcoded in committed files.
+  res.json({
+    LEGAL_BUSINESS_NAME    : process.env.LEGAL_BUSINESS_NAME    || '',
+    REGISTERED_ADDRESS     : process.env.REGISTERED_ADDRESS     || '',
+    SUPPORT_EMAIL          : process.env.SUPPORT_EMAIL          || '',
+    PRIVACY_EMAIL          : process.env.PRIVACY_EMAIL          || '',
+    GRIEVANCE_EMAIL        : process.env.GRIEVANCE_EMAIL        || '',
+    EFFECTIVE_DATE         : process.env.EFFECTIVE_DATE         || '',
+    GOVERNING_LAW          : process.env.GOVERNING_LAW          || '',
+    PAYMENT_PROVIDER_DETAILS: 'Razorpay',
+    DATA_SUBPROCESSORS     : process.env.DATA_SUBPROCESSORS     || 'Supabase, Render, OpenRouter'
   });
 });
 
@@ -99,7 +157,14 @@ app.use('/api/cron',         cronRoutes);
 app.use('/api/crm',          crmRoutes);
 app.use('/api/messages',     messageRoutes);
 
-// ── 404 handler ───────────────────────────────────────────────────────────────
+// Internal routes (super admin only)
+const internalRoutes = require('./routes/internal');
+app.use('/internal',         internalRoutes);
+
+// ── 404 handler (API routes only) ────────────────────────────────────────────
+// NOTE: The Express backend on Render is API-only. Frontend HTML is served by Vercel.
+// Static error pages (401.html, 403.html etc.) with correct status codes are
+// configured in vercel.json on the Vercel side.
 app.use((_req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
@@ -114,6 +179,7 @@ app.use((err, _req, res, _next) => {
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
+
 
 // ── Keep-alive for Render free tier ─────────────────────────────────────────
 // Render spins down free services after 15 min of inactivity.

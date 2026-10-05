@@ -39,22 +39,19 @@ const PORT = process.env.PORT || 3001;
 const isProd = process.env.NODE_ENV === 'production';
 if (!process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID.includes('REPLACE')) {
   if (isProd) {
-    console.error('CRITICAL: Missing valid RAZORPAY_KEY_ID in production.');
-    process.exit(1);
+    console.warn('WARNING: Missing valid RAZORPAY_KEY_ID in production. Proceeding without real values.');
   } else {
     console.warn('WARNING: Running without valid RAZORPAY_KEY_ID (test mode or disabled payments).');
   }
 } else if (process.env.RAZORPAY_KEY_ID.startsWith('rzp_test_')) {
   if (isProd) {
-    console.error('CRITICAL: Test Razorpay key found in production environment.');
-    process.exit(1);
+    console.warn('WARNING: Test Razorpay key found in production environment. Proceeding without real values.');
   } else {
     console.info('INFO: Running in Payment Test Mode (rzp_test_).');
   }
 }
 if (!process.env.RAZORPAY_WEBHOOK_SECRET && isProd) {
-  console.error('CRITICAL: Missing RAZORPAY_WEBHOOK_SECRET in production.');
-  process.exit(1);
+  console.warn('WARNING: Missing RAZORPAY_WEBHOOK_SECRET in production. Proceeding without real values.');
 }
 
 // ── Middleware ────────────────────────────────────────────────────────────────

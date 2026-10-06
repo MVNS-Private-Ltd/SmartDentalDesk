@@ -42,6 +42,16 @@ const FALLBACK_MODELS = [
   'liquid/lfm-2.5-2.6b:free',
 ];
 
+// Vision-capable models only (support image_url in messages)
+const VISION_FALLBACK_MODELS = [
+  'google/gemini-2.0-flash-exp:free',
+  'google/gemini-flash-1.5:free',
+  'meta-llama/llama-3.2-90b-vision-instruct:free',
+  'meta-llama/llama-3.2-11b-vision-instruct:free',
+  'qwen/qwen2.5-vl-72b-instruct:free',
+  'openrouter/free',
+];
+
 // ── Model selection logic ─────────────────────────────────────────────────────
 function getModel(subscriptionPlan, mode) {
   const plan = (subscriptionPlan || 'basic').toLowerCase();
@@ -780,7 +790,8 @@ router.post('/chat', chatRules, async (req, res, next) => {
     // 6. Call OpenRouter API with fallback cascade
     let openRouterRes;
     let usedModel = model;
-    const modelCandidates = Array.from(new Set([model, ...FALLBACK_MODELS]));
+    const hasImages = images && images.length > 0;
+    const modelCandidates = Array.from(new Set([model, ...(hasImages ? VISION_FALLBACK_MODELS : FALLBACK_MODELS)]));
     let lastError = null;
 
     for (const testModel of modelCandidates) {
@@ -989,7 +1000,8 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
 
     let openRouterRes;
     let usedModel = model;
-    const modelCandidates = Array.from(new Set([model, ...FALLBACK_MODELS]));
+    const hasImages = images && images.length > 0;
+    const modelCandidates = Array.from(new Set([model, ...(hasImages ? VISION_FALLBACK_MODELS : FALLBACK_MODELS)]));
 
     let lastError = null;
     for (const testModel of modelCandidates) {

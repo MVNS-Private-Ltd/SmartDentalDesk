@@ -3539,16 +3539,20 @@
       if (titleEl) { titleEl.textContent = ''; titleEl.classList.remove('visible'); }
     });
 
-    function renderMessage(role, content) {
+    function renderMessage(role, content, images) {
       const div = document.createElement('div');
       div.className = `chat-msg ${role}`;
-      let htmlContent = content.replace(/\n/g, '<br>');
+      let htmlContent = (content || '').replace(/\n/g, '<br>');
       if (role === 'assistant' && typeof marked !== 'undefined') {
-        htmlContent = marked.parse(content);
+        htmlContent = marked.parse(content || '');
+      }
+      let imagesHtml = '';
+      if (images && images.length) {
+        imagesHtml = images.map(src => `<img src="${src}" style="max-width:200px;max-height:160px;border-radius:8px;margin-top:6px;display:block;cursor:pointer;" onclick="window.open(this.src,'_blank')" title="Click to expand" />`).join('');
       }
       div.innerHTML = `
         ${role === 'assistant' ? '<div class="chat-avatar">AI</div>' : ''}
-        <div class="chat-bubble ${role === 'assistant' ? 'markdown-body' : ''}">${htmlContent}</div>
+        <div class="chat-bubble ${role === 'assistant' ? 'markdown-body' : ''}">${htmlContent}${imagesHtml}</div>
       `;
       chatHistory.appendChild(div);
       chatHistory.scrollTop = chatHistory.scrollHeight;
@@ -3759,6 +3763,59 @@
       });
     }
 
+    // 📋 Clipboard paste → image support
+    const chatInputEl = document.getElementById('chatInput');
+    if (chatInputEl) {
+      chatInputEl.addEventListener('paste', (e) => {
+        const items = Array.from(e.clipboardData?.items || []);
+        const imageItems = items.filter(item => item.type.startsWith('image/'));
+        if (!imageItems.length) return; // no image, let normal text paste proceed
+        e.preventDefault();
+        imageItems.forEach((item, i) => {
+          const file = item.getAsFile();
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const dataUrl = ev.target.result;
+            // Add to pending attachments
+            pendingAttachments.push(dataUrl);
+            // Show preview bar
+            let previewBar = document.getElementById('attachmentPreviewBar');
+            if (!previewBar) {
+              previewBar = document.createElement('div');
+              previewBar.id = 'attachmentPreviewBar';
+              previewBar.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;padding:6px 0;';
+              chatInputEl.parentNode.insertBefore(previewBar, chatInputEl);
+            }
+            const chip = document.createElement('span');
+            chip.style.cssText = 'position:relative;display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,0.07);border-radius:20px;padding:3px 10px;font-size:12px;';
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.style.cssText = 'width:32px;height:32px;object-fit:cover;border-radius:6px;cursor:pointer;';
+            img.title = 'Click to preview';
+            img.addEventListener('click', () => { window.open(dataUrl, '_blank'); });
+            chip.appendChild(img);
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = `Screenshot ${pendingAttachments.length}`;
+            chip.appendChild(nameSpan);
+            // Remove button
+            const removeBtn = document.createElement('span');
+            removeBtn.textContent = '×';
+            removeBtn.style.cssText = 'cursor:pointer;font-size:16px;line-height:1;color:#888;margin-left:2px;';
+            removeBtn.title = 'Remove';
+            removeBtn.addEventListener('click', () => {
+              const idx = pendingAttachments.indexOf(dataUrl);
+              if (idx > -1) pendingAttachments.splice(idx, 1);
+              chip.remove();
+            });
+            chip.appendChild(removeBtn);
+            previewBar.appendChild(chip);
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+    }
+
     let isAiThinking = false;
     chatForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -3768,7 +3825,7 @@
       }
       
       const text = chatInput.value.trim();
-      if (!text) return;
+      if (!text && !pendingAttachments.filter(Boolean).length) return;
 
       const activeMode = document.querySelector('.mode-option.active')?.dataset.mode || 'thinking';
 
@@ -3778,7 +3835,7 @@
         document.querySelector('.chat-container').classList.remove('is-empty');
       }
 
-      renderMessage('user', text);
+      renderMessage('user', text, pendingAttachments.filter(Boolean));
       chatInput.value = '';
 
       // Snapshot + clear pending attachments

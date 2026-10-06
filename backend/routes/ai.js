@@ -1060,31 +1060,59 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
     let buffer = '';
     const decoder = new TextDecoder();
 
-    for await (const chunk of reader) {
-      buffer += decoder.decode(chunk, { stream: true });
-      
-      // Send a keep-alive ping to the frontend so it doesn't hit the 90s chunk timeout
-      res.write(':\n\n');
-      if (typeof res.flush === 'function') res.flush();
+    // Global 55s wall-clock timeout for the entire stream
+    const streamAbort = new AbortController();
+    const streamGlobalTimer = setTimeout(() => streamAbort.abort('STREAM_TIMEOUT'), 55000);
 
-      const lines = buffer.split('\n');
-      buffer = lines.pop(); // keep incomplete line
+    // Stall detection: abort if no real token content for 15s
+    let stallTimer = setTimeout(() => streamAbort.abort('STREAM_STALL'), 15000);
 
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith('data:')) continue;
-        const payload = trimmed.slice(5).trim();
-        if (payload === '[DONE]') continue;
-        try {
-          const parsed = JSON.parse(payload);
-          const delta = parsed?.choices?.[0]?.delta?.content;
-          if (delta) {
-            fullReply += delta;
-            res.write(`data: ${JSON.stringify({ type: 'delta', content: delta })}\n\n`);
-            if (typeof res.flush === 'function') res.flush();
-          }
-        } catch { /* skip malformed */ }
+    try {
+      for await (const chunk of reader) {
+        if (streamAbort.signal.aborted) break;
+
+        buffer += decoder.decode(chunk, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        let hadRealContent = false;
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data:')) continue;
+          const payload = trimmed.slice(5).trim();
+          if (payload === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(payload);
+            const delta = parsed?.choices?.[0]?.delta?.content;
+            if (delta) {
+              hadRealContent = true;
+              fullReply += delta;
+              res.write(`data: ${JSON.stringify({ type: 'delta', content: delta })}\n\n`);
+              if (typeof res.flush === 'function') res.flush();
+            }
+          } catch { /* skip malformed */ }
+        }
+
+        // Only reset stall timer when real content tokens arrive
+        if (hadRealContent) {
+          clearTimeout(stallTimer);
+          stallTimer = setTimeout(() => streamAbort.abort('STREAM_STALL'), 15000);
+        }
       }
+    } catch (streamErr) {
+      console.warn('[AI Stream] Stream read error:', streamErr.message);
+    } finally {
+      clearTimeout(streamGlobalTimer);
+      clearTimeout(stallTimer);
+    }
+
+    // If we got a garbage/safety response, throw so frontend shows error
+    const trimmedReply = fullReply.trim();
+    if (!trimmedReply || trimmedReply.length < 5 || /^user safety:/i.test(trimmedReply)) {
+      res.write(`data: ${JSON.stringify({ type: 'error', message: 'The AI model returned an empty response. Please try again.' })}\n\n`);
+      res.end();
+      return;
     }
 
     // Save full reply to DB and Deduct Tokens

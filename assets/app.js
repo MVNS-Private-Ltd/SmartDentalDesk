@@ -206,7 +206,8 @@ window.api = (function() {
       if (session_id) payload.session_id = session_id;
       if (images && images.length > 0) payload.images = images;
       
-      const MAX_RETRIES = 100; // Practically infinite retries per user instruction
+      const MAX_RETRIES = 3; // Max 3 attempts before showing error
+      const WALL_CLOCK_MS = 60000; // 60s total timeout per attempt
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
           const token = getToken();
@@ -217,6 +218,8 @@ window.api = (function() {
 
           // Enforce strict 10-second timeout for first byte
           const timeout = setTimeout(() => controller.abort('TIMEOUT'), 10000);
+          // Wall-clock timeout: abort entire attempt after 60s no matter what
+          const wallClockTimer = setTimeout(() => controller.abort('TIMEOUT'), WALL_CLOCK_MS);
 
           const res = await fetch(`${BASE_URL}/ai/chat/stream`, {
             method: 'POST',
@@ -229,6 +232,7 @@ window.api = (function() {
           });
 
           clearTimeout(timeout);
+          clearTimeout(wallClockTimer);
           if (!res.ok) {
             if (res.status === 401) {
               try {
@@ -249,15 +253,19 @@ window.api = (function() {
           const reader = res.body.getReader();
           const decoder = new TextDecoder();
           let buffer = '';
-          // Reset timeout for each chunk — abort if 10s of silence mid-stream
-          let chunkTimeout = setTimeout(() => controller.abort('TIMEOUT'), 10000);
+          // Stall detection: only reset timer when real SSE data arrives (not keep-alive pings)
+          let chunkTimeout = setTimeout(() => controller.abort('TIMEOUT'), 15000);
 
           while (true) {
             const { done, value } = await reader.read();
-            clearTimeout(chunkTimeout);
             if (done) break;
-            chunkTimeout = setTimeout(() => controller.abort('TIMEOUT'), 10000);
-            buffer += decoder.decode(value, { stream: true });
+            const decoded = decoder.decode(value, { stream: true });
+            // Only reset stall timer if chunk has real SSE data (not just ':' keep-alive)
+            if (decoded.includes('data:')) {
+              clearTimeout(chunkTimeout);
+              chunkTimeout = setTimeout(() => controller.abort('TIMEOUT'), 15000);
+            }
+            buffer += decoded;
             const lines = buffer.split('\n');
             buffer = lines.pop();
             for (const line of lines) {
@@ -277,6 +285,7 @@ window.api = (function() {
             }
           }
           clearTimeout(chunkTimeout);
+          clearTimeout(wallClockTimer);
           if (activeChatController === controller) activeChatController = null;
           return;
 
@@ -293,12 +302,12 @@ window.api = (function() {
 
           console.warn(`[AI Chat] Attempt ${attempt} failed: ${error.message}. Retrying...`);
           if (attempt === MAX_RETRIES) {
-             if (onError) onError(new Error("Failed to get response after multiple attempts."));
+             if (onError) onError(new Error("AI is unresponsive right now. Please try again in a moment."));
              throw error;
           }
           
           if (onRetry) onRetry();
-          await new Promise(r => setTimeout(r, 1000));
+          await new Promise(r => setTimeout(r, 1500 * attempt)); // backoff: 1.5s, 3s
         }
       }
     },

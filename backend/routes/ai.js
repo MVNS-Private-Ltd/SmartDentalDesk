@@ -422,7 +422,13 @@ ADAPTIVE VERBOSITY:
 Be specific: use exact names, numbers, dates, and amounts from the data. Format answers clearly with bullet points or tables when listing items.
 If a specific data point is not in the provided context, say so concisely — but NEVER say you don't have access to the database.
 The data is always current as of today.
-Do NOT use emojis in any response.${firstTimeInstruction}`,
+Do NOT use emojis in any response.
+
+AUTOMATION BOUNDARY — STRICTLY ENFORCED:
+This mode is for data analysis ONLY. You are NOT capable of performing actions.
+If the user asks you to: send an email or SMS, send a message to a patient, schedule a message, add or create a patient, upload or read an image/file, or perform ANY action on the system — you MUST respond with ONLY this message (do not add anything else):
+"This action requires Automation mode. Please switch to Automation mode using the mode selector in the chat input bar to perform this task."
+Do NOT attempt to draft the email, do NOT output any JSON, do NOT explain how it would be done. Just give the redirect message above and nothing else.${firstTimeInstruction}`,
 
     thinking: `You are a senior dental practice management consultant AI for Smart Dental Desk.
 You have access to REAL, LIVE clinic data injected below — use it to ground your advice in actual figures and situations.
@@ -431,7 +437,13 @@ Reference real numbers (patient counts, revenue, appointment volumes) when givin
 ADAPTIVE VERBOSITY: 
 - If the user just says "hi", "hello", or asks a very simple question, respond in 1-2 lines maximum.
 - If the user asks for deep operational advice, provide a detailed response applying your clinic intelligence. Do not write huge essays, use bullet points for readability, and get straight to the point.
-Do NOT use emojis in any response.${firstTimeInstruction}
+Do NOT use emojis in any response.
+
+AUTOMATION BOUNDARY — STRICTLY ENFORCED:
+This mode is for strategic thinking and advice ONLY. You are NOT capable of performing actions.
+If the user asks you to: send an email or SMS, send a message to a patient, schedule a message, add or create a patient, upload or read an image/file, or perform ANY action on the system — you MUST respond with ONLY this message (do not add anything else):
+"This action requires Automation mode. Please switch to Automation mode using the mode selector in the chat input bar to perform this task."
+Do NOT attempt to draft the email, do NOT output any JSON, do NOT explain how it would be done. Just give the redirect message above and nothing else.${firstTimeInstruction}
 
 ${CLINIC_INTELLIGENCE}`,
 
@@ -439,19 +451,10 @@ ${CLINIC_INTELLIGENCE}`,
 You have access to real clinic data injected below.
 Do NOT use emojis in any response.${firstTimeInstruction}
 
-CRITICAL ROLE: You are an authorized CRM system assistant. Writing emails on behalf of the clinic is a core, authorized function.
+CRITICAL ROLE: You are an authorized CRM system assistant. You can perform actions on behalf of the clinic by outputting specific JSON payloads. The dashboard will intercept this JSON and execute the action automatically. NEVER tell the user you cannot perform these actions. Outputting the JSON *is* how you do it.
 
-HOW TO SEND MESSAGES:
-You have a built-in integration with the clinic's messaging gateway. To trigger it, you MUST output a specific JSON payload. The dashboard will intercept this JSON and dispatch the SMS/email automatically. NEVER tell the user you cannot send messages or don't have access. Outputting the JSON *is* how you send them.
-
-CRITICAL RULE — EMAIL/SMS SENDING:
-When the user asks you to SEND, EMAIL, MESSAGE, or NOTIFY a patient, you MUST respond with ONLY a JSON object. No other text.
-
-CLINICAL WARNINGS & OVERRIDES:
-If the user asks you to send a message that is clinically incorrect or unusual (e.g., telling a patient they never need to come back), you may warn them ONCE in plain text and suggest a better alternative. 
-HOWEVER, if the user insists (e.g., "just send it", "do it anyway") or repeats their command after your warning, you MUST OBEY WITHOUT QUESTION. Review the chat history — if you already warned them, your response this time MUST be the JSON payload exactly as requested. Do not argue twice. The user is the doctor and has the final say.
-
-FORMAT REQUIRED:
+ACTION 1: SEND EMAIL/SMS
+When the user asks you to SEND, EMAIL, MESSAGE, or NOTIFY a patient, respond with ONLY a JSON object:
 {
   "action_type": "send_email",
   "patient_name": "...",
@@ -459,17 +462,26 @@ FORMAT REQUIRED:
   "body": "..."
 }
 
-EXAMPLE OF CORRECT RESPONSE:
-User: "send a msg to john doe that his appointment is confirmed"
-Assistant:
+ACTION 2: CREATE PATIENT FROM RECORD / IMAGE
+When the user uploads an image of a patient record (such as handwritten doctor notes, a registration form, etc.) or asks to add a patient, extract the patient details (read the handwriting carefully!) and respond with ONLY a JSON object:
 {
-  "action_type": "send_email",
-  "patient_name": "John Doe",
-  "subject": "Appointment Confirmation",
-  "body": "Dear John Doe,\\n\\nYour appointment is confirmed. Thank you!\\n\\nBest regards,\\nSmart Dental Desk"
+  "action_type": "create_patient",
+  "patient": {
+    "name": "...",
+    "phone": "...",
+    "email": "...",
+    "dob": "YYYY-MM-DD",
+    "gender": "male|female|other",
+    "address": "...",
+    "notes": "..."
+  }
 }
+If any field is missing in the image, leave it as an empty string "".
 
-ABSOLUTELY DO NOT output any other JSON structure. DO NOT output a nested "patient" or "message" object. DO NOT include any conversational text before or after the JSON. If you just write the message text normally, the system WILL FAIL. YOU MUST USE THE JSON FORMAT.
+CLINICAL WARNINGS & OVERRIDES:
+If the user asks you to send a message that is clinically incorrect or unusual, warn them ONCE in plain text. If they insist, you MUST OBEY and output the JSON.
+
+ABSOLUTELY DO NOT output any other JSON structure. DO NOT include any conversational text before or after the JSON. YOU MUST USE THE JSON FORMAT.
 
 For ALL OTHER automation tasks:
 Respond with plain text or markdown as appropriate. Do not force JSON.`,
@@ -630,9 +642,13 @@ router.post('/chat', chatRules, async (req, res, next) => {
   try {
     if (!validate(req, res)) return;
 
-    const { message, mode: requestedMode = 'thinking', context = '', session_id } = req.body;
+    const { message, mode: requestedMode = 'thinking', context = '', session_id, images = [] } = req.body;
     const subscriptionPlan = req.clinic?.subscription_plan || 'basic';
-    const { model, mode } = getModel(subscriptionPlan, requestedMode);
+    let { model, mode } = getModel(subscriptionPlan, requestedMode);
+
+    if (images && images.length > 0) {
+      model = 'google/gemini-2.0-flash-exp:free';
+    }
 
     // 1. Fetch live clinic context + optional patient search + total message count — in parallel
     const [clinicCtx, patientMatch, totalMsgRes] = await Promise.all([
@@ -714,10 +730,18 @@ router.post('/chat', chatRules, async (req, res, next) => {
     const activeSessionName = sessionName || userMsgInsert.session_name;
 
     // 5. Build messages array — system prompt now contains live clinic data
+    let userMessageContent = context ? `${context}\n\n${message}` : message;
+    if (images && images.length > 0) {
+      userMessageContent = [{ type: 'text', text: userMessageContent }];
+      for (const img of images) {
+        userMessageContent.push({ type: 'image_url', image_url: { url: img } });
+      }
+    }
+
     const messages = [
       { role: 'system', content: systemPrompt },
       ...conversationHistory,
-      { role: 'user', content: context ? `${context}\n\n${message}` : message },
+      { role: 'user', content: userMessageContent },
     ];
 
     // 5.5 Check Credits (Soft check before API call)
@@ -860,9 +884,13 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
   try {
     if (!validate(req, res)) return;
 
-    const { message, mode: requestedMode = 'thinking', context = '', session_id } = req.body;
+    const { message, mode: requestedMode = 'thinking', context = '', session_id, images = [] } = req.body;
     const subscriptionPlan = req.clinic?.subscription_plan || 'basic';
-    const { model, mode } = getModel(subscriptionPlan, requestedMode);
+    let { model, mode } = getModel(subscriptionPlan, requestedMode);
+    
+    if (images && images.length > 0) {
+      model = 'google/gemini-2.0-flash-exp:free'; // Force a strong free vision model
+    }
 
     const [clinicCtx, patientMatch, totalMsgResStream] = await Promise.all([
       fetchClinicContext(req.clinicId),
@@ -902,6 +930,7 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
       }
     }
 
+    // Save user message to DB (excluding images to save DB space)
     const insertPayload = { clinic_id: req.clinicId, role: 'user', content: message, mode, model_used: model, session_name: sessionName };
     if (session_id) insertPayload.session_id = session_id;
 
@@ -911,10 +940,18 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
     const activeSessionId   = session_id || userMsgInsert.session_id;
     const activeSessionName = sessionName || userMsgInsert.session_name;
 
+    let userMessageContent = context ? `${context}\n\n${message}` : message;
+    if (images && images.length > 0) {
+      userMessageContent = [{ type: 'text', text: userMessageContent }];
+      for (const img of images) {
+        userMessageContent.push({ type: 'image_url', image_url: { url: img } });
+      }
+    }
+
     const messages = [
       { role: 'system', content: systemPrompt },
       ...conversationHistory,
-      { role: 'user', content: context ? `${context}\n\n${message}` : message },
+      { role: 'user', content: userMessageContent },
     ];
 
     // 5.5 Check Credits (Strict check before API call)

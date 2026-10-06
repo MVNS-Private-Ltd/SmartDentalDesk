@@ -182,6 +182,7 @@ window.api = (function() {
     getMarketplaceMeta: () => request('/public/marketplace/meta'),
 
     getPatients: (type = 'all') => request(`/patients?type=${type}`),
+    createPatient: (data) => request('/patients', { method: 'POST', body: JSON.stringify(data) }),
     togglePatientStar: (id, is_starred) => request(`/patients/${id}/star`, { method: 'PATCH', body: JSON.stringify({ is_starred }) }),
     deletePatient: (id) => request(`/patients/${id}`, { method: 'DELETE' }),
     bulkDeletePatients: (ids) => request(`/patients`, { method: 'DELETE', body: JSON.stringify({ ids }) }),
@@ -200,78 +201,112 @@ window.api = (function() {
       window.dispatchEvent(new Event('credits-updated'));
       return res;
     },
-    streamChatMessage: async (message, mode = 'thinking', context = '', session_id = null, { onDelta, onMeta, onDone, onError } = {}) => {
+    streamChatMessage: async (message, mode = 'thinking', context = '', session_id = null, { onDelta, onMeta, onDone, onError, onRetry, images } = {}) => {
       const payload = { message, mode, context };
       if (session_id) payload.session_id = session_id;
-      const token = getToken();
+      if (images && images.length > 0) payload.images = images;
+      
+      const MAX_RETRIES = 100; // Practically infinite retries per user instruction
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const token = getToken();
 
-      if (activeChatController) activeChatController.abort();
-      const controller = new AbortController();
-      activeChatController = controller;
+          if (activeChatController) activeChatController.abort('NEW_STREAM');
+          const controller = new AbortController();
+          activeChatController = controller;
 
-      // Wait up to 90s for first response (Render free tier can cold-start in 50-60s)
-      const timeout = setTimeout(() => controller.abort(), 35000);
+          // Enforce strict 10-second timeout for first byte
+          const timeout = setTimeout(() => controller.abort('TIMEOUT'), 10000);
 
-      const res = await fetch(`${BASE_URL}/ai/chat/stream`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
+          const res = await fetch(`${BASE_URL}/ai/chat/stream`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+          });
 
-      clearTimeout(timeout);
-      if (!res.ok) {
-        if (res.status === 401) {
-          try {
-            await refreshAccessToken();
-            return window.api.streamChatMessage(message, mode, context, session_id, { onDelta, onMeta, onDone, onError });
-          } catch (err) {
-            localStorage.removeItem('sdd_token');
-            localStorage.removeItem('sdd_refresh_token');
-            window.location.href = './login.html';
+          clearTimeout(timeout);
+          if (!res.ok) {
+            if (res.status === 401) {
+              try {
+                await refreshAccessToken();
+                continue; // token refreshed, retry immediately
+              } catch (err) {
+                localStorage.removeItem('sdd_token');
+                localStorage.removeItem('sdd_refresh_token');
+                window.location.href = './login.html';
+                return;
+              }
+            }
+            let errMessage = `Stream error: ${res.status}`;
+            try { const errData = await res.json(); errMessage = errData.error || errMessage; } catch {}
+            throw new Error(errMessage);
+          }
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          // Reset timeout for each chunk — abort if 10s of silence mid-stream
+          let chunkTimeout = setTimeout(() => controller.abort('TIMEOUT'), 10000);
+
+          while (true) {
+            const { done, value } = await reader.read();
+            clearTimeout(chunkTimeout);
+            if (done) break;
+            chunkTimeout = setTimeout(() => controller.abort('TIMEOUT'), 10000);
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed.startsWith('data:')) continue;
+              const raw = trimmed.slice(5).trim();
+              try {
+                const evt = JSON.parse(raw);
+                if (evt.type === 'meta'  && onMeta)  onMeta(evt);
+                if (evt.type === 'delta' && onDelta)  onDelta(evt.content);
+                if (evt.type === 'done') {
+                  if (onDone) onDone(evt);
+                  window.dispatchEvent(new Event('credits-updated'));
+                }
+                if (evt.type === 'error' && onError)  onError(new Error(evt.message));
+              } catch { /* skip */ }
+            }
+          }
+          clearTimeout(chunkTimeout);
+          if (activeChatController === controller) activeChatController = null;
+          return;
+
+        } catch (error) {
+          if (activeChatController === controller) activeChatController = null;
+          
+          if (error.name === 'AbortError' && controller.signal && controller.signal.reason === 'USER_STOP') {
+            if (onError) onError(new Error('Stopped by user'));
             return;
           }
-        }
-        let errMessage = `Stream error: ${res.status}`;
-        try { const errData = await res.json(); errMessage = errData.error || errMessage; } catch {}
-        throw new Error(errMessage);
-      }
+          if (error.name === 'AbortError' && controller.signal && controller.signal.reason === 'NEW_STREAM') {
+            return;
+          }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      // Reset timeout for each chunk — abort if 90s of silence mid-stream
-      let chunkTimeout = setTimeout(() => controller.abort(), 35000);
-
-      while (true) {
-        const { done, value } = await reader.read();
-        clearTimeout(chunkTimeout);
-        if (done) break;
-        chunkTimeout = setTimeout(() => controller.abort(), 35000);
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop();
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed.startsWith('data:')) continue;
-          const raw = trimmed.slice(5).trim();
-          try {
-            const evt = JSON.parse(raw);
-            if (evt.type === 'meta'  && onMeta)  onMeta(evt);
-            if (evt.type === 'delta' && onDelta)  onDelta(evt.content);
-            if (evt.type === 'done') {
-              if (onDone) onDone(evt);
-              window.dispatchEvent(new Event('credits-updated'));
-            }
-            if (evt.type === 'error' && onError)  onError(new Error(evt.message));
-          } catch { /* skip */ }
+          console.warn(`[AI Chat] Attempt ${attempt} failed: ${error.message}. Retrying...`);
+          if (attempt === MAX_RETRIES) {
+             if (onError) onError(new Error("Failed to get response after multiple attempts."));
+             throw error;
+          }
+          
+          if (onRetry) onRetry();
+          await new Promise(r => setTimeout(r, 1000));
         }
       }
-      clearTimeout(chunkTimeout);
-      if (activeChatController === controller) activeChatController = null;
+    },
+    stopChatStream: () => {
+      if (activeChatController) {
+        activeChatController.abort('USER_STOP');
+        activeChatController = null;
+      }
     },
     getChatHistory: (session_id = null) => request(`/ai/history${session_id ? '?session_id=' + session_id : ''}`),
     getChatSessions: () => request('/ai/sessions'),

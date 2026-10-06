@@ -537,6 +537,60 @@
     position: relative;
     z-index: 10;
   }
+  .attachment-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .attachment-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .attachment-btn:hover {
+    background: rgba(0,0,0,0.05);
+    color: var(--color-text);
+  }
+  .attachment-menu {
+    position: absolute;
+    bottom: calc(100% + 15px);
+    left: 0;
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    padding: 8px;
+    min-width: 220px;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 100;
+  }
+  .attachment-menu.show {
+    display: flex;
+  }
+  .attachment-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    transition: background 0.2s;
+  }
+  .attachment-menu-item:hover {
+    background: rgba(0,0,0,0.04);
+  }
   .chat-input-wrapper {
     display: flex;
     align-items: center;
@@ -1279,6 +1333,22 @@
               <span id="modeLabel">Thinking</span>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
+            <div class="attachment-wrapper">
+              <button type="button" class="attachment-btn" id="attachmentBtn" title="Add an attachment">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="16"></line>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+              </button>
+              <div class="attachment-menu" id="attachmentMenu">
+                <div class="attachment-menu-item" id="uploadFilesBtn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Upload files or images
+                </div>
+              </div>
+            </div>
+            <input type="file" id="chatAttachmentInput" multiple style="display:none;">
             <input type="text" id="chatInput" placeholder="How can I help you today?">
             <button type="submit" id="chatSendBtn" data-state="arrow-up" aria-label="Send message">
               <svg class="icon-arrow-up" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -2612,6 +2682,69 @@
       }
     }
 
+    const attachmentBtn = document.getElementById('attachmentBtn');
+    const attachmentMenu = document.getElementById('attachmentMenu');
+    if (attachmentBtn && attachmentMenu) {
+      attachmentBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        attachmentMenu.classList.toggle('show');
+      });
+      document.addEventListener('click', (e) => {
+        if (!attachmentMenu.contains(e.target) && e.target !== attachmentBtn) {
+          attachmentMenu.classList.remove('show');
+        }
+      });
+      
+      const uploadFilesBtn = document.getElementById('uploadFilesBtn');
+      const chatAttachmentInput = document.getElementById('chatAttachmentInput');
+      if (uploadFilesBtn && chatAttachmentInput) {
+        uploadFilesBtn.addEventListener('click', () => {
+          chatAttachmentInput.click();
+          attachmentMenu.classList.remove('show');
+        });
+      }
+    }
+
+    let pendingAttachments = [];
+    const chatAttachmentInput = document.getElementById('chatAttachmentInput');
+    if (chatAttachmentInput) {
+      chatAttachmentInput.addEventListener('change', () => {
+        const files = Array.from(chatAttachmentInput.files || []);
+        if (!files.length) return;
+        let previewBar = document.getElementById('attachmentPreviewBar');
+        if (!previewBar) {
+          previewBar = document.createElement('div');
+          previewBar.id = 'attachmentPreviewBar';
+          previewBar.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;padding:6px 0;';
+          chatAttachmentInput.parentNode.insertBefore(previewBar, chatAttachmentInput);
+        }
+        previewBar.innerHTML = '';
+        pendingAttachments = [];
+        files.forEach((file, i) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            pendingAttachments[i] = ev.target.result;
+            const chip = document.createElement('span');
+            chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,0.07);border-radius:20px;padding:3px 10px;font-size:12px;';
+            if (file.type.startsWith('image/')) {
+              const img = document.createElement('img');
+              img.src = ev.target.result;
+              img.style.cssText = 'width:22px;height:22px;object-fit:cover;border-radius:4px;';
+              chip.appendChild(img);
+            } else {
+              chip.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+            }
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = file.name.length > 18 ? file.name.slice(0, 15) + '...' : file.name;
+            chip.appendChild(nameSpan);
+            previewBar.appendChild(chip);
+          };
+          reader.readAsDataURL(file);
+        });
+        chatAttachmentInput.value = '';
+      });
+    }
+
     let isAiThinking = false;
     chatForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -2633,6 +2766,11 @@
 
       renderMessage('user', text);
       chatInput.value = '';
+
+      const imagesToSend = pendingAttachments.filter(Boolean);
+      pendingAttachments = [];
+      const previewBarEl = document.getElementById('attachmentPreviewBar');
+      if (previewBarEl) previewBarEl.innerHTML = '';
 
       // Animated thinking dots (shown until first streaming token)
       const loadDiv = document.createElement('div');
@@ -2658,6 +2796,13 @@
 
       try {
         await window.api.streamChatMessage(text, activeMode, '', currentSessionId, {
+          images: imagesToSend,
+          onRetry: () => {
+            accumulated = '';
+            firstToken = true;
+            streamBubble.className = 'chat-bubble thinking-dots';
+            streamBubble.innerHTML = '<span></span><span></span><span></span>';
+          },
           onMeta: (evt) => {
             if (evt.session_id) currentSessionId = evt.session_id;
             if (evt.session_name) {
@@ -2787,9 +2932,82 @@
                       Email cancelled.
                     </div>`;
                 });
+              } else if (parsed && parsed.action_type === 'create_patient') {
+                streamBubble.style.display = 'none';
+                const pt = parsed.patient || {};
+                const card = document.createElement('div');
+                card.className = 'email-action-card';
+                card.innerHTML = `
+                  <div class="eac-header" style="display:flex;justify-content:space-between;">
+                    <div>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      Add patient from image record
+                    </div>
+                    <span class="eac-badge" style="background:#d1fae5;color:#065f46;padding:2px 6px;font-size:10px;border-radius:4px;">AI-extracted</span>
+                  </div>
+                  <div class="eac-field"><span class="eac-label">Name</span><input class="eac-subject-input" id="cptName" type="text" value="${(pt.name||'').replace(/"/g,'&quot;')}" placeholder="Patient full name"/></div>
+                  <div class="eac-field"><span class="eac-label">Phone</span><input class="eac-subject-input" id="cptPhone" type="text" value="${(pt.phone||'').replace(/"/g,'&quot;')}" placeholder="Phone number"/></div>
+                  <div class="eac-field"><span class="eac-label">Email</span><input class="eac-subject-input" id="cptEmail" type="text" value="${(pt.email||'').replace(/"/g,'&quot;')}" placeholder="Email address"/></div>
+                  <div class="eac-field"><span class="eac-label">Date of Birth</span><input class="eac-subject-input" id="cptDob" type="text" value="${(pt.dob||'').replace(/"/g,'&quot;')}" placeholder="YYYY-MM-DD"/></div>
+                  <div class="eac-field"><span class="eac-label">Gender</span><input class="eac-subject-input" id="cptGender" type="text" value="${(pt.gender||'').replace(/"/g,'&quot;')}" placeholder="male / female / other"/></div>
+                  <div class="eac-field"><span class="eac-label">Address</span><input class="eac-subject-input" id="cptAddress" type="text" value="${(pt.address||'').replace(/"/g,'&quot;')}" placeholder="Address"/></div>
+                  <div class="eac-field"><span class="eac-label">Notes</span><textarea class="eac-body-textarea" id="cptNotes" placeholder="Doctor notes">${pt.notes||''}</textarea></div>
+                  <div style="margin-top:10px;font-size:0.8rem;display:flex;align-items:start;gap:8px;">
+                    <input type="checkbox" id="cptConfirmCheck" style="margin-top:3px;"/>
+                    <label for="cptConfirmCheck" style="color:var(--color-text-muted);">I have reviewed the extracted details and confirm they are correct.</label>
+                  </div>
+                  <hr class="eac-divider">
+                  <div class="eac-actions">
+                    <button class="eac-send-btn" id="cptSaveBtn" disabled style="opacity:0.5;cursor:not-allowed;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                      Save to Patient Records
+                    </button>
+                    <button class="eac-cancel-btn" id="cptCancelBtn">Discard</button>
+                  </div>
+                `;
+                loadDiv.appendChild(card);
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+                const confirmCheck = card.querySelector('#cptConfirmCheck');
+                const saveBtn = card.querySelector('#cptSaveBtn');
+                confirmCheck.addEventListener('change', (e) => {
+                  if (e.target.checked) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; saveBtn.style.cursor = 'pointer'; }
+                  else { saveBtn.disabled = true; saveBtn.style.opacity = '0.5'; saveBtn.style.cursor = 'not-allowed'; }
+                });
+                saveBtn.addEventListener('click', async () => {
+                  saveBtn.disabled = true;
+                  saveBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg> Saving...`;
+                  card.querySelector('#cptCancelBtn').disabled = true;
+                  try {
+                    const payload = {
+                      name:    card.querySelector('#cptName').value.trim(),
+                      phone:   card.querySelector('#cptPhone').value.trim(),
+                      email:   card.querySelector('#cptEmail').value.trim() || undefined,
+                      dob:     card.querySelector('#cptDob').value.trim() || undefined,
+                      gender:  card.querySelector('#cptGender').value.trim() || undefined,
+                      address: card.querySelector('#cptAddress').value.trim() || undefined,
+                      notes:   card.querySelector('#cptNotes').value.trim() || undefined,
+                    };
+                    if (!payload.name) throw new Error('Patient name is required.');
+                    await window.api.createPatient(payload);
+                    card.querySelector('.eac-actions').innerHTML = `
+                      <div class="eac-status success">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        Patient <strong>${payload.name}</strong> added to records successfully.
+                      </div>`;
+                  } catch (err) {
+                    card.querySelector('.eac-actions').innerHTML = `
+                      <div class="eac-status error">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        ${err.message || 'Failed to save patient.'}
+                      </div>`;
+                  }
+                });
+                card.querySelector('#cptCancelBtn').addEventListener('click', () => {
+                  card.querySelector('.eac-actions').innerHTML = `<div class="eac-status" style="color:var(--color-text-muted)">Discarded.</div>`;
+                });
               }
             }
-            // ── end automation email handling ─────────────────────────────
+            // ── end automation action handling ───────────────────────────────
           },
           onError: (err) => {
             if (firstToken) {

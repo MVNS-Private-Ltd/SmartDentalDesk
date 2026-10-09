@@ -512,7 +512,7 @@ router.post('/reset-password', [
 // Returns the Supabase OAuth URL to initiate Google login securely
 router.get('/google-url', (req, res) => {
   const supabaseUrl = process.env.SUPABASE_URL;
-  const redirectUri = process.env.OAUTH_REDIRECT || 'https://smart-dental-desk.vercel.app/login.html';
+  const redirectUri = process.env.OAUTH_REDIRECT || 'https://www.dentalsmart.tech/login.html';
   
   if (!supabaseUrl) {
     return res.status(500).json({ error: 'Supabase URL not configured on server.' });

@@ -1,37 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://smart-dental-desk.vercel.app/</loc>
+    <loc>https://www.dentalsmart.tech/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://smart-dental-desk.vercel.app/index.html</loc>
+    <loc>https://www.dentalsmart.tech/index.html</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://smart-dental-desk.vercel.app/clinics.html</loc>
+    <loc>https://www.dentalsmart.tech/clinics.html</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://smart-dental-desk.vercel.app/pricing.html</loc>
+    <loc>https://www.dentalsmart.tech/pricing.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://smart-dental-desk.vercel.app/privacy-policy.html</loc>
+    <loc>https://www.dentalsmart.tech/privacy-policy.html</loc>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://smart-dental-desk.vercel.app/terms-of-service.html</loc>
+    <loc>https://www.dentalsmart.tech/terms-of-service.html</loc>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://smart-dental-desk.vercel.app/refund-cancellation.html</loc>
+    <loc>https://www.dentalsmart.tech/refund-cancellation.html</loc>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>

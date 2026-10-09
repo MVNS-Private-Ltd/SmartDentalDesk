@@ -12,6 +12,19 @@
       ]
     }
   ],
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "smart-dental-desk.vercel.app"
+        }
+      ],
+      "destination": "https://www.dentalsmart.tech/$1",
+      "permanent": true
+    }
+  ],
   "routes": [
     {
       "src": "/401",

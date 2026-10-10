@@ -3,9 +3,9 @@ html = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Dental Clinic &middot; Online Booking for Independent Dentists</title>
-<meta name="description" content="Smart Dental Clinic gives dentists a shareable booking link, auto patient records, and a daily schedule view. No complex setup. No paper slips.">
-<meta property="og:title" content="Smart Dental Clinic &middot; Online Booking for Independent Dentists">
+<title>dentalsmart &middot; Online Booking for Independent Dentists</title>
+<meta name="description" content="dentalsmart gives dentists a shareable booking link, auto patient records, and a daily schedule view. No complex setup. No paper slips.">
+<meta property="og:title" content="dentalsmart &middot; Online Booking for Independent Dentists">
 <meta property="og:description" content="Shareable booking link, auto patient records, and a daily schedule built for dentists in India.">
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -82,13 +82,13 @@ html = r"""<!DOCTYPE html>
 <!-- HEADER -->
 <header class="site-header">
   <div class="container nav">
-    <a href="./index.html" class="brand" aria-label="Smart Dental Clinic home">
+    <a href="./index.html" class="brand" aria-label="dentalsmart home">
       <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
         <rect width="32" height="32" rx="8" fill="#2563eb"/>
         <path d="M16 8c-2.8 0-5 1.9-5 4.6 0 1.7.6 2.7 1.2 3.9.7 1.4 1.4 3 1.6 6.1.1 1.4 1 2.4 2.2 2.4s2.1-1 2.2-2.4c.2-3.1.9-4.7 1.6-6.1.6-1.2 1.2-2.2 1.2-3.9C21 9.9 18.8 8 16 8Z" fill="#fff"/>
         <circle cx="16" cy="13" r="1.6" fill="#2563eb"/>
       </svg>
-      <span class="brand-name">Smart Dental Clinic</span>
+      <span class="brand-name">dentalsmart</span>
     </a>
     <nav class="nav-links" id="navLinks" aria-label="Primary">
       <a href="./index.html" aria-current="page">Home</a>
@@ -290,7 +290,7 @@ html = r"""<!DOCTYPE html>
       <span class="eyebrow">Real outcomes</span>
       <h2 style="font-size:var(--text-xl);margin-top:var(--space-2);margin-bottom:var(--space-4)">What changes once you&rsquo;re live.</h2>
       <p style="color:var(--color-text-muted);font-size:var(--text-base);line-height:1.7;max-width:38ch">
-        Dentists who move from paper and phone calls to Smart Dental Clinic save real time every single day.
+        Dentists who move from paper and phone calls to dentalsmart save real time every single day.
       </p>
     </div>
     <div class="benefit-grid">
@@ -388,7 +388,7 @@ html = r"""<!DOCTYPE html>
           <rect width="32" height="32" rx="8" fill="#1e3a8a"/>
           <path d="M16 8c-2.8 0-5 1.9-5 4.6 0 1.7.6 2.7 1.2 3.9.7 1.4 1.4 3 1.6 6.1.1 1.4 1 2.4 2.2 2.4s2.1-1 2.2-2.4c.2-3.1.9-4.7 1.6-6.1.6-1.2 1.2-2.2 1.2-3.9C21 9.9 18.8 8 16 8Z" fill="#60a5fa"/>
         </svg>
-        <strong style="font-family:var(--font-display);color:#eef4f1">Smart Dental Clinic</strong>
+        <strong style="font-family:var(--font-display);color:#eef4f1">dentalsmart</strong>
       </div>
       <p class="mt-6" style="font-size:var(--text-xs);color:#9fb0aa;max-width:28ch;line-height:1.6">
         Simple online booking and patient management for independent dentists across India.
@@ -414,13 +414,13 @@ html = r"""<!DOCTYPE html>
     <div>
       <h4>Contact</h4>
       <ul>
-        <li>hello@smartdentaldesk.in</li>
+        <li>hello@dentalsmart.in</li>
         <li>WhatsApp: +91 98XXX XXXXX</li>
       </ul>
     </div>
   </div>
   <div class="container footer-bottom">
-    <span>&copy; 2026 Smart Dental Clinic. All rights reserved.</span>
+    <span>&copy; 2026 dentalsmart. All rights reserved.</span>
     <span>Built for independent dentists &amp; small clinics.</span>
   </div>
 </footer>

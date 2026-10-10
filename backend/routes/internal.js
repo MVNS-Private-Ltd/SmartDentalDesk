@@ -49,24 +49,24 @@ const ALLOWED_TEST_TEMPLATES = [
 // Safe template content (no patient data, no dynamic user content)
 const TEST_TEMPLATE_CONTENT = {
   'welcome': {
-    subject: '[TEST] Welcome to Smart Dental Desk',
+    subject: '[TEST] Welcome to dentalsmart',
     text: 'This is a test email confirming the welcome email template is working correctly. No patient data is included.',
   },
   'password-reset': {
-    subject: '[TEST] Password Reset Test — Smart Dental Desk',
+    subject: '[TEST] Password Reset Test — dentalsmart',
     text: 'This is a test of the password reset email flow. No real reset link is included in this test.',
   },
   'appointment-confirmation': {
-    subject: '[TEST] Appointment Confirmation — Smart Dental Desk',
+    subject: '[TEST] Appointment Confirmation — dentalsmart',
     text: 'This is a test of the appointment confirmation email template. No patient or appointment data is included.',
   },
   'invoice': {
-    subject: '[TEST] Invoice Notification — Smart Dental Desk',
+    subject: '[TEST] Invoice Notification — dentalsmart',
     text: 'This is a test of the invoice notification email template. No billing data is included in this test.',
   },
   'support-test': {
-    subject: '[TEST] Support Email Test — Smart Dental Desk',
-    text: 'This is an internal test email to confirm the Smart Dental Desk email infrastructure is operational.',
+    subject: '[TEST] Support Email Test — dentalsmart',
+    text: 'This is an internal test email to confirm the dentalsmart email infrastructure is operational.',
   },
 };
 

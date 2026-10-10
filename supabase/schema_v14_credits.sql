@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────────────────
---  Smart Dental Desk — Schema v14: Atomic Credits & Reservations
+--  dentalsmart — Schema v14: Atomic Credits & Reservations
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- 1. Updates to clinic_credits

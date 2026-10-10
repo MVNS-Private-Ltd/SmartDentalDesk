@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────────────────
---  Smart Dental Desk — Schema v3 Migration
+--  dentalsmart — Schema v3 Migration
 --  Run this in the Supabase SQL Editor AFTER schema_v2.sql
 -- ─────────────────────────────────────────────────────────────────────────────
 

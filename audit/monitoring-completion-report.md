@@ -4,7 +4,7 @@
 **Status:** COMPLETE
 
 ## Overview
-A lightweight, secure production monitoring and incident-response system has been successfully implemented for the Smart Dental Desk soft launch. This system ensures critical operational and security events are tracked without exposing patient health information (PHI) or infrastructure secrets.
+A lightweight, secure production monitoring and incident-response system has been successfully implemented for the dentalsmart soft launch. This system ensures critical operational and security events are tracked without exposing patient health information (PHI) or infrastructure secrets.
 
 ## Key Implementations
 

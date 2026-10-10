@@ -1,4 +1,4 @@
-# Smart Dental Desk: Incident Response Runbook
+# dentalsmart: Incident Response Runbook
 
 This runbook outlines standard operating procedures for handling critical events detected during the soft launch.
 

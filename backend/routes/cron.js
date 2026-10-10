@@ -46,7 +46,7 @@ router.post('/send-scheduled-messages', async (req, res, next) => {
 
     for (const msg of due) {
       try {
-        const clinicName = msg.clinics?.name || 'Smart Dental Desk';
+        const clinicName = msg.clinics?.name || 'dentalsmart';
         const lines = msg.body.split('\n').map(l =>
           `<p style="margin:0 0 12px;line-height:1.7;color:#374151;">${l || '&nbsp;'}</p>`
         ).join('');
@@ -58,7 +58,7 @@ router.post('/send-scheduled-messages', async (req, res, next) => {
             <p style="color:#374151;margin:0 0 20px;">Hi ${msg.recipient_name},</p>
             ${lines}
           </div>
-          <p style="text-align:center;color:#9ca3af;font-size:12px;margin-top:20px;">Sent via Smart Dental Desk</p>
+          <p style="text-align:center;color:#9ca3af;font-size:12px;margin-top:20px;">Sent via dentalsmart</p>
         </div>`;
 
         const info = await sendMail({ to: msg.recipient_email, subject: msg.subject, text: msg.body, html });

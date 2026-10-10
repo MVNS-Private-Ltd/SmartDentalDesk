@@ -415,15 +415,15 @@ function buildSystemPrompt(mode, contextBlock, isFirstEver = false) {
     ? `
 
 SPECIAL FIRST-TIME GREETING RULE (applies THIS message only):
-This is the very first time this clinic is using the Smart Dental Desk AI assistant.
-Before responding to their question, warmly welcome them to Smart Dental Desk. Tell them you are their AI assistant and briefly mention that you can help them manage appointments, patients, invoices, and give operational advice.
+This is the very first time this clinic is using the dentalsmart AI assistant.
+Before responding to their question, warmly welcome them to dentalsmart. Tell them you are their AI assistant and briefly mention that you can help them manage appointments, patients, invoices, and give operational advice.
 Do NOT use emojis. Keep the greeting natural, professional, and brief (2-4 sentences). Then seamlessly answer their actual question or prompt below.
 IMPORTANT: This greeting instruction must never be applied again — it is ONLY for this very first interaction.
 `
     : '';
 
   const base = {
-    data: `You are a dental clinic data analyst AI for Smart Dental Desk.
+    data: `You are a dental clinic data analyst AI for dentalsmart.
 You have been provided with LIVE, REAL clinic data pulled directly from the database — it is injected below before this conversation.
 Your job is to analyze and answer questions about patients, appointments, invoices, revenue, and clinic statistics using ONLY the data provided.
 ADAPTIVE VERBOSITY: 
@@ -440,7 +440,7 @@ If the user asks you to: send an email or SMS, send a message to a patient, sche
 "This action requires Automation mode. Please switch to Automation mode using the mode selector in the chat input bar to perform this task."
 Do NOT attempt to draft the email, do NOT output any JSON, do NOT explain how it would be done. Just give the redirect message above and nothing else.${firstTimeInstruction}`,
 
-    thinking: `You are a senior dental practice management consultant AI for Smart Dental Desk.
+    thinking: `You are a senior dental practice management consultant AI for dentalsmart.
 You have access to REAL, LIVE clinic data injected below — use it to ground your advice in actual figures and situations.
 Provide strategic advice, workflow suggestions, and operational recommendations that are specific to this clinic's actual data.
 Reference real numbers (patient counts, revenue, appointment volumes) when giving recommendations.
@@ -457,7 +457,7 @@ Do NOT attempt to draft the email, do NOT output any JSON, do NOT explain how it
 
 ${CLINIC_INTELLIGENCE}`,
 
-    automation: `You are an automation assistant AI for Smart Dental Desk.
+    automation: `You are an automation assistant AI for dentalsmart.
 You have access to real clinic data injected below.
 Do NOT use emojis in any response.${firstTimeInstruction}
 
@@ -514,8 +514,8 @@ async function generateSessionName(conversationText) {
         headers: {
           'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
           'Content-Type':  'application/json',
-          'HTTP-Referer':  'https://smartdentaldesk.app',
-          'X-Title':       'Smart Dental Desk',
+          'HTTP-Referer':  'https://dentalsmart.app',
+          'X-Title':       'dentalsmart',
         },
         body: JSON.stringify({
           model:      testModel,
@@ -804,8 +804,8 @@ router.post('/chat', chatRules, async (req, res, next) => {
           headers: {
             'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
             'Content-Type':  'application/json',
-            'HTTP-Referer':  'https://smartdentaldesk.app',
-            'X-Title':       'Smart Dental Desk',
+            'HTTP-Referer':  'https://dentalsmart.app',
+            'X-Title':       'dentalsmart',
           },
           body: JSON.stringify({
             model:       testModel,
@@ -1014,8 +1014,8 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
           headers: {
             'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
             'Content-Type':  'application/json',
-            'HTTP-Referer':  'https://smartdentaldesk.app',
-            'X-Title':       'Smart Dental Desk',
+            'HTTP-Referer':  'https://dentalsmart.app',
+            'X-Title':       'dentalsmart',
           },
           body: JSON.stringify({
             model: testModel,

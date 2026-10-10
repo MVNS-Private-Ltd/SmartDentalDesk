@@ -138,7 +138,7 @@ router.get('/import/template', (req, res) => {
   ]);
   
   res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="smartdentaldesk_patients_template.csv"');
+  res.setHeader('Content-Disposition', 'attachment; filename="dentalsmart_patients_template.csv"');
   res.status(200).send(csv);
 });
 

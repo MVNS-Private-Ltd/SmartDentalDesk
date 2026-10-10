@@ -33,14 +33,14 @@ function buildHtml(subject, bodyText, recipientName, clinicName) {
   return `
     <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;color:#1a1a2e;">
       <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:12px 12px 0 0;padding:24px;text-align:center;">
-        <h2 style="color:#fff;margin:0;font-size:20px;font-weight:600;">🦷 ${clinicName || 'Smart Dental Desk'}</h2>
+        <h2 style="color:#fff;margin:0;font-size:20px;font-weight:600;">🦷 ${clinicName || 'dentalsmart'}</h2>
       </div>
       <div style="background:#fff;border:1px solid #e8e8e8;border-top:none;border-radius:0 0 12px 12px;padding:32px 24px;">
         <p style="color:#374151;margin:0 0 20px;">Hi ${recipientName || 'there'},</p>
         ${lines}
       </div>
       <p style="text-align:center;color:#9ca3af;font-size:12px;margin-top:20px;">
-        Sent via Smart Dental Desk · <a href="#" style="color:#9ca3af;">Unsubscribe</a>
+        Sent via dentalsmart · <a href="#" style="color:#9ca3af;">Unsubscribe</a>
       </p>
     </div>`;
 }
@@ -186,7 +186,7 @@ router.post('/send-due', async (req, res, next) => {
 
     for (const msg of due) {
       try {
-        const clinicName = msg.clinics?.name || 'Smart Dental Desk';
+        const clinicName = msg.clinics?.name || 'dentalsmart';
         const html = buildHtml(msg.subject, msg.body, msg.recipient_name, clinicName);
 
         const info = await sendMail({

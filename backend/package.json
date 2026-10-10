@@ -1,7 +1,7 @@
 {
-  "name": "smartdentaldesk-backend",
+  "name": "dentalsmart-backend",
   "version": "1.0.0",
-  "description": "Smart Dental Desk API Server — Node.js + Express + Supabase",
+  "description": "DentalSmart API Server — Node.js + Express + Supabase",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  Super Admin API Routes
-//  Platform Owner Control Room for SmartDentalDesk SaaS
+//  Platform Owner Control Room for dentalsmart SaaS
 // ─────────────────────────────────────────────────────────────────────────────
 const express   = require('express');
 const { body, param, query, validationResult } = require('express-validator');
@@ -750,7 +750,7 @@ router.post('/ai/chat', [
 
     // Construct grounded context block
     const contextLines = [
-      '=== SMARTDENTALDESK PLATFORM OVERVIEW (LIVE METRICS) ===',
+      '=== dentalsmart PLATFORM OVERVIEW (LIVE METRICS) ===',
       `Timestamp: ${now.toISOString()}`,
       `Total Onboarded Clinics: ${clinics.length} (Active: ${clinics.filter(c => !c.settings?.is_suspended).length}, Suspended: ${clinics.filter(c => c.settings?.is_suspended).length})`,
       `Subscription Breakdown: Free (${clinics.filter(c => !c.subscription_plan || c.subscription_plan === 'free').length}), Starter (${clinics.filter(c => c.subscription_plan === 'starter').length}), Premium (${clinics.filter(c => c.subscription_plan === 'premium').length}), Enterprise (${clinics.filter(c => c.subscription_plan === 'enterprise').length})`,
@@ -783,7 +783,7 @@ router.post('/ai/chat', [
 
     // System Prompts per mode
     const systemPrompts = {
-      strategy: `You are the Executive SaaS AI Advisor for SmartDentalDesk Platform Leadership.
+      strategy: `You are the Executive SaaS AI Advisor for dentalsmart Platform Leadership.
 You have real-time access to live platform metrics across all dental clinics, revenue figures, subscription distribution, and tenant activity injected below.
 Your goals:
 1. Provide sharp, data-backed insights on SaaS growth, user onboarding, revenue expansion, and clinic retention.
@@ -791,12 +791,12 @@ Your goals:
 3. Offer tactical recommendations to improve platform stickiness and operational health.
 Format your responses with clear Markdown headings, bullet points, and exact numbers from the data. Keep recommendations actionable, punchy, and professional.`,
 
-      data: `You are the Lead Platform Telemetry & Financial Analyst AI for SmartDentalDesk.
+      data: `You are the Lead Platform Telemetry & Financial Analyst AI for dentalsmart.
 You have live platform metrics, clinic directories, invoice totals, and staff counts injected below.
 Answer user questions regarding clinic statistics, GMV, subscription trends, appointment volume, and database telemetry with precision.
 Use exact numbers, percentages, and tables where helpful. If a specific data point is not available, state so clearly.`,
 
-      announcement: `You are the Platform Communications Specialist AI for SmartDentalDesk.
+      announcement: `You are the Platform Communications Specialist AI for dentalsmart.
 You help the Super Admin craft clear, polite, and impactful announcements and maintenance notices for clinic owners and receptionists.
 When asked to draft an announcement, provide:
 1. A concise, attention-grabbing Broadcast Banner message (1-2 sentences for top bar).
@@ -846,8 +846,8 @@ When asked to draft an announcement, provide:
           headers: {
             'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
             'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://smartdentaldesk.app',
-            'X-Title': 'SmartDentalDesk Platform Command'
+            'HTTP-Referer': 'https://dentalsmart.app',
+            'X-Title': 'dentalsmart Platform Command'
           },
           body: JSON.stringify({
             model: testModel,
@@ -1065,7 +1065,7 @@ router.get('/export/clinics', async (_req, res, next) => {
 
     const csv = jsonToCsv(clinics || [], fields);
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="smartdentaldesk_clinics_fleet.csv"');
+    res.setHeader('Content-Disposition', 'attachment; filename="dentalsmart_clinics_fleet.csv"');
     res.send(csv);
   } catch (err) {
     next(err);
@@ -1095,7 +1095,7 @@ router.get('/export/staff', async (_req, res, next) => {
 
     const csv = jsonToCsv(staffList || [], fields);
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="smartdentaldesk_global_staff.csv"');
+    res.setHeader('Content-Disposition', 'attachment; filename="dentalsmart_global_staff.csv"');
     res.send(csv);
   } catch (err) {
     next(err);
@@ -1123,7 +1123,7 @@ router.get('/export/invoices', async (_req, res, next) => {
 
     const csv = jsonToCsv(invoices || [], fields);
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="smartdentaldesk_platform_invoices.csv"');
+    res.setHeader('Content-Disposition', 'attachment; filename="dentalsmart_platform_invoices.csv"');
     res.send(csv);
   } catch (err) {
     next(err);

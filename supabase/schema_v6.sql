@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- Smart Dental Desk — Migration Schema V6
+-- dentalsmart — Migration Schema V6
 -- Adding is_starred column to patients table
 -- ─────────────────────────────────────────────────────────────────────────────
 

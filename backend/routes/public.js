@@ -489,7 +489,7 @@ router.post('/book', bookingLimiter, [
     if (apptErr) throw apptErr;
 
     // ── Format time for emails ────────────────────────────────────────────────
-    const clinicName = clinic?.name || 'Smart Dental Desk';
+    const clinicName = clinic?.name || 'dentalsmart';
     const [hourStr, minStr] = time.split(':');
     let hour = parseInt(hourStr, 10);
     const ampm = hour >= 12 ? 'PM' : 'AM';
@@ -569,7 +569,7 @@ router.post('/book', bookingLimiter, [
             <p style="margin: 0 0 8px 0;"><strong>Time:</strong> ${formattedTime}</p>
             ${reason ? `<p style="margin: 0;"><strong>Reason:</strong> ${reason}</p>` : ''}
           </div>
-          <p>Please log in to your <strong>Smart Dental Desk</strong> dashboard to approve or decline this appointment.</p>
+          <p>Please log in to your <strong>dentalsmart</strong> dashboard to approve or decline this appointment.</p>
         </div>
       `;
       try {

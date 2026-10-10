@@ -1,8 +1,8 @@
-// SmartDentalDesk API Client
+// dentalsmart API Client
 window.api = (function() {
   const BASE_URL       = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
     ? 'http://localhost:3001/api' 
-    : 'https://smartdentaldesk.onrender.com/api';
+    : 'https://dentalsmart.onrender.com/api';
   // Removed hardcoded SUPABASE_URL and SUPABASE_ANON for security.
   // OAuth URL is now fetched securely from the backend.
 
@@ -348,7 +348,7 @@ window.api = (function() {
         .then(blob => {
           const url = URL.createObjectURL(blob);
           a.href = url;
-          a.download = 'smartdentaldesk_patients_template.csv';
+          a.download = 'dentalsmart_patients_template.csv';
           a.click();
           URL.revokeObjectURL(url);
         });
@@ -405,7 +405,7 @@ window.api = (function() {
     },
     exportSuperAdminCSV: async (type) => {
       const token = getToken();
-      const filename = `smartdentaldesk_${type}_${new Date().toISOString().slice(0,10)}.csv`;
+      const filename = `dentalsmart_${type}_${new Date().toISOString().slice(0,10)}.csv`;
       const res = await fetch(`${BASE_URL}/super-admin/export/${type}`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });

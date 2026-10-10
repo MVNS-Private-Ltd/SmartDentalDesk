@@ -5,7 +5,7 @@ for f in files:
     with open(f, 'r', encoding='utf-8') as file:
         content = file.read()
     
-    content = content.replace('SmartDentalDesk', 'Smart Dental Clinic')
+    content = content.replace('dentalsmart', 'dentalsmart')
     
     script_str = """<script>
 (function(){

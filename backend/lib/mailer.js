@@ -42,7 +42,7 @@ function buildSafeHtml(plainText, fromName) {
     .map(line => `<p style="margin:0 0 12px;line-height:1.6;color:#374151;">${line || '&nbsp;'}</p>`)
     .join('');
 
-  const safeName = (fromName || 'Smart Dental Desk')
+  const safeName = (fromName || 'dentalsmart')
     .replace(/</g, '').replace(/>/g, '').slice(0, 60);
 
   return `
@@ -58,7 +58,7 @@ function buildSafeHtml(plainText, fromName) {
       ${paragraphs}
     </div>
     <p style="text-align:center;color:#9ca3af;font-size:12px;margin-top:20px;">
-      This message was sent from Smart Dental Desk on behalf of your dental clinic.
+      This message was sent from dentalsmart on behalf of your dental clinic.
     </p>
   </div>
 </body>

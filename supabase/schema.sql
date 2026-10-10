@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────────────────
---  Smart Dental Desk — Supabase PostgreSQL Schema
+--  dentalsmart — Supabase PostgreSQL Schema
 --  Run this in the Supabase SQL Editor
 -- ─────────────────────────────────────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────────────────
---  Smart Dental Desk — Schema v12 Marketplace & Clinic Directory Migration
+--  dentalsmart — Schema v12 Marketplace & Clinic Directory Migration
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- 1. Add marketplace columns to clinics table

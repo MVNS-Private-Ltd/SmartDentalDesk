@@ -555,7 +555,7 @@ router.post('/refresh', async (req, res, next) => {
 // ── GET /api/auth/mfa/setup ───────────────────────────────────────────────────
 router.get('/mfa/setup', requireAuth, async (req, res, next) => {
   try {
-    const secret = speakeasy.generateSecret({ name: `SmartDentalDesk (${req.user.email})` });
+    const secret = speakeasy.generateSecret({ name: `dentalsmart (${req.user.email})` });
     
     await supabase.from('user_security').upsert({
       auth_user_id: req.user.id,

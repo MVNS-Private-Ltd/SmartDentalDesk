@@ -91,7 +91,7 @@ function getEmailConfig() {
   const mode      = getEmailMode();
   const apiKey    = process.env.RESEND_API_KEY;
   const fromEmail = process.env.EMAIL_FROM;
-  const fromName  = process.env.EMAIL_FROM_NAME || 'Smart Dental Desk';
+  const fromName  = process.env.EMAIL_FROM_NAME || 'dentalsmart';
   const prodDomain = process.env.EMAIL_PRODUCTION_DOMAIN || null;
 
   const fromDomain   = extractDomain(fromEmail || '');

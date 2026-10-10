@@ -62,7 +62,7 @@ async function sendAppointmentReminders() {
           <p>This is a reminder that you have an appointment at <strong>${clinic?.name}</strong> 
           on <strong>${appt.appointment_date}</strong> at <strong>${appt.appointment_time}</strong>.</p>
           <p>If you need to reschedule, please contact us at ${clinic?.phone || clinic?.email || 'the clinic'}.</p>
-          <p>Thank you,<br/>${clinic?.name || 'Smart Dental Desk'}</p>
+          <p>Thank you,<br/>${clinic?.name || 'dentalsmart'}</p>
         `
       });
       logStatus = 'sent';

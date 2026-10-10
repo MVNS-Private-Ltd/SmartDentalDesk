@@ -1,4 +1,4 @@
-SmartDentalDesk — Website Package
+DentalSmart — Website Package
 ==================================
 
 This is a static HTML/CSS/JS website (no build tools, no npm install needed).
@@ -9,7 +9,7 @@ HOW TO USE
 2. Double-click index.html to open it in any browser — OR
 3. For the best experience (so all internal links work smoothly), serve it locally:
      - VS Code: right-click index.html -> "Open with Live Server"
-     - Or run: npx serve .   (from inside the smartdentaldesk folder)
+     - Or run: npx serve .   (from inside the dentalsmart folder)
 
 PAGES
 -----
@@ -28,4 +28,4 @@ NOTES
   connect assets/app.js to Supabase (recommended, matches your usual stack).
 - Colors, fonts and spacing are defined as CSS variables at the top of
   assets/style.css — easy to re-theme.
-- Built for Zenth / SmartDentalDesk.
+- Built for Zenth / DentalSmart.

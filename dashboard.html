@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard | Smart Dental Desk</title>
+<title>Dashboard | dentalsmart</title>
 <meta name="description" content="Manage your dental clinic operations.">
   <link rel="canonical" href="https://www.dentalsmart.tech/dashboard.html">
 
@@ -1301,12 +1301,12 @@
 
 <div class="dashboard-layout">
   <aside class="sidebar">
-    <a href="./index.html" class="brand" aria-label="Smart Dental Desk home">
+    <a href="./index.html" class="brand" aria-label="dentalsmart home">
       <svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true">
         <rect width="32" height="32" rx="8" fill="#2563eb"/>
         <path d="M16 8c-2.8 0-5 1.9-5 4.6 0 1.7.6 2.7 1.2 3.9.7 1.4 1.4 3 1.6 6.1.1 1.4 1 2.4 2.2 2.4s2.1-1 2.2-2.4c.2-3.1.9-4.7 1.6-6.1.6-1.2 1.2-2.2 1.2-3.9C21 9.9 18.8 8 16 8Z" fill="#fff"/>
       </svg>
-      <span class="brand-name">Smart Dental Desk</span>
+      <span class="brand-name">dentalsmart</span>
     </a>
     
     <nav class="sidebar-nav" id="sidebarNav">
@@ -1730,7 +1730,7 @@
             </button>
           </form>
           <div style="font-size: 0.75rem; color: var(--color-text-muted); text-align: center; margin-top: 8px; padding: 0 10px;">
-            AI assistance only: Smart Dental Desk AI may be inaccurate or incomplete. It does not diagnose, prescribe, or replace professional clinical judgment. A qualified dental professional must review all AI-generated content before using, saving, or sharing it with a patient.
+            AI assistance only: dentalsmart AI may be inaccurate or incomplete. It does not diagnose, prescribe, or replace professional clinical judgment. A qualified dental professional must review all AI-generated content before using, saving, or sharing it with a patient.
           </div>
 
           <div class="ai-suggestions">
@@ -3233,7 +3233,7 @@
 
     // ── Receipt Modal Handlers ───────────────────────────────────────────────
     window.openReceiptModal = function(data) {
-      const clinicName = data.clinic?.name || localStorage.getItem('sdd_clinic_name') || 'Smart Dental Desk';
+      const clinicName = data.clinic?.name || localStorage.getItem('sdd_clinic_name') || 'dentalsmart';
       const clinicAddress = data.clinic?.address || 'Dental Care & Implant Center';
       const clinicContact = data.clinic?.email ? `Contact: ${data.clinic.email}` : (data.clinic?.phone ? `Phone: ${data.clinic.phone}` : '');
       
@@ -4129,9 +4129,9 @@
         } else {
           streamBubble.className = 'chat-bubble';
           if (firstToken) {
-            streamBubble.innerHTML = `Smart Dental Desk AI was terminated`;
+            streamBubble.innerHTML = `dentalsmart AI was terminated`;
           } else {
-            streamBubble.innerHTML += `<br><br>[Smart Dental Desk AI was terminated]`;
+            streamBubble.innerHTML += `<br><br>[dentalsmart AI was terminated]`;
           }
         }
       } finally {
@@ -4791,10 +4791,10 @@ if(document.getElementById('section-scheduled-messages')?.classList.contains('ac
         <div>
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
             <div style="width:24px; height:24px; border-radius:6px; background:#2563eb; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:bold;">✦</div>
-            <h2 id="rcptClinicName" style="margin:0; font-size:1.25rem; font-weight:800; color:#0f172a;">Smart Dental Desk</h2>
+            <h2 id="rcptClinicName" style="margin:0; font-size:1.25rem; font-weight:800; color:#0f172a;">dentalsmart</h2>
           </div>
           <p id="rcptClinicAddress" style="margin:0; font-size:0.78rem; color:#64748b;">Dental Care &amp; Implant Center</p>
-          <p id="rcptClinicContact" style="margin:2px 0 0; font-size:0.75rem; color:#64748b;">Contact: clinic@smartdental.com</p>
+          <p id="rcptClinicContact" style="margin:2px 0 0; font-size:0.75rem; color:#64748b;">Contact: clinic@dentalsmart.com</p>
         </div>
         <div style="text-align:right;">
           <div style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:#64748b; letter-spacing:0.05em;">Receipt / Invoice</div>
@@ -5427,7 +5427,7 @@ document.getElementById('staffModal').addEventListener('click', function(e) {
     <div style="padding:28px 32px; font-family:'General Sans', sans-serif;" id="subReceiptPrintArea">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #0f172a; padding-bottom:14px; margin-bottom:16px;">
         <div>
-          <h2 style="margin:0; font-size:1.2rem; font-weight:800; color:#0f172a;">Smart Dental Desk Inc.</h2>
+          <h2 style="margin:0; font-size:1.2rem; font-weight:800; color:#0f172a;">dentalsmart Inc.</h2>
           <p style="margin:2px 0 0; font-size:0.78rem; color:#64748b;">AI-Powered Dental Clinic Operating System</p>
         </div>
         <div style="text-align:right;">
@@ -5439,7 +5439,7 @@ document.getElementById('staffModal').addEventListener('click', function(e) {
 
       <div style="background:#f8fafc; border-radius:8px; padding:12px 16px; margin-bottom:18px; font-size:0.82rem;">
         <div style="font-size:0.7rem; text-transform:uppercase; font-weight:700; color:#94a3b8; margin-bottom:2px;">Billed To (Clinic)</div>
-        <div id="subRcptClinicName" style="font-weight:700; font-size:0.95rem; color:#0f172a;">Smart Dental Desk</div>
+        <div id="subRcptClinicName" style="font-weight:700; font-size:0.95rem; color:#0f172a;">dentalsmart</div>
         <div id="subRcptPaymentMethod" style="color:#64748b;">Payment Method: Visa •••• 4242</div>
       </div>
 
@@ -5465,7 +5465,7 @@ document.getElementById('staffModal').addEventListener('click', function(e) {
       </table>
 
       <div style="text-align:center; font-size:0.75rem; color:#94a3b8; border-top:1px dashed #e2e8f0; padding-top:12px;">
-        Thank you for choosing Smart Dental Desk! • GST Included
+        Thank you for choosing dentalsmart! • GST Included
       </div>
     </div>
 
@@ -5805,7 +5805,7 @@ window.submitUpgradePayment = async function() {
         amount: order.amount,
         currency: order.currency || 'INR',
         order_id: order.order_id,
-        name: 'Smart Dental Desk',
+        name: 'dentalsmart',
         description: `Upgrade to ${activeUpgradePlan.toUpperCase()} Plan`,
         prefill: { name: cardName },
         handler: async function(response) {
@@ -5970,7 +5970,7 @@ window.submitTopupPurchase = async function() {
         amount: order.amount,
         currency: order.currency || 'INR',
         order_id: order.order_id,
-        name: 'Smart Dental Desk',
+        name: 'dentalsmart',
         description: `Credits Top-up - ${p.credits} AI Credits`,
         prefill: { name: cardName },
         handler: async function(response) {
@@ -6168,7 +6168,7 @@ window.viewSubReceipt = function(invoiceId) {
   if (invNo) invNo.textContent = inv.invoice_number;
   if (rDate) rDate.textContent = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   
-  const clinicName = localStorage.getItem('sdd_clinic_name') || 'Smart Dental Desk';
+  const clinicName = localStorage.getItem('sdd_clinic_name') || 'dentalsmart';
   if (rClinic) rClinic.textContent = clinicName;
   if (rMethod) rMethod.textContent = `Payment Method: Card •••• ${inv.card_last4 || '4242'}`;
   if (rItem) rItem.textContent = `${inv.plan.toUpperCase()} Plan Subscription`;

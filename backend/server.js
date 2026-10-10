@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  Smart Dental Desk — Express Server Entry Point
+//  dentalsmart — Express Server Entry Point
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 require('dotenv').config();
@@ -206,7 +206,7 @@ function startKeepAlive() {
 
 // ── Start server ──────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`\n🦷 SmartDentalDesk API running on http://localhost:${PORT}`);
+  console.log(`\n🦷 dentalsmart API running on http://localhost:${PORT}`);
   console.log(`   Health check → http://localhost:${PORT}/api/health\n`);
   startKeepAlive();
 });

@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  Smart Dental Desk — Legal Configuration
+//  dentalsmart — Legal Configuration
 //  Legal values are loaded from the backend /api/config endpoint,
 //  which reads them from server-side environment variables (Render/Vercel).
 //  This file must NEVER contain real legal data, secrets, or emails directly.
@@ -12,7 +12,7 @@ window.SDD_CONFIG = {};
   const apiBase = window.SDD_API_BASE ||
     (window.location.hostname === 'localhost'
       ? 'http://localhost:3001'
-      : 'https://smartdentaldesk.onrender.com');
+      : 'https://dentalsmart.onrender.com');
 
   try {
     const res = await fetch(`${apiBase}/api/config`);

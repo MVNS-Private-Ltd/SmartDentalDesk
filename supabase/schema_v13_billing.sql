@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────────────────
---  Smart Dental Desk — Schema v13: Billing & Subscriptions
+--  dentalsmart — Schema v13: Billing & Subscriptions
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- 1. Subscriptions

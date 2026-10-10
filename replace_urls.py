@@ -1,6 +1,6 @@
 ﻿import os
 
-directory = 'c:/Users/mayan/OneDrive/Desktop/PROJECTS/clinic/smartdentaldesk'
+directory = 'c:/Users/mayan/OneDrive/Desktop/PROJECTS/clinic/dentalsmart'
 old_url = 'https://smart-dental-desk.vercel.app'
 new_url = 'https://www.dentalsmart.tech'
 

@@ -44,7 +44,7 @@ async function sendAppointmentStatusEmail(appointmentId, clinicId, newStatus, re
 
     const patientName = appt.patients.name;
     const patientEmail = appt.patients.email;
-    const clinicName = appt.clinics?.name || 'Smart Dental Desk';
+    const clinicName = appt.clinics?.name || 'dentalsmart';
     const date = appt.date;
     const [h, m] = String(appt.time).split(':');
     const hour = parseInt(h, 10);
@@ -438,7 +438,7 @@ router.post('/:id/checkout', async (req, res, next) => {
         payment_method: isPaid ? payment_method : null,
         created_at: new Date().toISOString()
       },
-      clinic: clinic || { name: 'Smart Dental Clinic' }
+      clinic: clinic || { name: 'dentalsmart' }
     });
   } catch (err) {
     next(err);

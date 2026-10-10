@@ -1,14 +1,4 @@
 User-agent: *
-Disallow: /dashboard.html
-Disallow: /receptionist-dashboard.html
-Disallow: /super-admin.html
-Disallow: /billing.html
-Disallow: /login.html
-Disallow: /register.html
-Disallow: /reset-password.html
-Disallow: /book.html
-Disallow: /clinic-profile.html
-
 Allow: /
 
 Sitemap: https://www.dentalsmart.tech/sitemap.xml

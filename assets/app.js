@@ -2,7 +2,7 @@
 window.api = (function() {
   const BASE_URL       = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
     ? 'http://localhost:3001/api' 
-    : 'https://dentalsmart.onrender.com/api';
+    : 'https://smartdentaldesk.onrender.com/api';
   // Removed hardcoded SUPABASE_URL and SUPABASE_ANON for security.
   // OAuth URL is now fetched securely from the backend.
 

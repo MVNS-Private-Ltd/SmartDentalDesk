@@ -12,7 +12,7 @@ window.SDD_CONFIG = {};
   const apiBase = window.SDD_API_BASE ||
     (window.location.hostname === 'localhost'
       ? 'http://localhost:3001'
-      : 'https://dentalsmart.onrender.com');
+      : 'https://smartdentaldesk.onrender.com');
 
   try {
     const res = await fetch(`${apiBase}/api/config`);

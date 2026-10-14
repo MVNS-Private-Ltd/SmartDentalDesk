@@ -1587,20 +1587,26 @@
     <section id="section-scheduled-messages" class="dashboard-section">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px;">
         <div>
-          <h2 style="margin:0;">Scheduled Messages</h2>
-          <p class="text-muted" style="margin:4px 0 0;">Schedule emails to patients for a future date &amp; time.</p>
+          <h2 style="margin:0;font-size:var(--text-xl);font-weight:700;">Scheduled Messages</h2>
+          <p class="text-muted" style="margin:4px 0 0;font-size:0.9rem;">Automate patient follow-ups, appointment reminders, and health check-ins.</p>
         </div>
-        <button class="btn btn-primary" id="openScheduleMsgBtn" style="display:flex;align-items:center;gap:6px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Schedule a Message
-        </button>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="btn btn-secondary" onclick="loadScheduledMessages()" style="display:flex;align-items:center;gap:6px;padding:0.5rem 0.9rem;font-size:0.85rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
+          <button class="btn btn-primary" id="openScheduleMsgBtn" style="display:flex;align-items:center;gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="12" y2="12"/></svg>
+            Schedule a Message
+          </button>
+        </div>
       </div>
-      <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;flex-wrap:wrap;" id="msgFilterTabs">
-        <button class="msg-filter-btn active" data-filter="">All</button>
-        <button class="msg-filter-btn" data-filter="pending">Pending</button>
-        <button class="msg-filter-btn" data-filter="sent">Sent</button>
-        <button class="msg-filter-btn" data-filter="failed">Failed</button>
-        <button class="msg-filter-btn" data-filter="cancelled">Cancelled</button>
+      <div class="tabs-nav" id="msgFilterTabs" style="margin-bottom:1.25rem;">
+        <button class="tab-btn msg-filter-btn active" data-filter="">All</button>
+        <button class="tab-btn msg-filter-btn" data-filter="pending">Pending</button>
+        <button class="tab-btn msg-filter-btn" data-filter="sent">Sent</button>
+        <button class="tab-btn msg-filter-btn" data-filter="failed">Failed</button>
+        <button class="tab-btn msg-filter-btn" data-filter="cancelled">Cancelled</button>
       </div>
       <div id="scheduledMsgList" style="display:flex;flex-direction:column;gap:0.75rem;min-height:200px;">
         <div style="text-align:center;padding:3rem;color:#94a3b8;"><p style="margin:0;font-weight:600;">Loading scheduled messages...</p></div>
@@ -2202,6 +2208,9 @@
         if (window.loadBillingSettings) window.loadBillingSettings();
       }
       if (targetId === 'team') loadStaff();
+      if (targetId === 'scheduled-messages') {
+        if (typeof window.loadScheduledMessages === 'function') window.loadScheduledMessages();
+      }
     }
 
     // ── AI Random Greeting ────────────────────────────────────────────────────
@@ -4385,70 +4394,126 @@
 // ── SCHEDULED MESSAGES LOGIC ───────────────────────────────────────
 let currentMsgFilter = '';
 
-async function loadScheduledMessages() {
+window.loadScheduledMessages = async function loadScheduledMessages() {
   const list = document.getElementById('scheduledMsgList');
   if(!list) return;
   try {
     const res = await window.api.getScheduledMessages(currentMsgFilter);
-    const msgs = res.messages;
+    const msgs = res.messages || [];
     
-    if(!msgs || msgs.length === 0) {
-      list.innerHTML = `<div style="text-align:center;padding:3rem;color:#94a3b8;">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:0.75rem;opacity:0.5;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <p style="margin:0;font-weight:600;">No scheduled messages found.</p>
+    // Calculate pending count across all messages
+    let pendingCount = 0;
+    if (currentMsgFilter === '') {
+      pendingCount = msgs.filter(m => m.status === 'pending').length;
+    } else {
+      window.api.getScheduledMessages('pending').then(r => {
+        const pCount = (r.messages || []).length;
+        const badge = document.getElementById('sidebarPendingMsgBadge');
+        if(badge) {
+          badge.textContent = pCount;
+          badge.style.display = pCount > 0 ? 'inline-block' : 'none';
+        }
+      }).catch(() => {});
+    }
+    
+    const badge = document.getElementById('sidebarPendingMsgBadge');
+    if(badge && currentMsgFilter === '') {
+      badge.textContent = pendingCount;
+      badge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+    }
+
+    if(msgs.length === 0) {
+      list.innerHTML = `<div style="text-align:center;padding:3.5rem 1rem;color:#94a3b8;background:var(--color-bg, #f8fafc);border-radius:12px;border:1px dashed var(--color-border, #cbd5e1);">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:0.75rem;opacity:0.6;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <p style="margin:0;font-weight:600;font-size:0.95rem;color:#475569;">No ${currentMsgFilter ? currentMsgFilter : ''} scheduled messages found.</p>
+          <p style="margin:4px 0 0;font-size:0.8rem;color:#94a3b8;">Click &ldquo;Schedule a Message&rdquo; above to set up automated patient emails.</p>
         </div>`;
-      
-      const badge = document.getElementById('sidebarPendingMsgBadge');
-      if(badge) badge.style.display = 'none';
       return;
     }
     
-    let pendingCount = 0;
     list.innerHTML = msgs.map(m => {
-      if(m.status === 'pending') pendingCount++;
       const d = new Date(m.scheduled_at);
-      const formattedDate = d.toLocaleDateString('en-IN', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      const formattedDate = d.toLocaleString('en-IN', {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
       const statusClass = `status-${m.status}`;
+      const isPending = m.status === 'pending';
+      const isFailed = m.status === 'failed';
+      const isSent = m.status === 'sent';
+
+      let sentInfoHtml = '';
+      if (isSent && m.sent_at) {
+        const sentDate = new Date(m.sent_at).toLocaleString('en-IN', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+        sentInfoHtml = `<span style="display:inline-flex;align-items:center;gap:4px;font-size:0.78rem;color:#16a34a;margin-left:8px;font-weight:600;">✓ Delivered ${sentDate}</span>`;
+      }
+
       return `
         <div class="scheduled-msg-card">
-          <div class="scheduled-msg-info">
-            <h4>To: ${m.recipient_name} <span style="font-weight:400;color:#64748b;font-size:0.9rem;">(${m.recipient_email})</span></h4>
-            <p><strong>Subject:</strong> ${m.subject}</p>
-            <p style="margin-top:4px;"><strong>Scheduled for:</strong> ${formattedDate}</p>
-            <span class="status-badge ${statusClass}">${m.status.toUpperCase()}</span>
-            ${m.error_message ? `<p style="color:#dc2626;font-size:0.75rem;margin-top:4px;">Error: ${m.error_message}</p>` : ''}
+          <div class="scheduled-msg-info" style="flex:1;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+              <h4 style="margin:0;font-size:0.98rem;font-weight:700;color:var(--color-text, #0f172a);">To: ${m.recipient_name}</h4>
+              <span style="font-weight:400;color:var(--color-text-muted, #64748b);font-size:0.85rem;">&lt;${m.recipient_email}&gt;</span>
+              <span class="status-badge ${statusClass}">${m.status.toUpperCase()}</span>
+              ${sentInfoHtml}
+            </div>
+            <p style="margin:4px 0 2px;font-size:0.88rem;color:#334155;"><strong>Subject:</strong> ${m.subject}</p>
+            <p style="margin:2px 0 0;font-size:0.82rem;color:#64748b;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-1px;margin-right:4px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Scheduled for: <strong>${formattedDate}</strong>
+            </p>
+            ${m.error_message ? `<div style="background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;padding:4px 8px;border-radius:6px;font-size:0.78rem;margin-top:6px;display:inline-block;">Error: ${m.error_message}</div>` : ''}
           </div>
-          <div>
-            ${m.status === 'pending' ? `<button class="btn btn-secondary" onclick="cancelScheduledMessage('${m.id}')" style="color:#dc2626;border-color:#fca5a5;padding:0.4rem 0.8rem;font-size:0.8rem;">Cancel</button>` : ''}
+          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+            ${(isPending || isFailed) ? `<button class="btn btn-sm btn-primary" onclick="sendScheduledMessageNow('${m.id}')" style="padding:0.4rem 0.85rem;font-size:0.8rem;display:flex;align-items:center;gap:4px;" title="Send this message immediately">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Send Now
+            </button>` : ''}
+            ${isPending ? `<button class="btn btn-sm btn-secondary" onclick="cancelScheduledMessage('${m.id}')" style="color:#dc2626;border-color:#fca5a5;padding:0.4rem 0.85rem;font-size:0.8rem;">Cancel</button>` : ''}
           </div>
         </div>
       `;
     }).join('');
     
-    // Update badge in sidebar
-    const badge = document.getElementById('sidebarPendingMsgBadge');
-    if(badge) {
-      if(pendingCount > 0 && currentMsgFilter === '') {
-        badge.textContent = pendingCount;
-        badge.style.display = 'inline-block';
-      } else if (currentMsgFilter === '') {
-        badge.style.display = 'none';
-      }
-    }
-    
   } catch(err) {
-    list.innerHTML = `<p style="color:#dc2626;">Error loading messages: ${err.message}</p>`;
+    list.innerHTML = `<div style="background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;padding:16px;border-radius:10px;">Error loading messages: ${err.message}</div>`;
   }
-}
+};
+
+window.sendScheduledMessageNow = async function(id) {
+  if (!confirm('Send this email immediately?')) return;
+  try {
+    window.showToast('Sending email immediately...', 'info');
+    await window.api.sendScheduledMessageNow(id);
+    window.showToast('Email sent successfully!', 'success');
+    window.loadScheduledMessages();
+  } catch(err) {
+    window.showToast(err.message || 'Failed to send message', 'error');
+  }
+};
 
 window.cancelScheduledMessage = async function(id) {
   if(!confirm('Are you sure you want to cancel this scheduled email?')) return;
   try {
     await window.api.cancelScheduledMessage(id);
     window.showToast('Message cancelled successfully.', 'success');
-    loadScheduledMessages();
+    window.loadScheduledMessages();
   } catch(err) {
-    window.showToast(err.message, 'error');
+    window.showToast(err.message || 'Failed to cancel message', 'error');
+  }
+};
+
+// Preset quick templates for scheduling
+window.applySchedTemplate = function(type) {
+  const clinicName = localStorage.getItem('sdd_clinic_name') || 'dentalsmart Clinic';
+  const nameVal = document.getElementById('schedMsgName')?.value.trim() || 'Patient';
+
+  if (type === 'reminder') {
+    document.getElementById('schedMsgSubject').value = `Appointment Reminder — Dental Visit with ${clinicName}`;
+    document.getElementById('schedMsgBody').value = `Dear ${nameVal},\n\nThis is a friendly reminder of your upcoming dental appointment at ${clinicName}.\n\nPlease arrive 10 minutes prior to your scheduled time. If you need to make any changes or have questions, feel free to reply or contact our front desk.\n\nWarm regards,\n${clinicName}`;
+  } else if (type === 'followup') {
+    document.getElementById('schedMsgSubject').value = `Follow-up Regarding Your Treatment — ${clinicName}`;
+    document.getElementById('schedMsgBody').value = `Dear ${nameVal},\n\nWe wanted to check in on how you are feeling after your recent visit with us. Healing comfortably is our top priority.\n\nIf you experience any unusual tenderness or have any questions about your aftercare instructions, please don't hesitate to reach out to us.\n\nBest regards,\n${clinicName}`;
+  } else if (type === 'checkup') {
+    document.getElementById('schedMsgSubject').value = `Time for Your Routine Dental Cleaning & Examination`;
+    document.getElementById('schedMsgBody').value = `Dear ${nameVal},\n\nRegular dental checkups and professional cleaning are essential for maintaining healthy teeth and gums.\n\nIt is time for your periodic dental wellness exam! Please contact ${clinicName} at your convenience or visit our booking page to secure your slot.\n\nWarm regards,\n${clinicName}`;
   }
 };
 
@@ -4456,12 +4521,40 @@ const openScheduleBtn = document.getElementById('openScheduleMsgBtn');
 if(openScheduleBtn) {
   openScheduleBtn.addEventListener('click', () => {
     document.getElementById('scheduleMsgForm').reset();
-    // Default time to 1 hr from now
+
+    // Populate patient autocomplete datalist if available
+    const datalist = document.getElementById('schedPatientDatalist');
+    if (datalist && Array.isArray(window._allLoadedPatients) && window._allLoadedPatients.length > 0) {
+      datalist.innerHTML = window._allLoadedPatients.map(p =>
+        `<option value="${p.name}">${p.email ? '(' + p.email + ')' : ''}</option>`
+      ).join('');
+    }
+
+    // Default time to 1 hr from now & enforce min time
     const now = new Date();
-    now.setHours(now.getHours() + 1);
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    document.getElementById('schedMsgTime').value = now.toISOString().slice(0, 16);
+    const minNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    const schedInput = document.getElementById('schedMsgTime');
+    if (schedInput) {
+      schedInput.min = minNow.toISOString().slice(0, 16);
+      const defaultSched = new Date(now.getTime() + 60 * 60 * 1000 - now.getTimezoneOffset() * 60000);
+      schedInput.value = defaultSched.toISOString().slice(0, 16);
+    }
+
     document.getElementById('scheduleMsgModal').style.display = 'flex';
+  });
+}
+
+// Auto-fill email when patient name is selected from datalist or typed
+const schedNameInput = document.getElementById('schedMsgName');
+if (schedNameInput) {
+  schedNameInput.addEventListener('input', () => {
+    const val = schedNameInput.value.trim().toLowerCase();
+    if (!val || !Array.isArray(window._allLoadedPatients)) return;
+    const match = window._allLoadedPatients.find(p => (p.name || '').toLowerCase() === val);
+    if (match && match.email) {
+      const emailField = document.getElementById('schedMsgEmail');
+      if (emailField) emailField.value = match.email;
+    }
   });
 }
 
@@ -4482,9 +4575,9 @@ if(schedMsgForm) {
       });
       document.getElementById('scheduleMsgModal').style.display = 'none';
       window.showToast('Email scheduled successfully.', 'success');
-      loadScheduledMessages();
+      window.loadScheduledMessages();
     } catch(err) {
-      window.showToast(err.message, 'error');
+      window.showToast(err.message || 'Failed to schedule email', 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = 'Schedule Email';
@@ -4498,26 +4591,28 @@ filterTabs.forEach(tab => {
     filterTabs.forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     currentMsgFilter = tab.dataset.filter;
-    loadScheduledMessages();
+    window.loadScheduledMessages();
   });
 });
 
-// Hook into section switching logic
-const originalSwitchFunc = window.switchSection;
-if(typeof originalSwitchFunc === 'function' && !window.hookedSwitchMsg) {
-  window.hookedSwitchMsg = true;
-  window.switchSection = function(sectionId) {
-    originalSwitchFunc(sectionId);
-    if(sectionId === 'section-scheduled-messages') {
-      loadScheduledMessages();
+// Hook into showSection logic as fallback
+const origShowSection = window.showSection;
+if(typeof origShowSection === 'function' && !window.hookedShowMsg) {
+  window.hookedShowMsg = true;
+  window.showSection = function(targetId) {
+    origShowSection(targetId);
+    if(targetId === 'scheduled-messages') {
+      window.loadScheduledMessages();
     }
   };
 }
 
-// Initial load if starting on that section
-if(document.getElementById('section-scheduled-messages')?.classList.contains('active')) {
-  loadScheduledMessages();
-}
+// Initial load on page startup to populate the sidebar badge
+setTimeout(() => {
+  if (typeof window.loadScheduledMessages === 'function') {
+    window.loadScheduledMessages();
+  }
+}, 800);
 
 
 </script>
@@ -6198,14 +6293,78 @@ window.cancelSubscriptionPrompt = async function() {
     window.showToast(err.message || 'Failed to cancel subscription.', 'error');
   }
 };
-</script>
+<style>
+  /* Scheduled Messages Section Styles */
+  .scheduled-msg-card {
+    background: var(--color-surface, #ffffff);
+    border: 1px solid var(--color-divider, #e2e8f0);
+    border-radius: var(--radius-lg, 12px);
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+  .scheduled-msg-card:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+    border-color: #cbd5e1;
+  }
+  .status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    line-height: 1.4;
+  }
+  .status-badge.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+  }
+  .status-badge.status-sent {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+  .status-badge.status-failed {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+  .status-badge.status-cancelled {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+  }
+  .template-pill {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .template-pill:hover {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+  }
+</style>
+
 <!-- Scheduled Message Modal -->
 <div id="scheduleMsgModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 1050; padding: 20px; overflow-y: auto;" onclick="if(event.target===this) this.style.display='none';">
-  <div class="modal-content" style="background: var(--color-surface, #ffffff); color: var(--color-text, #0f172a); border-radius: 16px; width: 100%; max-width: 520px; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.3); border: 1px solid var(--color-border, #e2e8f0); overflow: hidden; position: relative;">
+  <div class="modal-content" style="background: var(--color-surface, #ffffff); color: var(--color-text, #0f172a); border-radius: 16px; width: 100%; max-width: 540px; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.3); border: 1px solid var(--color-border, #e2e8f0); overflow: hidden; position: relative;">
     <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--color-border, #e2e8f0); background: var(--color-bg, #f8fafc);">
       <div>
-        <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #0f172a;">Schedule Email to Patient</h3>
-        <p style="margin: 2px 0 0; font-size: 0.8rem; color: #64748b;">Automate patient follow-ups or reminders</p>
+        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #0f172a;">Schedule Email to Patient</h3>
+        <p style="margin: 2px 0 0; font-size: 0.82rem; color: #64748b;">Compose automated patient follow-ups, appointment reminders, or check-ins</p>
       </div>
       <button type="button" onclick="document.getElementById('scheduleMsgModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; line-height: 1; padding: 4px 8px; border-radius: 6px;">&times;</button>
     </div>
@@ -6213,25 +6372,41 @@ window.cancelSubscriptionPrompt = async function() {
       <form id="scheduleMsgForm" style="display: flex; flex-direction: column; gap: 14px;">
         <div>
           <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: #334155;">Recipient Name</label>
-          <input type="text" id="schedMsgName" class="input" required placeholder="e.g. John Doe" style="width: 100%;">
+          <input type="text" id="schedMsgName" class="input" list="schedPatientDatalist" required placeholder="Type or select patient name" style="width: 100%;" autocomplete="off">
+          <datalist id="schedPatientDatalist"></datalist>
         </div>
         <div>
           <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: #334155;">Recipient Email</label>
-          <input type="email" id="schedMsgEmail" class="input" required placeholder="john@example.com" style="width: 100%;">
+          <input type="email" id="schedMsgEmail" class="input" required placeholder="patient@example.com" style="width: 100%;">
         </div>
+        
+        <!-- Quick Templates -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-size: 0.82rem; font-weight: 600; color: #334155;">Quick Templates</label>
+            <span style="font-size: 0.74rem; color: #94a3b8;">Click to auto-fill</span>
+          </div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button type="button" class="template-pill" onclick="applySchedTemplate('reminder')">📅 Appointment Reminder</button>
+            <button type="button" class="template-pill" onclick="applySchedTemplate('followup')">🩺 Post-Treatment Follow-up</button>
+            <button type="button" class="template-pill" onclick="applySchedTemplate('checkup')">🪥 Routine Cleaning Due</button>
+          </div>
+        </div>
+
         <div>
           <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: #334155;">Subject</label>
-          <input type="text" id="schedMsgSubject" class="input" required placeholder="Follow-up regarding your treatment" style="width: 100%;">
+          <input type="text" id="schedMsgSubject" class="input" required placeholder="e.g. Appointment Reminder — Dental Visit" style="width: 100%;">
         </div>
         <div>
           <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: #334155;">Message Body</label>
-          <textarea id="schedMsgBody" class="input" required style="min-height: 100px; width: 100%; resize: vertical;" placeholder="Dear John..."></textarea>
+          <textarea id="schedMsgBody" class="input" required style="min-height: 110px; width: 100%; resize: vertical;" placeholder="Compose your email message..."></textarea>
         </div>
         <div>
           <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: #334155;">Scheduled Date &amp; Time</label>
           <input type="datetime-local" id="schedMsgTime" class="input" required style="width: 100%;">
+          <p style="margin: 4px 0 0; font-size: 0.75rem; color: #94a3b8;">The background scheduler will automatically deliver this message at the specified time.</p>
         </div>
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; border-top: 1px solid var(--color-border, #e2e8f0); padding-top: 16px;">
           <button type="button" class="btn btn-secondary" onclick="document.getElementById('scheduleMsgModal').style.display='none'">Cancel</button>
           <button type="submit" class="btn btn-primary" id="schedMsgSubmitBtn">Schedule Email</button>
         </div>

@@ -1,20 +1,22 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  Scheduled Messages Routes
 //
+//  POST   /api/messages/send-due         — [Cron/Public Secret] Fire all due messages
 //  POST   /api/messages/schedule         — Create a new scheduled message
 //  GET    /api/messages/scheduled        — List scheduled messages (with filters)
 //  GET    /api/messages/scheduled/:id    — Get a single scheduled message
+//  POST   /api/messages/scheduled/:id/send-now — Fire a specific message immediately
 //  DELETE /api/messages/scheduled/:id    — Cancel (soft-delete) a scheduled msg
-//  POST   /api/messages/send-due         — [Internal/cron] Fire all due messages
 // ─────────────────────────────────────────────────────────────────────────────
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const supabase = require('../lib/supabase');
 const { sendMail } = require('../lib/mailer');
 const requireAuth = require('../middleware/auth');
+const { isSuperAdminUser } = require('../middleware/superAdmin');
+const { buildHtml, processDueScheduledMessages } = require('../cron/scheduledWorker');
 
 const router = express.Router();
-router.use(requireAuth);
 
 function validate(req, res) {
   const errors = validationResult(req);
@@ -25,27 +27,49 @@ function validate(req, res) {
   return true;
 }
 
-// ── Build the branded HTML email ──────────────────────────────────────────────
-function buildHtml(subject, bodyText, recipientName, clinicName) {
-  const lines = bodyText.split('\n').map(l =>
-    `<p style="margin:0 0 12px;line-height:1.7;color:#374151;">${l || '&nbsp;'}</p>`
-  ).join('');
-  return `
-    <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;color:#1a1a2e;">
-      <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:12px 12px 0 0;padding:24px;text-align:center;">
-        <h2 style="color:#fff;margin:0;font-size:20px;font-weight:600;">🦷 ${clinicName || 'dentalsmart'}</h2>
-      </div>
-      <div style="background:#fff;border:1px solid #e8e8e8;border-top:none;border-radius:0 0 12px 12px;padding:32px 24px;">
-        <p style="color:#374151;margin:0 0 20px;">Hi ${recipientName || 'there'},</p>
-        ${lines}
-      </div>
-      <p style="text-align:center;color:#9ca3af;font-size:12px;margin-top:20px;">
-        Sent via dentalsmart · <a href="#" style="color:#9ca3af;">Unsubscribe</a>
-      </p>
-    </div>`;
+// Helper: resolve clinicId even for super-admin testing
+async function resolveClinicId(req) {
+  if (req.clinicId) return req.clinicId;
+  const headerClinic = req.headers['x-clinic-id'];
+  if (headerClinic) return headerClinic;
+  if (req.isSuperAdmin) {
+    const { data: firstClinic } = await supabase.from('clinics').select('id').limit(1).maybeSingle();
+    return firstClinic?.id || null;
+  }
+  return null;
 }
 
-// ── POST /api/messages/schedule ───────────────────────────────────────────────
+// ── 1. POST /api/messages/send-due ── called by cron job or super-admin ───────
+// Mounted BEFORE requireAuth so external cron services with CRON_SECRET can call it
+router.post('/send-due', async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+    const isCron = process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`;
+
+    let isAdmin = false;
+    if (!isCron && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (user && isSuperAdminUser(user)) {
+        isAdmin = true;
+      }
+    }
+
+    if (!isCron && !isAdmin) {
+      return res.status(401).json({ error: 'Unauthorized — requires CRON_SECRET or Super Admin token.' });
+    }
+
+    const result = await processDueScheduledMessages();
+    res.json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── Enforce Authentication for all clinic-facing endpoints ────────────────────
+router.use(requireAuth);
+
+// ── 2. POST /api/messages/schedule ───────────────────────────────────────────
 router.post('/schedule', [
   body('recipient_name').trim().notEmpty().withMessage('recipient_name is required'),
   body('recipient_email').isEmail().withMessage('A valid recipient_email is required'),
@@ -63,14 +87,22 @@ router.post('/schedule', [
     } = req.body;
 
     const schedDate = new Date(scheduled_at);
-    if (schedDate <= new Date()) {
+    const now = new Date();
+
+    // Allow up to 60s tolerance for client-server clock drift
+    if (schedDate.getTime() < (now.getTime() - 60 * 1000)) {
       return res.status(400).json({ error: 'scheduled_at must be a future date/time.' });
+    }
+
+    const clinicId = await resolveClinicId(req);
+    if (!clinicId) {
+      return res.status(400).json({ error: 'No clinic context found for this request.' });
     }
 
     const { data, error } = await supabase
       .from('scheduled_messages')
       .insert({
-        clinic_id:      req.clinicId,
+        clinic_id:      clinicId,
         patient_id:     patient_id || null,
         recipient_name,
         recipient_email,
@@ -91,37 +123,55 @@ router.post('/schedule', [
   }
 });
 
-// ── GET /api/messages/scheduled ───────────────────────────────────────────────
+// ── 3. GET /api/messages/scheduled ───────────────────────────────────────────
 router.get('/scheduled', async (req, res, next) => {
   try {
     const { status } = req.query; // optional filter: pending | sent | failed | cancelled
+    const clinicId = await resolveClinicId(req);
+
+    if (!clinicId) {
+      return res.json({ messages: [] });
+    }
 
     let query = supabase
       .from('scheduled_messages')
       .select('*')
-      .eq('clinic_id', req.clinicId)
-      .order('scheduled_at', { ascending: true });
+      .eq('clinic_id', clinicId);
 
-    if (status) query = query.eq('status', status);
+    if (status) {
+      query = query.eq('status', status);
+      if (status === 'pending') {
+        query = query.order('scheduled_at', { ascending: true });
+      } else {
+        query = query.order('updated_at', { ascending: false });
+      }
+    } else {
+      query = query.order('created_at', { ascending: false });
+    }
 
     const { data, error } = await query;
     if (error) throw error;
 
-    res.json({ messages: data });
+    res.json({ messages: data || [] });
   } catch (err) {
     next(err);
   }
 });
 
-// ── GET /api/messages/scheduled/:id ──────────────────────────────────────────
+// ── 4. GET /api/messages/scheduled/:id ──────────────────────────────────────
 router.get('/scheduled/:id', async (req, res, next) => {
   try {
-    const { data, error } = await supabase
+    const clinicId = await resolveClinicId(req);
+    let query = supabase
       .from('scheduled_messages')
       .select('*')
-      .eq('id', req.params.id)
-      .eq('clinic_id', req.clinicId)
-      .single();
+      .eq('id', req.params.id);
+
+    if (clinicId) {
+      query = query.eq('clinic_id', clinicId);
+    }
+
+    const { data, error } = await query.single();
 
     if (error || !data) return res.status(404).json({ error: 'Message not found.' });
     res.json({ message: data });
@@ -130,15 +180,71 @@ router.get('/scheduled/:id', async (req, res, next) => {
   }
 });
 
-// ── DELETE /api/messages/scheduled/:id ── cancel a pending message ─────────────
+// ── 5. POST /api/messages/scheduled/:id/send-now ─────────────────────────────
+// Immediately fires a pending or failed scheduled message
+router.post('/scheduled/:id/send-now', async (req, res, next) => {
+  try {
+    const clinicId = await resolveClinicId(req);
+    let query = supabase
+      .from('scheduled_messages')
+      .select('*, clinics(name)')
+      .eq('id', req.params.id);
+
+    if (clinicId) {
+      query = query.eq('clinic_id', clinicId);
+    }
+
+    const { data: msg, error: fetchErr } = await query.single();
+    if (fetchErr || !msg) {
+      return res.status(404).json({ error: 'Message not found.' });
+    }
+
+    const clinicName = msg.clinics?.name || 'dentalsmart';
+    const html = buildHtml(msg.subject, msg.body, msg.recipient_name, clinicName);
+
+    const info = await sendMail({
+      to:         msg.recipient_email,
+      subject:    msg.subject,
+      text:       msg.body,
+      templateId: 'scheduled_message_immediate',
+      clinicId:   msg.clinic_id,
+    });
+
+    const { data: updated, error: updateErr } = await supabase
+      .from('scheduled_messages')
+      .update({
+        status:            'sent',
+        sent_at:           new Date().toISOString(),
+        resend_message_id: info?.messageId || null,
+        error_message:     null,
+        updated_at:        new Date().toISOString(),
+      })
+      .eq('id', msg.id)
+      .select()
+      .single();
+
+    if (updateErr) throw updateErr;
+
+    res.json({ success: true, message: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── 6. DELETE /api/messages/scheduled/:id ── cancel a pending message ─────────
 router.delete('/scheduled/:id', async (req, res, next) => {
   try {
-    const { data: existing } = await supabase
+    const clinicId = await resolveClinicId(req);
+    let query = supabase
       .from('scheduled_messages')
       .select('id, status')
-      .eq('id', req.params.id)
-      .eq('clinic_id', req.clinicId)
-      .single();
+      .eq('id', req.params.id);
+
+    if (clinicId) {
+      query = query.eq('clinic_id', clinicId);
+    }
+
+    const { data: existing } = await query.single();
 
     if (!existing) return res.status(404).json({ error: 'Message not found.' });
     if (existing.status !== 'pending') {
@@ -148,76 +254,10 @@ router.delete('/scheduled/:id', async (req, res, next) => {
     const { error } = await supabase
       .from('scheduled_messages')
       .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-      .eq('id', req.params.id)
-      .eq('clinic_id', req.clinicId);
+      .eq('id', req.params.id);
 
     if (error) throw error;
     res.json({ success: true });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// ── POST /api/messages/send-due ── called by cron job ──────────────────────────
-// Requires CRON_SECRET authorization header
-router.post('/send-due', async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    // Allow cron secret OR logged-in super-admin (for manual trigger)
-    const isCron = process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`;
-    const isAdmin = req.user?.role === 'super_admin';
-
-    if (!isCron && !isAdmin) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // Fetch all pending messages scheduled for now or earlier
-    const { data: due, error } = await supabase
-      .from('scheduled_messages')
-      .select('*, clinics(name)')
-      .eq('status', 'pending')
-      .lte('scheduled_at', new Date().toISOString())
-      .limit(100); // process in batches
-
-    if (error) throw error;
-
-    let sentCount = 0;
-    let failedCount = 0;
-
-    for (const msg of due) {
-      try {
-        const clinicName = msg.clinics?.name || 'dentalsmart';
-        const html = buildHtml(msg.subject, msg.body, msg.recipient_name, clinicName);
-
-        const info = await sendMail({
-          to:      msg.recipient_email,
-          subject: msg.subject,
-          text:    msg.body,
-          html,
-        });
-
-        await supabase.from('scheduled_messages').update({
-          status:            'sent',
-          sent_at:           new Date().toISOString(),
-          resend_message_id: info.messageId,
-          updated_at:        new Date().toISOString(),
-        }).eq('id', msg.id);
-
-        sentCount++;
-      } catch (sendErr) {
-        console.error(`[ScheduledMsg] Failed to send ${msg.id}:`, sendErr.message);
-
-        await supabase.from('scheduled_messages').update({
-          status:        'failed',
-          error_message: sendErr.message,
-          updated_at:    new Date().toISOString(),
-        }).eq('id', msg.id);
-
-        failedCount++;
-      }
-    }
-
-    res.json({ success: true, sent: sentCount, failed: failedCount, total: due.length });
   } catch (err) {
     next(err);
   }

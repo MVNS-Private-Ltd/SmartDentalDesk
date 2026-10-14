@@ -325,6 +325,7 @@ window.api = (function() {
     scheduleMessage: (payload) => request('/messages/schedule', { method: 'POST', body: JSON.stringify(payload) }),
     getScheduledMessages: (status = '') => request(`/messages/scheduled${status ? '?status=' + status : ''}`),
     cancelScheduledMessage: (id) => request(`/messages/scheduled/${id}`, { method: 'DELETE' }),
+    sendScheduledMessageNow: (id) => request(`/messages/scheduled/${id}/send-now`, { method: 'POST' }),
     importPatients: async (file) => {
       const formData = new FormData();
       formData.append('file', file);

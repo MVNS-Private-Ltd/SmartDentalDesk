@@ -204,9 +204,12 @@ function startKeepAlive() {
   console.log(`   [keep-alive] Self-ping active → ${pingUrl} every 14 min`);
 }
 
+const { startScheduledMessagesWorker } = require('./cron/scheduledWorker');
+
 // ── Start server ──────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`\n🦷 dentalsmart API running on http://localhost:${PORT}`);
   console.log(`   Health check → http://localhost:${PORT}/api/health\n`);
   startKeepAlive();
+  startScheduledMessagesWorker(30000);
 });

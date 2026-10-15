@@ -24,32 +24,29 @@ const router = express.Router();
 router.use(requireAuth);
 
 // ── Model IDs (OpenRouter) ───────────────────────────────────────────────────
-// openrouter/free dynamically routes across all active free models.
-// Specific high-performance free models are provided as backup fallbacks.
+// Last verified working: 2026-10-15
+// Models confirmed working (return content, not reasoning-only tokens):
+//   google/gemma-4-31b-it:free   — strong general model, good for analysis & thinking
+//   cohere/north-mini-code:free  — fast, precise, good for structured/automation outputs
+//   dots-studio/dots-3-note-preview:free — reliable fallback
 const MODELS = {
-  ultra:  'openrouter/free',
-  super:  'nvidia/nemotron-3-super-120b-a12b:free',
-  nano:   'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
-  mid:    'minimax/minimax-m3:free',
+  ultra:  'google/gemma-4-31b-it:free',
+  super:  'google/gemma-4-31b-it:free',
+  nano:   'cohere/north-mini-code:free',
+  mid:    'cohere/north-mini-code:free',
 };
 
 const FALLBACK_MODELS = [
-  'openrouter/free',
-  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
-  'nvidia/nemotron-3-super-120b-a12b:free',
-  'minimax/minimax-m3:free',
-  'minimax/minimax-m2.7:free',
-  'liquid/lfm-2.5-2.6b:free',
+  'google/gemma-4-31b-it:free',
+  'cohere/north-mini-code:free',
+  'dots-studio/dots-3-note-preview:free',
 ];
 
-// Vision-capable models only (support image_url in messages)
+// Vision-capable models — gemma-4 supports multimodal inputs
 const VISION_FALLBACK_MODELS = [
-  'google/gemini-2.0-flash-exp:free',
-  'google/gemini-flash-1.5:free',
-  'meta-llama/llama-3.2-90b-vision-instruct:free',
-  'meta-llama/llama-3.2-11b-vision-instruct:free',
-  'qwen/qwen2.5-vl-72b-instruct:free',
-  'openrouter/free',
+  'google/gemma-4-31b-it:free',
+  'cohere/north-mini-code:free',
+  'dots-studio/dots-3-note-preview:free',
 ];
 
 // ── Model selection logic ─────────────────────────────────────────────────────
@@ -657,7 +654,7 @@ router.post('/chat', chatRules, async (req, res, next) => {
     let { model, mode } = getModel(subscriptionPlan, requestedMode);
 
     if (images && images.length > 0) {
-      model = 'google/gemini-2.0-flash-exp:free';
+      model = 'google/gemma-4-31b-it:free'; // gemma-4 supports vision inputs
     }
 
     // 1. Fetch live clinic context + optional patient search + total message count — in parallel
@@ -900,7 +897,7 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
     let { model, mode } = getModel(subscriptionPlan, requestedMode);
     
     if (images && images.length > 0) {
-      model = 'google/gemini-2.0-flash-exp:free'; // Force a strong free vision model
+      model = 'google/gemma-4-31b-it:free'; // gemma-4 supports vision inputs
     }
 
     const [clinicCtx, patientMatch, totalMsgResStream] = await Promise.all([

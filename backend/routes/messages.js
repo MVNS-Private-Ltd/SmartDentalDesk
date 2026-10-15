@@ -194,7 +194,7 @@ router.post('/scheduled/:id/send-now', async (req, res, next) => {
       query = query.eq('clinic_id', clinicId);
     }
 
-    const { data: msg, error: fetchErr } = await query.single();
+    const { data: msg, error: fetchErr } = await query.maybeSingle();
     if (fetchErr || !msg) {
       return res.status(404).json({ error: 'Message not found.' });
     }
@@ -202,30 +202,44 @@ router.post('/scheduled/:id/send-now', async (req, res, next) => {
     const clinicName = msg.clinics?.name || 'dentalsmart';
     const html = buildHtml(msg.subject, msg.body, msg.recipient_name, clinicName);
 
-    const info = await sendMail({
-      to:         msg.recipient_email,
-      subject:    msg.subject,
-      text:       msg.body,
-      templateId: 'scheduled_message_immediate',
-      clinicId:   msg.clinic_id,
-    });
+    try {
+      const info = await sendMail({
+        to:         msg.recipient_email,
+        subject:    msg.subject,
+        text:       msg.body,
+        templateId: 'scheduled_message_immediate',
+        clinicId:   msg.clinic_id,
+      });
 
-    const { data: updated, error: updateErr } = await supabase
-      .from('scheduled_messages')
-      .update({
-        status:            'sent',
-        sent_at:           new Date().toISOString(),
-        resend_message_id: info?.messageId || null,
-        error_message:     null,
-        updated_at:        new Date().toISOString(),
-      })
-      .eq('id', msg.id)
-      .select()
-      .single();
+      const { data: updated, error: updateErr } = await supabase
+        .from('scheduled_messages')
+        .update({
+          status:            'sent',
+          sent_at:           new Date().toISOString(),
+          resend_message_id: info?.messageId || null,
+          error_message:     null,
+          updated_at:        new Date().toISOString(),
+        })
+        .eq('id', msg.id)
+        .select()
+        .single();
 
-    if (updateErr) throw updateErr;
+      if (updateErr) throw updateErr;
 
-    res.json({ success: true, message: updated });
+      res.json({ success: true, message: updated });
+    } catch (sendErr) {
+      // Record failure on message record
+      await supabase
+        .from('scheduled_messages')
+        .update({
+          status:        'failed',
+          error_message: sendErr.message || 'Immediate send failed',
+          updated_at:    new Date().toISOString(),
+        })
+        .eq('id', msg.id);
+
+      return res.status(400).json({ error: sendErr.message || 'Failed to send message immediately.' });
+    }
   } catch (err) {
     next(err);
   }
@@ -244,7 +258,7 @@ router.delete('/scheduled/:id', async (req, res, next) => {
       query = query.eq('clinic_id', clinicId);
     }
 
-    const { data: existing } = await query.single();
+    const { data: existing } = await query.maybeSingle();
 
     if (!existing) return res.status(404).json({ error: 'Message not found.' });
     if (existing.status !== 'pending') {

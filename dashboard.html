@@ -1595,18 +1595,18 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
-          <button class="btn btn-primary" id="openScheduleMsgBtn" style="display:flex;align-items:center;gap:6px;">
+          <button class="btn btn-primary" id="openScheduleMsgBtn" onclick="openScheduleMsgModal()" style="display:flex;align-items:center;gap:6px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="12" y2="12"/></svg>
             Schedule a Message
           </button>
         </div>
       </div>
       <div class="tabs-nav" id="msgFilterTabs" style="margin-bottom:1.25rem;">
-        <button class="tab-btn msg-filter-btn active" data-filter="">All</button>
-        <button class="tab-btn msg-filter-btn" data-filter="pending">Pending</button>
-        <button class="tab-btn msg-filter-btn" data-filter="sent">Sent</button>
-        <button class="tab-btn msg-filter-btn" data-filter="failed">Failed</button>
-        <button class="tab-btn msg-filter-btn" data-filter="cancelled">Cancelled</button>
+        <button class="tab-btn msg-filter-btn active" data-filter="" onclick="filterScheduledMessages('')">All</button>
+        <button class="tab-btn msg-filter-btn" data-filter="pending" onclick="filterScheduledMessages('pending')">Pending</button>
+        <button class="tab-btn msg-filter-btn" data-filter="sent" onclick="filterScheduledMessages('sent')">Sent</button>
+        <button class="tab-btn msg-filter-btn" data-filter="failed" onclick="filterScheduledMessages('failed')">Failed</button>
+        <button class="tab-btn msg-filter-btn" data-filter="cancelled" onclick="filterScheduledMessages('cancelled')">Cancelled</button>
       </div>
       <div id="scheduledMsgList" style="display:flex;flex-direction:column;gap:0.75rem;min-height:200px;">
         <div style="text-align:center;padding:3rem;color:#94a3b8;"><p style="margin:0;font-weight:600;">Loading scheduled messages...</p></div>
@@ -4394,6 +4394,15 @@
 // ── SCHEDULED MESSAGES LOGIC ───────────────────────────────────────
 let currentMsgFilter = '';
 
+function populateSchedPatientDatalist() {
+  const datalist = document.getElementById('schedPatientDatalist');
+  if (datalist && Array.isArray(window._allLoadedPatients) && window._allLoadedPatients.length > 0) {
+    datalist.innerHTML = window._allLoadedPatients.map(p =>
+      `<option value="${p.name}">${p.email ? '(' + p.email + ')' : ''}</option>`
+    ).join('');
+  }
+}
+
 window.loadScheduledMessages = async function loadScheduledMessages() {
   const list = document.getElementById('scheduledMsgList');
   if(!list) return;
@@ -4462,11 +4471,11 @@ window.loadScheduledMessages = async function loadScheduledMessages() {
             ${m.error_message ? `<div style="background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;padding:4px 8px;border-radius:6px;font-size:0.78rem;margin-top:6px;display:inline-block;">Error: ${m.error_message}</div>` : ''}
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
-            ${(isPending || isFailed) ? `<button class="btn btn-sm btn-primary" onclick="sendScheduledMessageNow('${m.id}')" style="padding:0.4rem 0.85rem;font-size:0.8rem;display:flex;align-items:center;gap:4px;" title="Send this message immediately">
+            ${(isPending || isFailed) ? `<button class="btn btn-sm btn-primary" onclick="sendScheduledMessageNow('${m.id}', this)" style="padding:0.4rem 0.85rem;font-size:0.8rem;display:flex;align-items:center;gap:4px;" title="Send this message immediately">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
               Send Now
             </button>` : ''}
-            ${isPending ? `<button class="btn btn-sm btn-secondary" onclick="cancelScheduledMessage('${m.id}')" style="color:#dc2626;border-color:#fca5a5;padding:0.4rem 0.85rem;font-size:0.8rem;">Cancel</button>` : ''}
+            ${isPending ? `<button class="btn btn-sm btn-secondary" onclick="cancelScheduledMessage('${m.id}', this)" style="color:#dc2626;border-color:#fca5a5;padding:0.4rem 0.85rem;font-size:0.8rem;">Cancel</button>` : ''}
           </div>
         </div>
       `;
@@ -4477,8 +4486,12 @@ window.loadScheduledMessages = async function loadScheduledMessages() {
   }
 };
 
-window.sendScheduledMessageNow = async function(id) {
+window.sendScheduledMessageNow = async function(id, btnEl) {
   if (!confirm('Send this email immediately?')) return;
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> Sending...';
+  }
   try {
     window.showToast('Sending email immediately...', 'info');
     await window.api.sendScheduledMessageNow(id);
@@ -4486,112 +4499,187 @@ window.sendScheduledMessageNow = async function(id) {
     window.loadScheduledMessages();
   } catch(err) {
     window.showToast(err.message || 'Failed to send message', 'error');
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Now';
+    }
   }
 };
 
-window.cancelScheduledMessage = async function(id) {
+window.cancelScheduledMessage = async function(id, btnEl) {
   if(!confirm('Are you sure you want to cancel this scheduled email?')) return;
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.textContent = 'Cancelling...';
+  }
   try {
     await window.api.cancelScheduledMessage(id);
     window.showToast('Message cancelled successfully.', 'success');
     window.loadScheduledMessages();
   } catch(err) {
     window.showToast(err.message || 'Failed to cancel message', 'error');
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.textContent = 'Cancel';
+    }
   }
+};
+
+window.filterScheduledMessages = function(filter) {
+  currentMsgFilter = filter;
+  const filterTabs = document.querySelectorAll('.msg-filter-btn');
+  filterTabs.forEach(t => {
+    if (t.dataset.filter === filter) {
+      t.classList.add('active');
+    } else {
+      t.classList.remove('active');
+    }
+  });
+  window.loadScheduledMessages();
+};
+
+window.openScheduleMsgModal = function() {
+  const form = document.getElementById('scheduleMsgForm');
+  if (form) form.reset();
+
+  // Populate patient autocomplete datalist if available or fetch
+  if (!Array.isArray(window._allLoadedPatients) || window._allLoadedPatients.length === 0) {
+    if (window.api && typeof window.api.getPatients === 'function') {
+      window.api.getPatients('all').then(res => {
+        window._allLoadedPatients = res.patients || [];
+        populateSchedPatientDatalist();
+      }).catch(() => {});
+    }
+  } else {
+    populateSchedPatientDatalist();
+  }
+
+  // Default time to 1 hr from now & enforce min time
+  const now = new Date();
+  const minNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  const schedInput = document.getElementById('schedMsgTime');
+  if (schedInput) {
+    schedInput.min = minNow.toISOString().slice(0, 16);
+    const defaultSched = new Date(now.getTime() + 60 * 60 * 1000 - now.getTimezoneOffset() * 60000);
+    schedInput.value = defaultSched.toISOString().slice(0, 16);
+  }
+
+  const modal = document.getElementById('scheduleMsgModal');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closeScheduleMsgModal = function() {
+  const modal = document.getElementById('scheduleMsgModal');
+  if (modal) modal.style.display = 'none';
 };
 
 // Preset quick templates for scheduling
 window.applySchedTemplate = function(type) {
   const clinicName = localStorage.getItem('sdd_clinic_name') || 'dentalsmart Clinic';
   const nameVal = document.getElementById('schedMsgName')?.value.trim() || 'Patient';
+  const subjEl = document.getElementById('schedMsgSubject');
+  const bodyEl = document.getElementById('schedMsgBody');
+  if (!subjEl || !bodyEl) return;
 
   if (type === 'reminder') {
-    document.getElementById('schedMsgSubject').value = `Appointment Reminder — Dental Visit with ${clinicName}`;
-    document.getElementById('schedMsgBody').value = `Dear ${nameVal},\n\nThis is a friendly reminder of your upcoming dental appointment at ${clinicName}.\n\nPlease arrive 10 minutes prior to your scheduled time. If you need to make any changes or have questions, feel free to reply or contact our front desk.\n\nWarm regards,\n${clinicName}`;
+    subjEl.value = `Appointment Reminder — Dental Visit with ${clinicName}`;
+    bodyEl.value = `Dear ${nameVal},\n\nThis is a friendly reminder of your upcoming dental appointment at ${clinicName}.\n\nPlease arrive 10 minutes prior to your scheduled time. If you need to make any changes or have questions, feel free to reply or contact our front desk.\n\nWarm regards,\n${clinicName}`;
   } else if (type === 'followup') {
-    document.getElementById('schedMsgSubject').value = `Follow-up Regarding Your Treatment — ${clinicName}`;
-    document.getElementById('schedMsgBody').value = `Dear ${nameVal},\n\nWe wanted to check in on how you are feeling after your recent visit with us. Healing comfortably is our top priority.\n\nIf you experience any unusual tenderness or have any questions about your aftercare instructions, please don't hesitate to reach out to us.\n\nBest regards,\n${clinicName}`;
+    subjEl.value = `Follow-up Regarding Your Treatment — ${clinicName}`;
+    bodyEl.value = `Dear ${nameVal},\n\nWe wanted to check in on how you are feeling after your recent visit with us. Healing comfortably is our top priority.\n\nIf you experience any unusual tenderness or have any questions about your aftercare instructions, please don't hesitate to reach out to us.\n\nBest regards,\n${clinicName}`;
   } else if (type === 'checkup') {
-    document.getElementById('schedMsgSubject').value = `Time for Your Routine Dental Cleaning & Examination`;
-    document.getElementById('schedMsgBody').value = `Dear ${nameVal},\n\nRegular dental checkups and professional cleaning are essential for maintaining healthy teeth and gums.\n\nIt is time for your periodic dental wellness exam! Please contact ${clinicName} at your convenience or visit our booking page to secure your slot.\n\nWarm regards,\n${clinicName}`;
+    subjEl.value = `Time for Your Routine Dental Cleaning & Examination`;
+    bodyEl.value = `Dear ${nameVal},\n\nRegular dental checkups and professional cleaning are essential for maintaining healthy teeth and gums.\n\nIt is time for your periodic dental wellness exam! Please contact ${clinicName} at your convenience or visit our booking page to secure your slot.\n\nWarm regards,\n${clinicName}`;
   }
 };
 
-const openScheduleBtn = document.getElementById('openScheduleMsgBtn');
-if(openScheduleBtn) {
-  openScheduleBtn.addEventListener('click', () => {
-    document.getElementById('scheduleMsgForm').reset();
+window.onSchedNameInput = function(val) {
+  const cleanVal = (val || '').trim().toLowerCase();
+  if (!cleanVal || !Array.isArray(window._allLoadedPatients)) return;
+  const match = window._allLoadedPatients.find(p => (p.name || '').toLowerCase() === cleanVal);
+  if (match && match.email) {
+    const emailField = document.getElementById('schedMsgEmail');
+    if (emailField) emailField.value = match.email;
+  }
+};
 
-    // Populate patient autocomplete datalist if available
-    const datalist = document.getElementById('schedPatientDatalist');
-    if (datalist && Array.isArray(window._allLoadedPatients) && window._allLoadedPatients.length > 0) {
-      datalist.innerHTML = window._allLoadedPatients.map(p =>
-        `<option value="${p.name}">${p.email ? '(' + p.email + ')' : ''}</option>`
-      ).join('');
-    }
-
-    // Default time to 1 hr from now & enforce min time
-    const now = new Date();
-    const minNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-    const schedInput = document.getElementById('schedMsgTime');
-    if (schedInput) {
-      schedInput.min = minNow.toISOString().slice(0, 16);
-      const defaultSched = new Date(now.getTime() + 60 * 60 * 1000 - now.getTimezoneOffset() * 60000);
-      schedInput.value = defaultSched.toISOString().slice(0, 16);
-    }
-
-    document.getElementById('scheduleMsgModal').style.display = 'flex';
-  });
-}
-
-// Auto-fill email when patient name is selected from datalist or typed
-const schedNameInput = document.getElementById('schedMsgName');
-if (schedNameInput) {
-  schedNameInput.addEventListener('input', () => {
-    const val = schedNameInput.value.trim().toLowerCase();
-    if (!val || !Array.isArray(window._allLoadedPatients)) return;
-    const match = window._allLoadedPatients.find(p => (p.name || '').toLowerCase() === val);
-    if (match && match.email) {
-      const emailField = document.getElementById('schedMsgEmail');
-      if (emailField) emailField.value = match.email;
-    }
-  });
-}
-
-const schedMsgForm = document.getElementById('scheduleMsgForm');
-if(schedMsgForm) {
-  schedMsgForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('schedMsgSubmitBtn');
+window.handleScheduleMsgSubmit = async function(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const btn = document.getElementById('schedMsgSubmitBtn');
+  if (btn) {
     btn.disabled = true;
     btn.textContent = 'Scheduling...';
-    try {
-      await window.api.scheduleMessage({
-        recipient_name: document.getElementById('schedMsgName').value,
-        recipient_email: document.getElementById('schedMsgEmail').value,
-        subject: document.getElementById('schedMsgSubject').value,
-        body: document.getElementById('schedMsgBody').value,
-        scheduled_at: new Date(document.getElementById('schedMsgTime').value).toISOString()
-      });
-      document.getElementById('scheduleMsgModal').style.display = 'none';
-      window.showToast('Email scheduled successfully.', 'success');
-      window.loadScheduledMessages();
-    } catch(err) {
-      window.showToast(err.message || 'Failed to schedule email', 'error');
-    } finally {
+  }
+
+  try {
+    const recipient_name = document.getElementById('schedMsgName')?.value.trim();
+    const recipient_email = document.getElementById('schedMsgEmail')?.value.trim();
+    const subject = document.getElementById('schedMsgSubject')?.value.trim();
+    const body = document.getElementById('schedMsgBody')?.value.trim();
+    const timeVal = document.getElementById('schedMsgTime')?.value;
+
+    if (!recipient_name || !recipient_email || !subject || !body || !timeVal) {
+      throw new Error('Please fill in all required fields.');
+    }
+
+    const schedDate = new Date(timeVal);
+    if (isNaN(schedDate.getTime())) {
+      throw new Error('Please enter a valid scheduled date & time.');
+    }
+
+    let patient_id = null;
+    if (Array.isArray(window._allLoadedPatients)) {
+      const match = window._allLoadedPatients.find(p =>
+        (p.name && p.name.toLowerCase() === recipient_name.toLowerCase()) ||
+        (p.email && p.email.toLowerCase() === recipient_email.toLowerCase())
+      );
+      if (match) patient_id = match.id;
+    }
+
+    await window.api.scheduleMessage({
+      recipient_name,
+      recipient_email,
+      subject,
+      body,
+      scheduled_at: schedDate.toISOString(),
+      patient_id
+    });
+
+    window.closeScheduleMsgModal();
+    window.showToast('Email scheduled successfully.', 'success');
+    window.loadScheduledMessages();
+  } catch(err) {
+    window.showToast(err.message || 'Failed to schedule email', 'error');
+  } finally {
+    if (btn) {
       btn.disabled = false;
       btn.textContent = 'Schedule Email';
     }
-  });
-}
+  }
+};
 
-const filterTabs = document.querySelectorAll('.msg-filter-btn');
-filterTabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    filterTabs.forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    currentMsgFilter = tab.dataset.filter;
-    window.loadScheduledMessages();
+// Event listener setup on DOM load
+document.addEventListener('DOMContentLoaded', () => {
+  const openScheduleBtn = document.getElementById('openScheduleMsgBtn');
+  if(openScheduleBtn) {
+    openScheduleBtn.addEventListener('click', window.openScheduleMsgModal);
+  }
+
+  const schedNameInput = document.getElementById('schedMsgName');
+  if (schedNameInput) {
+    schedNameInput.addEventListener('input', (e) => window.onSchedNameInput(e.target.value));
+  }
+
+  const schedMsgForm = document.getElementById('scheduleMsgForm');
+  if(schedMsgForm) {
+    schedMsgForm.addEventListener('submit', window.handleScheduleMsgSubmit);
+  }
+
+  const filterTabs = document.querySelectorAll('.msg-filter-btn');
+  filterTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      window.filterScheduledMessages(tab.dataset.filter || '');
+    });
   });
 });
 
@@ -6293,6 +6381,8 @@ window.cancelSubscriptionPrompt = async function() {
     window.showToast(err.message || 'Failed to cancel subscription.', 'error');
   }
 };
+</script>
+
 <style>
   /* Scheduled Messages Section Styles */
   .scheduled-msg-card {
@@ -6359,20 +6449,20 @@ window.cancelSubscriptionPrompt = async function() {
 </style>
 
 <!-- Scheduled Message Modal -->
-<div id="scheduleMsgModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 1050; padding: 20px; overflow-y: auto;" onclick="if(event.target===this) this.style.display='none';">
+<div id="scheduleMsgModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 1050; padding: 20px; overflow-y: auto;" onclick="if(event.target===this) closeScheduleMsgModal();">
   <div class="modal-content" style="background: var(--color-surface, #ffffff); color: var(--color-text, #0f172a); border-radius: 16px; width: 100%; max-width: 540px; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.3); border: 1px solid var(--color-border, #e2e8f0); overflow: hidden; position: relative;">
     <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--color-border, #e2e8f0); background: var(--color-bg, #f8fafc);">
       <div>
         <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #0f172a;">Schedule Email to Patient</h3>
         <p style="margin: 2px 0 0; font-size: 0.82rem; color: #64748b;">Compose automated patient follow-ups, appointment reminders, or check-ins</p>
       </div>
-      <button type="button" onclick="document.getElementById('scheduleMsgModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; line-height: 1; padding: 4px 8px; border-radius: 6px;">&times;</button>
+      <button type="button" onclick="closeScheduleMsgModal()" style="background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; line-height: 1; padding: 4px 8px; border-radius: 6px;">&times;</button>
     </div>
     <div style="padding: 24px;">
-      <form id="scheduleMsgForm" style="display: flex; flex-direction: column; gap: 14px;">
+      <form id="scheduleMsgForm" onsubmit="handleScheduleMsgSubmit(event)" style="display: flex; flex-direction: column; gap: 14px;">
         <div>
           <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: #334155;">Recipient Name</label>
-          <input type="text" id="schedMsgName" class="input" list="schedPatientDatalist" required placeholder="Type or select patient name" style="width: 100%;" autocomplete="off">
+          <input type="text" id="schedMsgName" class="input" list="schedPatientDatalist" required placeholder="Type or select patient name" style="width: 100%;" autocomplete="off" oninput="onSchedNameInput(this.value)">
           <datalist id="schedPatientDatalist"></datalist>
         </div>
         <div>
@@ -6407,7 +6497,7 @@ window.cancelSubscriptionPrompt = async function() {
           <p style="margin: 4px 0 0; font-size: 0.75rem; color: #94a3b8;">The background scheduler will automatically deliver this message at the specified time.</p>
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; border-top: 1px solid var(--color-border, #e2e8f0); padding-top: 16px;">
-          <button type="button" class="btn btn-secondary" onclick="document.getElementById('scheduleMsgModal').style.display='none'">Cancel</button>
+          <button type="button" class="btn btn-secondary" onclick="closeScheduleMsgModal()">Cancel</button>
           <button type="submit" class="btn btn-primary" id="schedMsgSubmitBtn">Schedule Email</button>
         </div>
       </form>

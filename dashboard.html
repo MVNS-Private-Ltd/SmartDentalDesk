@@ -4440,6 +4440,8 @@ window.loadScheduledMessages = async function loadScheduledMessages() {
       return;
     }
     
+    window._currentScheduledMessages = msgs;
+
     list.innerHTML = msgs.map(m => {
       const d = new Date(m.scheduled_at);
       const formattedDate = d.toLocaleString('en-IN', {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -4471,6 +4473,10 @@ window.loadScheduledMessages = async function loadScheduledMessages() {
             ${m.error_message ? `<div style="background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;padding:4px 8px;border-radius:6px;font-size:0.78rem;margin-top:6px;display:inline-block;">Error: ${m.error_message}</div>` : ''}
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+            ${isPending ? `<button class="btn btn-sm btn-secondary" onclick="openEditScheduleMsgModal('${m.id}')" style="padding:0.4rem 0.85rem;font-size:0.8rem;display:flex;align-items:center;gap:4px;" title="Edit this scheduled email">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Edit
+            </button>` : ''}
             ${(isPending || isFailed) ? `<button class="btn btn-sm btn-primary" onclick="sendScheduledMessageNow('${m.id}', this)" style="padding:0.4rem 0.85rem;font-size:0.8rem;display:flex;align-items:center;gap:4px;" title="Send this message immediately">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
               Send Now
@@ -4538,7 +4544,66 @@ window.filterScheduledMessages = function(filter) {
   window.loadScheduledMessages();
 };
 
+window._editingSchedMsgId = null;
+
+window.openEditScheduleMsgModal = function(id) {
+  const msg = (window._currentScheduledMessages || []).find(m => m.id === id);
+  if (!msg) {
+    window.showToast('Message not found.', 'error');
+    return;
+  }
+
+  window._editingSchedMsgId = id;
+
+  const titleEl = document.getElementById('schedModalTitle');
+  const subEl = document.getElementById('schedModalSubtitle');
+  const submitBtn = document.getElementById('schedMsgSubmitBtn');
+
+  if (titleEl) titleEl.textContent = 'Edit Scheduled Email';
+  if (subEl) subEl.textContent = 'Modify email recipient, subject, content, or scheduled delivery time';
+  if (submitBtn) submitBtn.textContent = 'Save Changes';
+
+  const form = document.getElementById('scheduleMsgForm');
+  if (form) form.reset();
+
+  populateSchedPatientDatalist();
+
+  const nameEl = document.getElementById('schedMsgName');
+  const emailEl = document.getElementById('schedMsgEmail');
+  const subjEl = document.getElementById('schedMsgSubject');
+  const bodyEl = document.getElementById('schedMsgBody');
+  const timeEl = document.getElementById('schedMsgTime');
+
+  if (nameEl) nameEl.value = msg.recipient_name || '';
+  if (emailEl) emailEl.value = msg.recipient_email || '';
+  if (subjEl) subjEl.value = msg.subject || '';
+  if (bodyEl) bodyEl.value = msg.body || '';
+
+  if (timeEl && msg.scheduled_at) {
+    const d = new Date(msg.scheduled_at);
+    const localTime = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    timeEl.value = localTime.toISOString().slice(0, 16);
+
+    const now = new Date();
+    const minNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    timeEl.min = minNow.toISOString().slice(0, 16);
+  }
+
+  const modal = document.getElementById('scheduleMsgModal');
+  if (modal) modal.style.display = 'flex';
+};
+
 window.openScheduleMsgModal = function() {
+  window._editingSchedMsgId = null;
+
+  const titleEl = document.getElementById('schedModalTitle');
+  const subEl = document.getElementById('schedModalSubtitle');
+  const submitBtn = document.getElementById('schedMsgSubmitBtn');
+
+  if (titleEl) titleEl.textContent = 'Schedule Email to Patient';
+  if (subEl) subEl.textContent = 'Compose automated patient follow-ups, appointment reminders, or check-ins';
+  if (submitBtn) submitBtn.textContent = 'Schedule Email';
+
   const form = document.getElementById('scheduleMsgForm');
   if (form) form.reset();
 
@@ -4569,6 +4634,7 @@ window.openScheduleMsgModal = function() {
 };
 
 window.closeScheduleMsgModal = function() {
+  window._editingSchedMsgId = null;
   const modal = document.getElementById('scheduleMsgModal');
   if (modal) modal.style.display = 'none';
 };
@@ -4606,9 +4672,11 @@ window.onSchedNameInput = function(val) {
 window.handleScheduleMsgSubmit = async function(e) {
   if (e && e.preventDefault) e.preventDefault();
   const btn = document.getElementById('schedMsgSubmitBtn');
+  const isEditing = !!window._editingSchedMsgId;
+
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Scheduling...';
+    btn.textContent = isEditing ? 'Saving...' : 'Scheduling...';
   }
 
   try {
@@ -4636,24 +4704,32 @@ window.handleScheduleMsgSubmit = async function(e) {
       if (match) patient_id = match.id;
     }
 
-    await window.api.scheduleMessage({
+    const payload = {
       recipient_name,
       recipient_email,
       subject,
       body,
       scheduled_at: schedDate.toISOString(),
       patient_id
-    });
+    };
 
+    if (isEditing) {
+      await window.api.updateScheduledMessage(window._editingSchedMsgId, payload);
+      window.showToast('Scheduled email updated successfully.', 'success');
+    } else {
+      await window.api.scheduleMessage(payload);
+      window.showToast('Email scheduled successfully.', 'success');
+    }
+
+    window._editingSchedMsgId = null;
     window.closeScheduleMsgModal();
-    window.showToast('Email scheduled successfully.', 'success');
     window.loadScheduledMessages();
   } catch(err) {
-    window.showToast(err.message || 'Failed to schedule email', 'error');
+    window.showToast(err.message || (isEditing ? 'Failed to update email' : 'Failed to schedule email'), 'error');
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = 'Schedule Email';
+      btn.textContent = isEditing ? 'Save Changes' : 'Schedule Email';
     }
   }
 };
@@ -6453,8 +6529,8 @@ window.cancelSubscriptionPrompt = async function() {
   <div class="modal-content" style="background: var(--color-surface, #ffffff); color: var(--color-text, #0f172a); border-radius: 16px; width: 100%; max-width: 540px; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.3); border: 1px solid var(--color-border, #e2e8f0); overflow: hidden; position: relative;">
     <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--color-border, #e2e8f0); background: var(--color-bg, #f8fafc);">
       <div>
-        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #0f172a;">Schedule Email to Patient</h3>
-        <p style="margin: 2px 0 0; font-size: 0.82rem; color: #64748b;">Compose automated patient follow-ups, appointment reminders, or check-ins</p>
+        <h3 id="schedModalTitle" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #0f172a;">Schedule Email to Patient</h3>
+        <p id="schedModalSubtitle" style="margin: 2px 0 0; font-size: 0.82rem; color: #64748b;">Compose automated patient follow-ups, appointment reminders, or check-ins</p>
       </div>
       <button type="button" onclick="closeScheduleMsgModal()" style="background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; line-height: 1; padding: 4px 8px; border-radius: 6px;">&times;</button>
     </div>

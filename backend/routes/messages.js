@@ -180,6 +180,77 @@ router.get('/scheduled/:id', async (req, res, next) => {
   }
 });
 
+// ── 4b. PUT /api/messages/scheduled/:id ── update an existing pending message ─
+router.put('/scheduled/:id', [
+  body('recipient_name').trim().notEmpty().withMessage('recipient_name is required'),
+  body('recipient_email').isEmail().withMessage('A valid recipient_email is required'),
+  body('subject').trim().notEmpty().withMessage('subject is required'),
+  body('body').trim().notEmpty().withMessage('body is required'),
+  body('scheduled_at').isISO8601().withMessage('scheduled_at must be a valid ISO date-time'),
+], async (req, res, next) => {
+  try {
+    if (!validate(req, res)) return;
+
+    const clinicId = await resolveClinicId(req);
+    let query = supabase
+      .from('scheduled_messages')
+      .select('id, status, clinic_id')
+      .eq('id', req.params.id);
+
+    if (clinicId) {
+      query = query.eq('clinic_id', clinicId);
+    }
+
+    const { data: existing, error: fetchErr } = await query.maybeSingle();
+    if (fetchErr || !existing) {
+      return res.status(404).json({ error: 'Message not found.' });
+    }
+
+    if (existing.status !== 'pending') {
+      return res.status(409).json({ error: `Cannot edit a message that is already ${existing.status}.` });
+    }
+
+    const {
+      recipient_name, recipient_email,
+      subject, body: msgBody,
+      scheduled_at, patient_id
+    } = req.body;
+
+    const schedDate = new Date(scheduled_at);
+    const now = new Date();
+
+    // Allow up to 60s tolerance for client-server clock drift
+    if (schedDate.getTime() < (now.getTime() - 60 * 1000)) {
+      return res.status(400).json({ error: 'scheduled_at must be a future date/time.' });
+    }
+
+    const updatePayload = {
+      recipient_name,
+      recipient_email,
+      subject,
+      body: msgBody,
+      scheduled_at: schedDate.toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    if (patient_id !== undefined) {
+      updatePayload.patient_id = patient_id || null;
+    }
+
+    const { data: updated, error: updateErr } = await supabase
+      .from('scheduled_messages')
+      .update(updatePayload)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (updateErr) throw updateErr;
+
+    res.json({ success: true, message: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── 5. POST /api/messages/scheduled/:id/send-now ─────────────────────────────
 // Immediately fires a pending or failed scheduled message
 router.post('/scheduled/:id/send-now', async (req, res, next) => {

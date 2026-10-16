@@ -323,7 +323,9 @@ window.api = (function() {
     renameChatSession: (session_id, name) => request(`/ai/sessions/${session_id}/rename`, { method: 'PUT', body: JSON.stringify({ name }) }),
     sendPatientEmail: (patient_name, subject, body, reviewed) => request('/email/send-patient', { method: 'POST', body: JSON.stringify({ patient_name, subject, body, reviewed }) }),
     scheduleMessage: (payload) => request('/messages/schedule', { method: 'POST', body: JSON.stringify(payload) }),
+    updateScheduledMessage: (id, payload) => request(`/messages/scheduled/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
     getScheduledMessages: (status = '') => request(`/messages/scheduled${status ? '?status=' + status : ''}`),
+    getScheduledMessage: (id) => request(`/messages/scheduled/${id}`),
     cancelScheduledMessage: (id) => request(`/messages/scheduled/${id}`, { method: 'DELETE' }),
     sendScheduledMessageNow: (id) => request(`/messages/scheduled/${id}/send-now`, { method: 'POST' }),
     importPatients: async (file) => {

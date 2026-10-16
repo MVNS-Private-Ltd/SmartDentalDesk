@@ -206,8 +206,8 @@ router.put('/scheduled/:id', [
       return res.status(404).json({ error: 'Message not found.' });
     }
 
-    if (existing.status !== 'pending') {
-      return res.status(409).json({ error: `Cannot edit a message that is already ${existing.status}.` });
+    if (existing.status === 'sent') {
+      return res.status(409).json({ error: 'Cannot edit an email that has already been delivered.' });
     }
 
     const {
@@ -230,6 +230,8 @@ router.put('/scheduled/:id', [
       subject,
       body: msgBody,
       scheduled_at: schedDate.toISOString(),
+      status: 'pending',
+      error_message: null,
       updated_at: new Date().toISOString()
     };
     if (patient_id !== undefined) {

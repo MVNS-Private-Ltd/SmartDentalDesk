@@ -4473,7 +4473,7 @@ window.loadScheduledMessages = async function loadScheduledMessages() {
             ${m.error_message ? `<div style="background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;padding:4px 8px;border-radius:6px;font-size:0.78rem;margin-top:6px;display:inline-block;">Error: ${m.error_message}</div>` : ''}
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
-            ${isPending ? `<button class="btn btn-sm btn-secondary" onclick="openEditScheduleMsgModal('${m.id}')" style="padding:0.4rem 0.85rem;font-size:0.8rem;display:flex;align-items:center;gap:4px;" title="Edit this scheduled email">
+            ${(isPending || isFailed) ? `<button class="btn btn-sm btn-secondary" onclick="openEditScheduleMsgModal('${m.id}')" style="padding:0.4rem 0.85rem;font-size:0.8rem;display:flex;align-items:center;gap:4px;" title="Edit this scheduled email">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               Edit
             </button>` : ''}
@@ -4581,10 +4581,14 @@ window.openEditScheduleMsgModal = function(id) {
 
   if (timeEl && msg.scheduled_at) {
     const d = new Date(msg.scheduled_at);
-    const localTime = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    const now = new Date();
+    // If the scheduled time is in the past or within 2 minutes, set default to +1 hour from now
+    const effectiveTime = d.getTime() <= (now.getTime() + 2 * 60 * 1000)
+      ? new Date(now.getTime() + 60 * 60 * 1000)
+      : d;
+    const localTime = new Date(effectiveTime.getTime() - effectiveTime.getTimezoneOffset() * 60000);
     timeEl.value = localTime.toISOString().slice(0, 16);
 
-    const now = new Date();
     const minNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
     timeEl.min = minNow.toISOString().slice(0, 16);
   }

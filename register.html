@@ -607,13 +607,8 @@
       // Call real API
       const res = await window.api.register({ name, email, password: pass });
       
-      // Store token and user data
-      localStorage.setItem('sdd_token',         res.access_token);
-      localStorage.setItem('sdd_refresh_token', res.refresh_token);
-      localStorage.setItem('sdd_user', JSON.stringify(res.user));
-      if (res.clinic) {
-        localStorage.setItem('sdd_clinic', JSON.stringify(res.clinic));
-      }
+      // Store token and user data with cookies and persistence
+      window.api.saveSession(res.access_token, res.refresh_token, res.user, res.role || 'admin', res.clinic || null, true);
 
       // Redirect to dashboard — 3-month trial is automatically activated on signup
       window.location.href = './dashboard.html';

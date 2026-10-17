@@ -24,12 +24,18 @@ const ACCESS_DENIED = { error: 'Access denied.' };
 
 module.exports = async function requireAuth(req, res, next) {
   try {
+    let token = null;
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Missing or invalid Authorization header' });
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.slice(7); // strip 'Bearer '
+    } else if (req.headers.cookie) {
+      const match = req.headers.cookie.match(/(?:^|;\s*)sdd_token=([^;]+)/);
+      if (match) token = decodeURIComponent(match[1]);
     }
 
-    const token = authHeader.slice(7); // strip 'Bearer '
+    if (!token) {
+      return res.status(401).json({ error: 'Missing or invalid Authorization header' });
+    }
 
     // ── 1. Verify the Supabase access token ────────────────────────────────
     const { data: { user }, error } = await supabase.auth.getUser(token);

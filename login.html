@@ -621,6 +621,41 @@
 
 <script src="./assets/app.js"></script>
 <script>
+  // ── Auto-Redirect for Remembered Sessions ──────────────────────────────────
+  (function checkExistingSession() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isExplicitLogout = urlParams.get('logout') === 'true' || window.location.hash.includes('logout');
+
+    if (!isExplicitLogout && window.api && window.api.isAuthenticated()) {
+      const role = window.api.getRole();
+      if (role === 'super_admin') {
+        window.location.replace('./super-admin.html');
+        return;
+      } else if (role === 'receptionist') {
+        window.location.replace('./receptionist-dashboard.html');
+        return;
+      } else {
+        window.location.replace('./dashboard.html');
+        return;
+      }
+    }
+
+    // Restore Remembered Email and Checkbox state
+    document.addEventListener('DOMContentLoaded', () => {
+      const rememberCb = document.getElementById('rememberMe');
+      const emailInput = document.getElementById('email');
+      const savedEmail = localStorage.getItem('sdd_remembered_email');
+      const isRemember = window.api && window.api.isRememberEnabled();
+
+      if (rememberCb && isRemember) {
+        rememberCb.checked = true;
+      }
+      if (emailInput && savedEmail && !emailInput.value) {
+        emailInput.value = savedEmail;
+      }
+    });
+  })();
+
   // ── OAuth callback: runs immediately on page load ──────────────────────────
   // If Google has redirected back with a token in the URL hash, process it.
   (async function checkOAuthCallback() {
@@ -691,25 +726,27 @@
     btn.disabled = true;
 
     try {
-      // Call real API
-      const res = await window.api.login(email, pass);
-      
-      // "Remember me" — persist to localStorage if checked, sessionStorage if not.
-      // localStorage survives browser restarts; sessionStorage is cleared when tab closes.
+      // Call real API with remember flag
       const remember = document.getElementById('rememberMe').checked;
-      const store = remember ? localStorage : sessionStorage;
+      const res = await window.api.login(email, pass, remember);
 
-      // Clear the opposite storage so there are never two conflicting sessions.
-      const otherStore = remember ? sessionStorage : localStorage;
-      ['sdd_token','sdd_refresh_token','sdd_user','sdd_role','sdd_clinic'].forEach(k => otherStore.removeItem(k));
-
-      store.setItem('sdd_token',         res.access_token);
-      store.setItem('sdd_refresh_token', res.refresh_token);
-      store.setItem('sdd_user',  JSON.stringify(res.user));
-      store.setItem('sdd_role',  res.role || 'admin');
-      if (res.clinic) {
-        store.setItem('sdd_clinic', JSON.stringify(res.clinic));
+      if (remember) {
+        localStorage.setItem('sdd_remember', 'true');
+        localStorage.setItem('sdd_remembered_email', email);
+      } else {
+        localStorage.removeItem('sdd_remember');
+        localStorage.removeItem('sdd_remembered_email');
       }
+
+      // Persist session across storage and cookies via unified helper
+      window.api.saveSession(
+        res.access_token,
+        res.refresh_token,
+        res.user,
+        res.role || 'admin',
+        res.clinic || null,
+        remember
+      );
 
       // Redirect to correct dashboard based on role
       if (res.role === 'super_admin') {

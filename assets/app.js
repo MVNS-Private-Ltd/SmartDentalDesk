@@ -8,30 +8,135 @@ window.api = (function() {
 
   let activeChatController = null;
 
-  // Check localStorage first (Remember Me), fall back to sessionStorage (session-only)
-  function getToken()        { return localStorage.getItem('sdd_token')         || sessionStorage.getItem('sdd_token'); }
-  function getRefreshToken() { return localStorage.getItem('sdd_refresh_token') || sessionStorage.getItem('sdd_refresh_token'); }
+    // ── Cookie Helpers ──────────────────────────────────────────────────────────
+  function setCookie(name, value, days) {
+    let expires = '';
+    if (days) {
+      const date = new Date();
+      date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+      expires = '; expires=' + date.toUTCString();
+    }
+    const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = encodeURIComponent(name) + '=' + encodeURIComponent(value || '') + expires + '; path=/; SameSite=Lax' + secure;
+  }
+
+  function getCookie(name) {
+    const nameEQ = encodeURIComponent(name) + '=';
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i].trim();
+      if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length));
+    }
+    return null;
+  }
+
+  function deleteCookie(name) {
+    const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = encodeURIComponent(name) + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax' + secure;
+  }
+
+  function isRememberEnabled() {
+    return localStorage.getItem('sdd_remember') === 'true' || getCookie('sdd_remember') === 'true';
+  }
+
+  // Check localStorage first (Remember Me), fall back to sessionStorage (session-only), then cookies
+  function getToken() {
+    return localStorage.getItem('sdd_token') || sessionStorage.getItem('sdd_token') || getCookie('sdd_token');
+  }
+
+  function getRefreshToken() {
+    return localStorage.getItem('sdd_refresh_token') || sessionStorage.getItem('sdd_refresh_token') || getCookie('sdd_refresh_token');
+  }
+
+  function getUser() {
+    const raw = localStorage.getItem('sdd_user') || sessionStorage.getItem('sdd_user') || getCookie('sdd_user');
+    if (!raw) return null;
+    try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { return null; }
+  }
+
+  function getRole() {
+    return localStorage.getItem('sdd_role') || sessionStorage.getItem('sdd_role') || getCookie('sdd_role') || 'admin';
+  }
+
+  function saveSession(accessToken, refreshToken, user, role, clinic, remember = true) {
+    const primaryStore = remember ? localStorage : sessionStorage;
+    const secondaryStore = remember ? sessionStorage : localStorage;
+
+    // Clean secondary store to prevent split-brain sessions
+    ['sdd_token', 'sdd_refresh_token', 'sdd_user', 'sdd_role', 'sdd_clinic'].forEach(k => secondaryStore.removeItem(k));
+
+    if (accessToken) primaryStore.setItem('sdd_token', accessToken);
+    if (refreshToken) primaryStore.setItem('sdd_refresh_token', refreshToken);
+    if (user) primaryStore.setItem('sdd_user', typeof user === 'string' ? user : JSON.stringify(user));
+    if (role) primaryStore.setItem('sdd_role', role);
+    if (clinic) primaryStore.setItem('sdd_clinic', typeof clinic === 'string' ? clinic : JSON.stringify(clinic));
+
+    // Cookie synchronization: 30 days if remember is true, or browser session if false
+    const cookieDays = remember ? 30 : null;
+    if (accessToken) setCookie('sdd_token', accessToken, cookieDays);
+    if (refreshToken) setCookie('sdd_refresh_token', refreshToken, cookieDays);
+    if (role) setCookie('sdd_role', role, cookieDays);
+    if (user) setCookie('sdd_user', typeof user === 'string' ? user : JSON.stringify(user), cookieDays);
+    if (remember) {
+      localStorage.setItem('sdd_remember', 'true');
+      setCookie('sdd_remember', 'true', 30);
+    } else {
+      localStorage.removeItem('sdd_remember');
+      deleteCookie('sdd_remember');
+    }
+  }
+
+  function clearAuthStorage() {
+    ['sdd_token', 'sdd_refresh_token', 'sdd_user', 'sdd_role', 'sdd_clinic', 'sdd_impersonation'].forEach(k => {
+      localStorage.removeItem(k);
+      sessionStorage.removeItem(k);
+    });
+    deleteCookie('sdd_token');
+    deleteCookie('sdd_refresh_token');
+    deleteCookie('sdd_role');
+    deleteCookie('sdd_user');
+    // Note: sdd_remember and sdd_remembered_email are preserved so checkbox and email remain remembered
+  }
+
+  // Mutex lock to prevent multiple simultaneous refreshes from causing token rotation race conditions
+  let refreshPromise = null;
 
   // Silently refresh the Supabase access token using the stored refresh_token
   async function refreshAccessToken() {
-    const refreshToken = getRefreshToken();
-    if (!refreshToken) throw new Error('No refresh token available.');
+    if (refreshPromise) {
+      return refreshPromise;
+    }
 
-    const res = await fetch(`${BASE_URL}/auth/refresh`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
+    refreshPromise = (async () => {
+      try {
+        const refreshToken = getRefreshToken();
+        if (!refreshToken) throw new Error('No refresh token available.');
 
-    if (!res.ok) throw new Error('Token refresh failed.');
+        const res = await fetch(`${BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
 
-    const data = await res.json();
-    localStorage.setItem('sdd_token',         data.access_token);
-    localStorage.setItem('sdd_refresh_token', data.refresh_token);
-    console.log('[Auth] Token refreshed successfully.');
-    return data.access_token;
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Token refresh failed.');
+        }
+
+        const data = await res.json();
+        const remember = isRememberEnabled();
+        saveSession(data.access_token, data.refresh_token, null, null, null, remember);
+        console.log('[Auth] Token refreshed successfully.');
+        return data.access_token;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
+
+    return refreshPromise;
   }
 
   async function request(endpoint, options = {}, isRetry = false) {
@@ -45,7 +150,7 @@ window.api = (function() {
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
     try {
-      const response = await fetch(url, { ...options, headers });
+      const response = await fetch(url, { credentials: 'include', ...options, headers });
       const data = await response.json();
 
       // If 401 and not already a retry, attempt a silent token refresh then retry once
@@ -139,7 +244,14 @@ window.api = (function() {
 
   return {
     BASE_URL,
-    login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+    login: (email, password, remember = true) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password, remember_me: !!remember }) }),
+    saveSession,
+    clearAuthStorage,
+    getToken,
+    getRefreshToken,
+    getUser,
+    getRole,
+    isRememberEnabled,
     register: (payload) => request('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
     forgotPassword: (email) => request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
     resetPassword: (access_token, password) => request('/auth/reset-password', { method: 'POST', body: JSON.stringify({ access_token, password }) }),

@@ -190,7 +190,7 @@ router.post('/login', loginRules, async (req, res, next) => {
   try {
     if (!validate(req, res)) return;
 
-    const { email, password } = req.body;
+    const { email, password, remember_me } = req.body;
     const { logAuditEvent, trackAndHalt } = require('../lib/auditLogger');
 
     const authClient = createAnonClient();
@@ -267,6 +267,18 @@ router.post('/login', loginRules, async (req, res, next) => {
         return res.json({ mfa_required: true, mfa_token: mfaToken });
       }
     }
+
+    const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+    const cookieOpts = {
+      path: '/',
+      sameSite: isHttps ? 'none' : 'lax',
+      secure: isHttps,
+      httpOnly: false,
+      maxAge: (remember_me !== false) ? 30 * 24 * 60 * 60 * 1000 : undefined
+    };
+    res.cookie('sdd_token', data.session.access_token, cookieOpts);
+    res.cookie('sdd_refresh_token', data.session.refresh_token, cookieOpts);
+    res.cookie('sdd_role', userRole, cookieOpts);
 
     res.json({
       message      : 'Signed in successfully!',
@@ -545,6 +557,17 @@ router.post('/refresh', async (req, res, next) => {
     if (!response.ok) {
       return res.status(response.status).json(data);
     }
+
+    const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+    const cookieOpts = {
+      path: '/',
+      sameSite: isHttps ? 'none' : 'lax',
+      secure: isHttps,
+      httpOnly: false,
+      maxAge: 30 * 24 * 60 * 60 * 1000
+    };
+    if (data.access_token) res.cookie('sdd_token', data.access_token, cookieOpts);
+    if (data.refresh_token) res.cookie('sdd_refresh_token', data.refresh_token, cookieOpts);
 
     res.json(data);
   } catch (err) {
@@ -857,6 +880,20 @@ router.post('/mfa/recovery-codes', recoveryLimiterIP, requireAuth, [
   } catch (err) {
     next(err);
   }
+});
+
+// ── POST /api/auth/logout ─────────────────────────────────────────────────────
+router.post('/logout', (req, res) => {
+  const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+  const cookieOpts = {
+    path: '/',
+    sameSite: isHttps ? 'none' : 'lax',
+    secure: isHttps
+  };
+  res.clearCookie('sdd_token', cookieOpts);
+  res.clearCookie('sdd_refresh_token', cookieOpts);
+  res.clearCookie('sdd_role', cookieOpts);
+  res.json({ message: 'Logged out successfully' });
 });
 
 module.exports = router;

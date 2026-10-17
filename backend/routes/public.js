@@ -624,4 +624,60 @@ router.post('/report', reportLimiter, [
   }
 });
 
+
+// ── GET /api/public/sitemap.xml ───────────────────────────────────────────────
+// Live programmatic sitemap for search engines (Googlebot, Bingbot)
+router.get('/sitemap.xml', async (req, res, next) => {
+  try {
+    const { data: clinics, error } = await supabase
+      .from('clinics')
+      .select('id, booking_slug, updated_at, created_at')
+      .eq('is_active', true);
+
+    if (error) throw error;
+
+    const domain = 'https://www.dentalsmart.tech';
+    const today = new Date().toISOString().split('T')[0];
+
+    const staticPages = [
+      { loc: `${domain}/`, priority: '1.0', changefreq: 'daily', lastmod: today },
+      { loc: `${domain}/clinics.html`, priority: '0.9', changefreq: 'daily', lastmod: today },
+      { loc: `${domain}/pricing.html`, priority: '0.7', changefreq: 'weekly', lastmod: today },
+      { loc: `${domain}/privacy-policy.html`, priority: '0.3', changefreq: 'yearly', lastmod: today },
+      { loc: `${domain}/terms-of-service.html`, priority: '0.3', changefreq: 'yearly', lastmod: today },
+      { loc: `${domain}/refund-cancellation.html`, priority: '0.3', changefreq: 'yearly', lastmod: today }
+    ];
+
+    const clinicUrls = (clinics || []).map(c => {
+      const slug = c.booking_slug || c.id;
+      const mod = (c.updated_at || c.created_at || new Date().toISOString()).split('T')[0];
+      return `  <url>
+    <loc>${domain}/clinic-detail.html?c=${encodeURIComponent(slug)}</loc>
+    <lastmod>${mod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+    }).join('\n');
+
+    const staticUrls = staticPages.map(p => `  <url>
+    <loc>${p.loc}</loc>
+    <lastmod>${p.lastmod}</lastmod>
+    <changefreq>${p.changefreq}</changefreq>
+    <priority>${p.priority}</priority>
+  </url>`).join('\n');
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${staticUrls}
+${clinicUrls}
+</urlset>`;
+
+    res.header('Content-Type', 'application/xml; charset=utf-8');
+    res.header('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+    res.send(xml);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

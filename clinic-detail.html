@@ -587,23 +587,85 @@
 
         if (!clinic) throw new Error('Clinic not found');
 
-        // ── Unverified/Incomplete Profile SEO Gate ──
-        if (clinic.is_verified === false || !clinic.phone || !clinic.address) {
-          const metaRobots = document.createElement('meta');
+        // ── SEO & Indexing ──
+        // Ensure active clinics are indexable by Google
+        let metaRobots = document.querySelector('meta[name="robots"]');
+        if (!metaRobots) {
+          metaRobots = document.createElement('meta');
           metaRobots.name = "robots";
-          metaRobots.content = "noindex, nofollow";
           document.head.appendChild(metaRobots);
         }
+        metaRobots.content = clinic.is_active === false ? "noindex, nofollow" : "index, follow, max-image-preview:large";
 
         // Populate fields
         // Update dynamic meta tags from real clinic data (no invented values)
-        document.title = `${clinic.name} | dentalsmart`;
+        // Dynamic Canonical URL
+        const clinicUrl = `https://www.dentalsmart.tech/clinic-detail.html?c=${encodeURIComponent(slug)}`;
+        let canonicalLink = document.querySelector('link[rel="canonical"]');
+        if (canonicalLink) {
+          canonicalLink.href = clinicUrl;
+        }
+
+        // Dynamic Title & Description for Google & Justdial-style directory search
+        const clinicLocation = [clinic.area, clinic.city].filter(Boolean).join(', ');
+        const locationSuffix = clinicLocation ? ` in ${clinicLocation}` : '';
+        const pageTitle = `${clinic.name} – Dental Clinic${locationSuffix} | DentalSmart`;
+        document.title = pageTitle;
+        const metaDescText = clinic.about && clinic.about.trim().length > 10
+          ? `${clinic.name}${locationSuffix}: ${clinic.about}`.slice(0, 160)
+          : `Book an appointment at ${clinic.name}${locationSuffix}. View verified clinic profile, available dental treatments, timings, and fees on DentalSmart.`;
+
         const descEl = document.querySelector('meta[name="description"]');
-        if (descEl && clinic.about) descEl.content = clinic.about.slice(0, 160);
+        if (descEl) descEl.content = metaDescText;
+
         const ogTitleEl = document.querySelector('meta[property="og:title"]');
-        if (ogTitleEl) ogTitleEl.content = `${clinic.name} | dentalsmart`;
+        if (ogTitleEl) ogTitleEl.content = pageTitle;
         const ogDescEl = document.querySelector('meta[property="og:description"]');
-        if (ogDescEl && clinic.about) ogDescEl.content = clinic.about.slice(0, 160);
+        if (ogDescEl) ogDescEl.content = metaDescText;
+        const ogUrlEl = document.querySelector('meta[property="og:url"]');
+        if (ogUrlEl) ogUrlEl.content = clinicUrl;
+
+        // Structured Data (JSON-LD) for Google Rich Results (Dentist schema)
+        try {
+          const oldLd = document.getElementById('clinicSchemaLd');
+          if (oldLd) oldLd.remove();
+
+          const ldJson = {
+            "@context": "https://schema.org",
+            "@type": "Dentist",
+            "name": clinic.name,
+            "description": metaDescText,
+            "url": clinicUrl,
+            "image": clinic.cover_image || 'https://www.dentalsmart.tech/assets/favicon.svg',
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": clinic.address || "",
+              "addressLocality": clinic.city || "",
+              "addressRegion": clinic.city || "",
+              "postalCode": clinic.pincode || "",
+              "addressCountry": "IN"
+            }
+          };
+
+          if (clinic.phone) ldJson.telephone = clinic.phone;
+          if (clinic.timings) ldJson.openingHours = clinic.timings;
+          if (clinic.price_range) ldJson.priceRange = clinic.price_range;
+          if (clinic.rating && Number(clinic.rating) > 0) {
+            ldJson.aggregateRating = {
+              "@type": "AggregateRating",
+              "ratingValue": Number(clinic.rating).toFixed(1),
+              "reviewCount": clinic.review_count || 1
+            };
+          }
+
+          const scriptLd = document.createElement('script');
+          scriptLd.id = 'clinicSchemaLd';
+          scriptLd.type = 'application/ld+json';
+          scriptLd.textContent = JSON.stringify(ldJson);
+          document.head.appendChild(scriptLd);
+        } catch (e) {
+          console.warn('[SEO] Failed to inject JSON-LD:', e);
+        }
 
         document.getElementById('bcClinicName').textContent = clinic.name;
         document.getElementById('cName').textContent = clinic.name;

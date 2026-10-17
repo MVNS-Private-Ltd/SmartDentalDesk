@@ -539,13 +539,40 @@ window.api = (function() {
     getBroadcast: () => request('/super-admin/broadcast'),
     publishBroadcast: (payload) => request('/super-admin/broadcast', { method: 'POST', body: JSON.stringify(payload) }),
 
-    logout: () => {
-      // Clear both storages so session-only and remember-me tokens are both removed
+    logout: async () => {
+      // 1. Tell the backend to invalidate the Supabase session server-side (best-effort)
+      const token = getToken();
+      if (token) {
+        try {
+          await fetch(`${BASE_URL}/auth/logout`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+          });
+        } catch (_) { /* ignore — we clear client state regardless */ }
+      }
+
+      // 2. Clear every auth key from both storages
       ['sdd_token','sdd_refresh_token','sdd_user','sdd_role','sdd_clinic','sdd_impersonation'].forEach(k => {
         localStorage.removeItem(k);
         sessionStorage.removeItem(k);
       });
-      window.location.href = './login.html';
+
+      // 3. Also clear the remember-me flag so the login page no longer auto-redirects
+      //    (sdd_remembered_email is left intact so the email field stays pre-filled)
+      localStorage.removeItem('sdd_remember');
+      sessionStorage.removeItem('sdd_remember');
+
+      // 4. Delete all auth cookies — critical, because getToken() falls back to cookies
+      //    and the login page's isAuthenticated() check would see a live cookie and auto-redirect
+      deleteCookie('sdd_token');
+      deleteCookie('sdd_refresh_token');
+      deleteCookie('sdd_role');
+      deleteCookie('sdd_user');
+      deleteCookie('sdd_remember');
+
+      // 5. Navigate with ?logout=true so the login page's auto-redirect guard skips the check
+      window.location.replace('./login.html?logout=true');
     },
     isAuthenticated: () => !!getToken()
   };

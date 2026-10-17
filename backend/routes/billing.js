@@ -589,19 +589,236 @@ router.post('/update-card', requireAuth, [
 });
 
 // ── POST /api/billing/cancel-subscription ─────────────────────────────────────
+// Sets status to cancel_pending — access continues until current_period_end.
+// Renewal is stopped but existing paid entitlement is honoured.
 router.post('/cancel-subscription', requireAuth, async (req, res, next) => {
   try {
+    if (req.isSuperAdmin) return res.status(403).json({ error: 'Super admin cannot cancel subscriptions.' });
+
+    // Fetch current subscription
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('status, plan, current_period_end, provider_subscription_id')
+      .eq('clinic_id', req.clinicId)
+      .maybeSingle();
+
+    if (!sub) return res.status(404).json({ error: 'No subscription found.' });
+
+    if (['canceled', 'expired', 'cancel_pending'].includes(sub.status)) {
+      return res.status(409).json({
+        error: sub.status === 'cancel_pending'
+          ? 'Cancellation is already scheduled. Access continues until your paid period ends.'
+          : 'Subscription is already cancelled or expired.'
+      });
+    }
+
+    // Trial subscriptions use cancel-trial instead
+    if (sub.status === 'trialing') {
+      return res.status(409).json({
+        error: 'Your account is on a free trial. Use the cancel-trial endpoint to end the trial.',
+        code: 'USE_CANCEL_TRIAL'
+      });
+    }
+
+    // Attempt to cancel on Razorpay at cycle end (best-effort; don't fail the request)
+    if (sub.provider_subscription_id && razorpay) {
+      try {
+        await razorpay.subscriptions.cancel(sub.provider_subscription_id, { cancel_at_cycle_end: 1 });
+        console.log(`[Billing] Razorpay subscription ${sub.provider_subscription_id} scheduled for end-of-cycle cancellation.`);
+      } catch (rzpErr) {
+        // Log but continue — local state is the authoritative source
+        console.warn('[Billing] Razorpay cancel (best-effort) failed:', rzpErr.message);
+      }
+    }
+
+    // Mark locally as cancel_pending — middleware grants access until current_period_end
     const { error } = await supabase
       .from('subscriptions')
       .update({
-        status:     'canceled',
+        status:     'cancel_pending',
         updated_at: new Date().toISOString()
       })
       .eq('clinic_id', req.clinicId);
 
     if (error) throw error;
-    res.json({ success: true, message: 'Subscription canceled. Access will continue until the end of your billing period.' });
+
+    const periodEnd = sub.current_period_end
+      ? new Date(sub.current_period_end).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+      : 'the end of your current billing period';
+
+    res.json({
+      success:    true,
+      status:     'cancel_pending',
+      message:    `Your subscription renewal has been cancelled. You will retain full access until ${periodEnd}. No further charges will be made.`,
+      access_until: sub.current_period_end || null
+    });
   } catch (err) { next(err); }
+});
+
+// ── POST /api/billing/cancel-trial ────────────────────────────────────────────
+// Immediately terminates a trialing subscription. No charge is made.
+// Unlike cancel-subscription, trial cancellation takes effect immediately.
+router.post('/cancel-trial', requireAuth, async (req, res, next) => {
+  try {
+    if (req.isSuperAdmin) return res.status(403).json({ error: 'Super admin cannot cancel trials.' });
+
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('status, provider_subscription_id')
+      .eq('clinic_id', req.clinicId)
+      .maybeSingle();
+
+    if (!sub || sub.status !== 'trialing') {
+      return res.status(409).json({ error: 'No active trial to cancel.' });
+    }
+
+    // Cancel Razorpay mandate immediately (prevents any future auto-charge)
+    if (sub.provider_subscription_id && razorpay) {
+      try {
+        await razorpay.subscriptions.cancel(sub.provider_subscription_id);
+        console.log(`[Billing] Razorpay trial subscription ${sub.provider_subscription_id} cancelled immediately.`);
+      } catch (rzpErr) {
+        console.warn('[Billing] Razorpay trial cancel (best-effort) failed:', rzpErr.message);
+      }
+    }
+
+    // Immediately terminate trial — no access-until-end for trial cancellations
+    await supabase
+      .from('subscriptions')
+      .update({ status: 'canceled', updated_at: new Date().toISOString() })
+      .eq('clinic_id', req.clinicId);
+
+    // Zero out trial credits (trial credits are forfeited on cancellation)
+    await supabase
+      .from('clinic_credits')
+      .update({ credits_allocated: 0, credits_used: 0, updated_at: new Date().toISOString() })
+      .eq('clinic_id', req.clinicId);
+
+    res.json({
+      success: true,
+      message: 'Your free trial has been cancelled. No charge has been made. You can start a new trial or choose a plan at any time.'
+    });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/billing/start-trial ─────────────────────────────────────────────
+// Card-free free trial activation. No Razorpay mandate required.
+// Trial is 3 calendar months. The clinic must explicitly choose and pay for a
+// plan after expiry — there is no automatic conversion to paid.
+router.post('/start-trial', requireAuth, async (req, res, next) => {
+  try {
+    if (req.isSuperAdmin) return res.status(403).json({ error: 'Super admin cannot start trials.' });
+
+    const clinicId = req.clinicId;
+    const { PLAN_CREDITS } = require('../lib/plans');
+
+    // Block if already on an active/trialing subscription
+    const { data: existingSub } = await supabase
+      .from('subscriptions')
+      .select('status, trial_ends_at')
+      .eq('clinic_id', clinicId)
+      .maybeSingle();
+
+    if (existingSub) {
+      if (['trialing', 'active', 'cancel_pending'].includes(existingSub.status)) {
+        return res.status(409).json({
+          error: 'Your clinic already has an active subscription or trial.',
+          redirect: './dashboard.html'
+        });
+      }
+      // If previously canceled/expired, allow a new trial only if they never had one before
+      // (i.e. trial_ends_at was null — they went straight from free to paid to canceled)
+      if (existingSub.trial_ends_at) {
+        return res.status(409).json({
+          error: 'Your free trial has already been used. Please choose a paid plan to continue.',
+          redirect: './pricing.html'
+        });
+      }
+    }
+
+    const now          = new Date();
+    const trialEndDate = new Date(now);
+    trialEndDate.setMonth(trialEndDate.getMonth() + 3); // 3 calendar months
+
+    // Trial plan is always 'premium' — clinics get full features during trial
+    const trialPlan       = 'premium';
+    const allocatedCredits = PLAN_CREDITS[trialPlan]; // 900
+
+    // Write subscription row — no Razorpay ID, no mandate
+    const subPayload = {
+      clinic_id:            clinicId,
+      plan:                 trialPlan,
+      status:               'trialing',
+      billing_cycle:        'monthly',
+      trial_start_at:       now.toISOString(),
+      trial_ends_at:        trialEndDate.toISOString(),
+      current_period_start: now.toISOString(),
+      current_period_end:   trialEndDate.toISOString(),
+      // No provider_subscription_id — no mandate
+      updated_at:           now.toISOString()
+    };
+
+    const { error: subErr } = await supabase
+      .from('subscriptions')
+      .upsert(subPayload, { onConflict: 'clinic_id' });
+
+    if (subErr) {
+      console.error('[Billing] start-trial subscription write error:', subErr);
+      throw subErr;
+    }
+
+    // Allocate trial credits
+    await supabase.from('clinic_credits').upsert({
+      clinic_id:         clinicId,
+      credits_allocated: allocatedCredits,
+      credits_used:      0,
+      period_start:      now.toISOString(),
+      period_end:        trialEndDate.toISOString(),
+      updated_at:        now.toISOString()
+    }, { onConflict: 'clinic_id' }).then(() => {}).catch(e => console.error('[Billing] Trial credit upsert error:', e));
+
+    // Enable marketplace access during trial
+    await supabase.from('clinics').update({
+      subscription_plan:     trialPlan,
+      is_marketplace_listed: true
+    }).eq('id', clinicId);
+
+    // Record trial activation in credit ledger
+    await supabase.from('credit_transactions').insert({
+      clinic_id: clinicId,
+      type:      'allocation',
+      amount:    allocatedCredits,
+      ai_mode:   'system'
+    }).then(() => {}).catch(e => console.error('[Billing] Trial credit ledger error:', e));
+
+    // Log a £0 trial invoice
+    const invoiceNum = `TRL-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 900 + 100)}`;
+    await supabase.from('subscription_invoices').insert({
+      clinic_id:            clinicId,
+      invoice_number:       invoiceNum,
+      plan:                 'premium (3-Month Free Trial)',
+      amount_paise:         0,
+      currency:             'INR',
+      status:               'paid',
+      payment_method:       'none',
+      card_last4:           null,
+      billing_period_start: now.toISOString(),
+      billing_period_end:   trialEndDate.toISOString()
+    }).then(() => {}).catch(e => console.error('[Billing] Trial invoice error:', e));
+
+    return res.json({
+      success:       true,
+      redirect_url:  './dashboard.html',
+      message:       '3-Month Free Trial activated. No card required. Choose a plan before your trial ends to continue.',
+      trial_ends_at: trialEndDate.toISOString(),
+      plan:          trialPlan,
+      credits:       allocatedCredits
+    });
+
+  } catch (err) {
+    console.error('[Billing] start-trial error:', err);
+    next(err);
+  }
 });
 
 // ── GET /api/billing/status ───────────────────────────────────────────────────

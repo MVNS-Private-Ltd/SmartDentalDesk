@@ -423,12 +423,20 @@
           badge.className = 'plan-badge trial';
           badge.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Free Trial Active';
           var end = new Date(sub.trial_ends_at).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
-          document.getElementById('planPeriod').textContent = 'Trial ends on ' + end + '.';
+          document.getElementById('planPeriod').textContent = 'Trial ends on ' + end + '. Choose a plan before this date to continue.';
         } else if (sub.status === 'active') {
           badge.className = 'plan-badge active';
           badge.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Active Subscription';
           var pEnd = new Date(sub.current_period_end).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
           document.getElementById('planPeriod').textContent = 'Next billing: ' + pEnd;
+        } else if (sub.status === 'cancel_pending') {
+          badge.className = 'plan-badge';
+          badge.style.background = '#fef3c7';
+          badge.style.color = '#92400e';
+          badge.style.border = '1px solid #fde68a';
+          badge.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Renewal Cancelled';
+          var aEnd = new Date(sub.current_period_end).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
+          document.getElementById('planPeriod').textContent = 'Access continues until ' + aEnd + '. No further charges will be made.';
         } else {
           badge.className = 'plan-badge';
           badge.textContent = sub.status || 'Inactive';

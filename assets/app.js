@@ -269,8 +269,11 @@ window.api = (function() {
     getSubscriptionInvoices: () => request('/billing/invoices'),
     updateBillingCard: (payload) => request('/billing/update-card', { method: 'POST', body: JSON.stringify(payload) }),
     cancelSubscription: () => request('/billing/cancel-subscription', { method: 'POST' }),
+    cancelTrial: () => request('/billing/cancel-trial', { method: 'POST' }),
+    startTrial: () => request('/billing/start-trial', { method: 'POST' }),
     createOrder: (plan) => request('/billing/create-order', { method: 'POST', body: JSON.stringify({ plan }) }),
     verifyPayment: (payload) => request('/billing/verify-payment', { method: 'POST', body: JSON.stringify(payload) }),
+    // Legacy: kept for existing Razorpay-mandate trial accounts only
     createTrial: (plan) => request('/billing/create-trial', { method: 'POST', body: JSON.stringify({ plan }) }),
     verifyTrial: (payload) => request('/billing/verify-trial', { method: 'POST', body: JSON.stringify(payload) }),
     // Generic POST helper — strips /api prefix if full path is passed

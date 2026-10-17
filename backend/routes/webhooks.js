@@ -81,7 +81,7 @@ async function handleSubscriptionEvent(eventType, rzpSub, eventId, fullPayload) 
   // Find existing subscription
   const { data: subRecord } = await supabase
     .from('subscriptions')
-    .select('id, status, plan')
+    .select('id, status, plan, current_period_end')
     .eq('clinic_id', clinicId)
     .single();
 
@@ -92,71 +92,91 @@ async function handleSubscriptionEvent(eventType, rzpSub, eventId, fullPayload) 
 
   let newStatus = subRecord.status;
   const now = new Date().toISOString();
-  
-  // State machine updates
+
+  // ── State machine ──────────────────────────────────────────────────────────
   if (eventType === 'subscription.authenticated') {
     newStatus = 'trialing';
+
   } else if (eventType === 'subscription.activated' || eventType === 'subscription.charged') {
+    // A charge has occurred — subscription is now active regardless of previous state.
+    // If it was cancel_pending (Razorpay fired a final charge before cancel took effect),
+    // that is unexpected; keep as active and let the next cycle end handle it.
     newStatus = 'active';
+
   } else if (eventType === 'subscription.pending') {
     newStatus = 'past_due';
-  } else if (eventType === 'subscription.halted' || eventType === 'subscription.cancelled') {
+
+  } else if (eventType === 'subscription.cancelled') {
+    // Razorpay fires this when cancellation actually takes effect at cycle end.
+    // If we had cancel_pending locally, this is the expected terminal event —
+    // the paid period has genuinely ended and Razorpay has confirmed it.
+    // Transition to 'canceled' (full termination, no remaining access).
+    if (subRecord.status === 'cancel_pending' || subRecord.status === 'active') {
+      newStatus = 'canceled';
+    } else if (subRecord.status === 'trialing') {
+      // Trial mandate cancelled — immediate termination
+      newStatus = 'canceled';
+    }
+    // If already canceled, expired, or other terminal state: no change.
+
+  } else if (eventType === 'subscription.halted') {
     newStatus = 'canceled';
+
   } else if (eventType === 'subscription.completed') {
     newStatus = 'expired';
   }
 
   const updates = {
-    status: newStatus,
+    status:     newStatus,
     updated_at: now
   };
 
   if (rzpSub.current_start) updates.current_period_start = new Date(rzpSub.current_start * 1000).toISOString();
-  if (rzpSub.current_end) updates.current_period_end = new Date(rzpSub.current_end * 1000).toISOString();
+  if (rzpSub.current_end)   updates.current_period_end   = new Date(rzpSub.current_end   * 1000).toISOString();
 
-  // Apply updates to subscriptions
+  // Apply status update
   await supabase
     .from('subscriptions')
     .update(updates)
     .eq('id', subRecord.id);
 
-  // If status changed to canceled or expired, remove marketplace visibility
+  // Marketplace visibility:
+  // - Remove only when fully canceled/expired (not while cancel_pending — access still valid)
+  // - Restore when active or trialing
   if (newStatus === 'canceled' || newStatus === 'expired') {
     await supabase.from('clinics').update({ is_marketplace_listed: false }).eq('id', clinicId);
-  } else {
-    // If active or trialing, set marketplace visibility based on plan features
+  } else if (newStatus === 'active' || newStatus === 'trialing') {
     const isListed = PLAN_FEATURES[subRecord.plan]?.marketplace || false;
     await supabase.from('clinics').update({ is_marketplace_listed: isListed }).eq('id', clinicId);
   }
+  // cancel_pending: leave marketplace visibility unchanged — access still valid
 
   // Record audit log
   await supabase.from('subscription_events').insert({
-    clinic_id: clinicId,
-    event_type: eventType,
+    clinic_id:        clinicId,
+    event_type:       eventType,
     provider_event_id: eventId,
-    payload: fullPayload
+    payload:          fullPayload
   });
 
-  // Provision initial credits if entering trialing or active state
+  // Provision initial credits if entering trialing or active state for the first time
   if (eventType === 'subscription.authenticated' || eventType === 'subscription.activated') {
-    const creditsToAllocate = PLAN_CREDITS[subRecord.plan] || 2500;
-    
-    // Upsert clinic_credits
+    const creditsToAllocate = PLAN_CREDITS[subRecord.plan] || 900;
+
     await supabase.from('clinic_credits').upsert({
-      clinic_id: clinicId,
+      clinic_id:         clinicId,
       credits_allocated: creditsToAllocate,
-      credits_used: 0,
-      period_start: updates.current_period_start || now,
-      period_end: updates.current_period_end || null,
-      updated_at: now
+      credits_used:      0,
+      period_start:      updates.current_period_start || now,
+      period_end:        updates.current_period_end   || null,
+      updated_at:        now
     }, { onConflict: 'clinic_id' });
 
-    // Record allocation in ledger
     await supabase.from('credit_transactions').insert({
       clinic_id: clinicId,
-      type: 'allocation',
-      amount: creditsToAllocate,
-      ai_mode: 'system'
+      type:      'allocation',
+      amount:    creditsToAllocate,
+      ai_mode:   'system'
     });
   }
 }

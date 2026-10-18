@@ -31,7 +31,8 @@ router.use(auditLogger('crm'));
 // GET /api/crm/leads
 router.get('/leads', async (req, res, next) => {
   try {
-    const supabase = createScopedClient(req.token);
+    if (!req.clinicId) return res.json({ leads: [] });
+    const supabase = createScopedClient(req);
     const { data, error } = await supabase
       .from('leads')
       .select('*')
@@ -39,14 +40,15 @@ router.get('/leads', async (req, res, next) => {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    res.json({ leads: data });
+    res.json({ leads: data || [] });
   } catch (err) { next(err); }
 });
 
 // GET /api/crm/campaigns
 router.get('/campaigns', async (req, res, next) => {
   try {
-    const supabase = createScopedClient(req.token);
+    if (!req.clinicId) return res.json({ campaigns: [] });
+    const supabase = createScopedClient(req);
     const { data, error } = await supabase
       .from('campaigns')
       .select('*')
@@ -54,7 +56,7 @@ router.get('/campaigns', async (req, res, next) => {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    res.json({ campaigns: data });
+    res.json({ campaigns: data || [] });
   } catch (err) { next(err); }
 });
 

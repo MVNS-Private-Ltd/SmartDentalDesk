@@ -29,6 +29,9 @@ function validate(req, res) {
 // ── GET /api/treatments ───────────────────────────────────────────────────────
 router.get('/', async (req, res, next) => {
   try {
+    if (!req.clinicId) {
+      return res.json({ treatments: [], total: 0 });
+    }
     const { page = 1, limit = 20 } = req.query;
     const offset = (page - 1) * limit;
 

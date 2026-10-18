@@ -43,16 +43,67 @@ module.exports = async function requireAuth(req, res, next) {
       return res.status(401).json({ error: 'Invalid or expired token. Please sign in again.' });
     }
 
-    // ── 2. Super-admin fast path (no clinic-state checks) ──────────────────
+    // ── 2. Super-admin path (impersonation & platform owner support) ──
     const isSuperAdmin = isSuperAdminUser(user);
     if (isSuperAdmin) {
       req.user         = user;
       req.userRole     = 'super_admin';
       req.isSuperAdmin = true;
-      req.clinicId     = null;
-      req.clinic       = { id: null, name: 'SaaS Platform Control', owner_name: 'Platform Owner' };
       req.staff        = null;
       req.token        = token;
+
+      // UUID format validation helper
+      const isValidUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+      // Check if Super Admin is targeting or impersonating a specific clinic via header or query
+      const rawHeaderClinic = req.headers['x-clinic-id'] || req.headers['x-target-clinic-id'] || req.query?.clinic_id;
+      const headerClinicId = typeof rawHeaderClinic === 'string' ? rawHeaderClinic.trim() : null;
+      if (isValidUuid(headerClinicId)) {
+        const { data: targetClinic } = await supabase
+          .from('clinics')
+          .select('id, name, owner_name, email, subscription_plan, is_active, suspended_at, suspension_reason')
+          .eq('id', headerClinicId)
+          .maybeSingle();
+
+        if (targetClinic) {
+          req.clinicId        = targetClinic.id;
+          req.clinic          = targetClinic;
+          req.isImpersonating = true;
+          return next();
+        }
+      }
+
+      // Check if Super Admin directly owns a clinic in the DB
+      const { data: ownedClinic } = await supabase
+        .from('clinics')
+        .select('id, name, owner_name, email, subscription_plan, is_active, suspended_at, suspension_reason')
+        .eq('owner_id', user.id)
+        .maybeSingle();
+
+      if (ownedClinic) {
+        req.clinicId = ownedClinic.id;
+        req.clinic   = ownedClinic;
+        return next();
+      }
+
+      // Fallback for Super Admin viewing clinic dashboard without an explicit header:
+      // Pick the first active clinic so UI queries don't fail on null UUID
+      const { data: firstClinic } = await supabase
+        .from('clinics')
+        .select('id, name, owner_name, email, subscription_plan, is_active, suspended_at, suspension_reason')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (firstClinic) {
+        req.clinicId = firstClinic.id;
+        req.clinic   = firstClinic;
+        return next();
+      }
+
+      req.clinicId = null;
+      req.clinic   = { id: null, name: 'SaaS Platform Control', owner_name: 'Platform Owner' };
       return next();
     }
 

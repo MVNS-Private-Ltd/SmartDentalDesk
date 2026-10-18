@@ -317,14 +317,26 @@ router.post('/create-trial', requireAuth, [
     // 1. Check existing subscription
     const { data: existingSub } = await supabase
       .from('subscriptions')
-      .select('status, plan, trial_ends_at, provider_customer_id')
+      .select('status, plan, trial_ends_at, provider_subscription_id, provider_customer_id')
       .eq('clinic_id', clinicId)
       .maybeSingle();
+
+    // SERVER-SIDE BLOCK FOR NEW CLINICS:
+    // New clinics must activate trials via card-free POST /api/billing/start-trial.
+    // Legacy mandate trial creation is strictly blocked for any clinic that does not
+    // already have a legacy mandate session.
+    if (!existingSub || !existingSub.provider_subscription_id) {
+      return res.status(403).json({
+        error: 'The card-mandate trial flow is deprecated and closed to new accounts. Please use POST /api/billing/start-trial for instant card-free activation.',
+        code: 'MANDATE_FLOW_DEPRECATED',
+        redirect: '/pricing.html'
+      });
+    }
 
     const trialEndDate = new Date();
     trialEndDate.setMonth(trialEndDate.getMonth() + 3);
 
-    if (existingSub && ['trialing', 'active'].includes(existingSub.status)) {
+    if (['trialing', 'active'].includes(existingSub.status)) {
       return res.json({
         direct_activation: true,
         trial_ends_at: existingSub.trial_ends_at || trialEndDate.toISOString(),
@@ -409,6 +421,21 @@ router.post('/verify-trial', requireAuth, [
 
     const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature, card_number, card_exp, card_cvv, cardholder_name } = req.body;
     const clinicId = req.clinicId;
+
+    // SERVER-SIDE BLOCK FOR NEW CLINICS:
+    const { data: existingSub } = await supabase
+      .from('subscriptions')
+      .select('status, provider_subscription_id')
+      .eq('clinic_id', clinicId)
+      .maybeSingle();
+
+    if (!existingSub || !existingSub.provider_subscription_id) {
+      return res.status(403).json({
+        error: 'Legacy mandate verification is disabled for new accounts. Please use POST /api/billing/start-trial.',
+        code: 'MANDATE_FLOW_DEPRECATED',
+        redirect: '/pricing.html'
+      });
+    }
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     const isRealRazorpay = razorpay && keySecret && !keySecret.includes('REPLACE_WITH_REAL');
 
@@ -589,8 +616,9 @@ router.post('/update-card', requireAuth, [
 });
 
 // ── POST /api/billing/cancel-subscription ─────────────────────────────────────
+// Confirms renewal cancellation with Razorpay before updating state.
 // Sets status to cancel_pending — access continues until current_period_end.
-// Renewal is stopped but existing paid entitlement is honoured.
+// If Razorpay call fails, valid paid access is preserved and failure is recorded.
 router.post('/cancel-subscription', requireAuth, async (req, res, next) => {
   try {
     if (req.isSuperAdmin) return res.status(403).json({ error: 'Super admin cannot cancel subscriptions.' });
@@ -620,18 +648,42 @@ router.post('/cancel-subscription', requireAuth, async (req, res, next) => {
       });
     }
 
-    // Attempt to cancel on Razorpay at cycle end (best-effort; don't fail the request)
-    if (sub.provider_subscription_id && razorpay) {
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const isRealRazorpay = razorpay && keyId && !keyId.includes('REPLACE_WITH_REAL');
+
+    // 1. Confirm renewal cancellation with Razorpay if a provider subscription exists
+    if (sub.provider_subscription_id && isRealRazorpay) {
       try {
         await razorpay.subscriptions.cancel(sub.provider_subscription_id, { cancel_at_cycle_end: 1 });
-        console.log(`[Billing] Razorpay subscription ${sub.provider_subscription_id} scheduled for end-of-cycle cancellation.`);
+        console.log(`[Billing] Razorpay confirmed subscription ${sub.provider_subscription_id} scheduled for end-of-cycle cancellation.`);
       } catch (rzpErr) {
-        // Log but continue — local state is the authoritative source
-        console.warn('[Billing] Razorpay cancel (best-effort) failed:', rzpErr.message);
+        console.error('[Billing] Razorpay renewal cancellation failed:', rzpErr.message);
+
+        // Record failure in audit log / subscription events
+        await supabase.from('subscription_events').insert({
+          clinic_id: req.clinicId,
+          event_type: 'cancellation_failed',
+          payload: {
+            provider_subscription_id: sub.provider_subscription_id,
+            error: rzpErr.message,
+            occurred_at: new Date().toISOString()
+          }
+        }).then(() => {}).catch(e => console.error('[Billing] Failed to record cancellation failure:', e));
+
+        // CRITICAL: Preserve valid paid access! Status remains active.
+        return res.status(502).json({
+          error: `Renewal cancellation could not be confirmed by payment provider (${rzpErr.message}). Your paid access remains active and uninterrupted. Please retry or contact support.`,
+          code: 'PROVIDER_CANCELLATION_FAILED',
+          can_retry: true,
+          status: sub.status,
+          current_period_end: sub.current_period_end
+        });
       }
+    } else if (sub.provider_subscription_id) {
+      console.log(`[Billing] Simulated mode: renewal cancellation confirmed for ${sub.provider_subscription_id}.`);
     }
 
-    // Mark locally as cancel_pending — middleware grants access until current_period_end
+    // 2. Mark locally as cancel_pending — middleware grants access until current_period_end
     const { error } = await supabase
       .from('subscriptions')
       .update({
@@ -642,22 +694,108 @@ router.post('/cancel-subscription', requireAuth, async (req, res, next) => {
 
     if (error) throw error;
 
+    // Record successful cancellation scheduling
+    await supabase.from('subscription_events').insert({
+      clinic_id: req.clinicId,
+      event_type: 'cancellation_scheduled',
+      payload: {
+        provider_subscription_id: sub.provider_subscription_id || null,
+        scheduled_for: sub.current_period_end,
+        scheduled_at: new Date().toISOString()
+      }
+    }).then(() => {}).catch(e => console.error('[Billing] Audit log error:', e));
+
     const periodEnd = sub.current_period_end
       ? new Date(sub.current_period_end).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
       : 'the end of your current billing period';
 
     res.json({
-      success:    true,
-      status:     'cancel_pending',
-      message:    `Your subscription renewal has been cancelled. You will retain full access until ${periodEnd}. No further charges will be made.`,
+      success:      true,
+      status:       'cancel_pending',
+      message:      `Your subscription renewal has been cancelled. You will retain full access until ${periodEnd}. No further charges will be made.`,
       access_until: sub.current_period_end || null
+    });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/billing/reconcile-cancellation ──────────────────────────────────
+// Queries Razorpay directly to verify subscription state and reconcile local DB
+router.post('/reconcile-cancellation', requireAuth, async (req, res, next) => {
+  try {
+    if (req.isSuperAdmin) return res.status(403).json({ error: 'Super admin cannot reconcile subscriptions.' });
+
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('clinic_id', req.clinicId)
+      .maybeSingle();
+
+    if (!sub) return res.status(404).json({ error: 'No subscription found.' });
+
+    if (!sub.provider_subscription_id) {
+      return res.json({ reconciled: true, status: sub.status, message: 'No external subscription linked.' });
+    }
+
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const isRealRazorpay = razorpay && keyId && !keyId.includes('REPLACE_WITH_REAL');
+
+    if (!isRealRazorpay) {
+      return res.json({ reconciled: true, status: sub.status, simulated: true, message: 'Simulated environment synchronized.' });
+    }
+
+    const rzpSub = await razorpay.subscriptions.fetch(sub.provider_subscription_id);
+    const now = new Date();
+    let reconciledStatus = sub.status;
+
+    if (rzpSub.status === 'cancelled') {
+      if (sub.current_period_end && new Date(sub.current_period_end) > now) {
+        reconciledStatus = 'cancel_pending';
+      } else {
+        reconciledStatus = 'canceled';
+      }
+    } else if (rzpSub.status === 'completed' || rzpSub.status === 'expired') {
+      reconciledStatus = 'expired';
+    } else if (rzpSub.status === 'active') {
+      if (rzpSub.cancel_at_cycle_end && (!sub.current_period_end || new Date(sub.current_period_end) > now)) {
+        reconciledStatus = 'cancel_pending';
+      } else if (!rzpSub.cancel_at_cycle_end && sub.status === 'cancel_pending') {
+        reconciledStatus = 'active';
+      }
+    }
+
+    if (reconciledStatus !== sub.status) {
+      await supabase
+        .from('subscriptions')
+        .update({ status: reconciledStatus, updated_at: now.toISOString() })
+        .eq('clinic_id', req.clinicId);
+    }
+
+    await supabase.from('subscription_events').insert({
+      clinic_id: req.clinicId,
+      event_type: 'subscription_reconciled',
+      payload: {
+        previous_status: sub.status,
+        reconciled_status: reconciledStatus,
+        provider_status: rzpSub.status,
+        cancel_at_cycle_end: rzpSub.cancel_at_cycle_end,
+        reconciled_at: now.toISOString()
+      }
+    }).then(() => {}).catch(e => console.error('[Billing] Reconcile audit error:', e));
+
+    res.json({
+      success: true,
+      reconciled: true,
+      previous_status: sub.status,
+      status: reconciledStatus,
+      current_period_end: sub.current_period_end,
+      provider_status: rzpSub.status
     });
   } catch (err) { next(err); }
 });
 
 // ── POST /api/billing/cancel-trial ────────────────────────────────────────────
 // Immediately terminates a trialing subscription. No charge is made.
-// Unlike cancel-subscription, trial cancellation takes effect immediately.
+// Usage history and credits are preserved; purchased top-ups remain untouched.
 router.post('/cancel-trial', requireAuth, async (req, res, next) => {
   try {
     if (req.isSuperAdmin) return res.status(403).json({ error: 'Super admin cannot cancel trials.' });
@@ -672,13 +810,13 @@ router.post('/cancel-trial', requireAuth, async (req, res, next) => {
       return res.status(409).json({ error: 'No active trial to cancel.' });
     }
 
-    // Cancel Razorpay mandate immediately (prevents any future auto-charge)
+    // Cancel Razorpay mandate immediately if exists (prevents any future auto-charge)
     if (sub.provider_subscription_id && razorpay) {
       try {
         await razorpay.subscriptions.cancel(sub.provider_subscription_id);
         console.log(`[Billing] Razorpay trial subscription ${sub.provider_subscription_id} cancelled immediately.`);
       } catch (rzpErr) {
-        console.warn('[Billing] Razorpay trial cancel (best-effort) failed:', rzpErr.message);
+        console.warn('[Billing] Razorpay trial cancel failed:', rzpErr.message);
       }
     }
 
@@ -688,15 +826,28 @@ router.post('/cancel-trial', requireAuth, async (req, res, next) => {
       .update({ status: 'canceled', updated_at: new Date().toISOString() })
       .eq('clinic_id', req.clinicId);
 
-    // Zero out trial credits (trial credits are forfeited on cancellation)
-    await supabase
-      .from('clinic_credits')
-      .update({ credits_allocated: 0, credits_used: 0, updated_at: new Date().toISOString() })
-      .eq('clinic_id', req.clinicId);
+    // Delist from marketplace
+    await supabase.from('clinics').update({ is_marketplace_listed: false }).eq('id', req.clinicId);
+
+    // Audit log
+    await supabase.from('subscription_events').insert({
+      clinic_id: req.clinicId,
+      event_type: 'trial_canceled',
+      payload: {
+        provider_subscription_id: sub.provider_subscription_id || null,
+        canceled_at: new Date().toISOString()
+      }
+    }).then(() => {}).catch(e => console.error('[Billing] Trial cancel audit log error:', e));
+
+    // NOTE:
+    // Trial-credit forfeiture was NOT approved.
+    // We do NOT zero clinic_credits or wipe credits_used.
+    // Usage history is preserved.
+    // Purchased top-up lots remain separate and intact in credit_topup_lots.
 
     res.json({
       success: true,
-      message: 'Your free trial has been cancelled. No charge has been made. You can start a new trial or choose a plan at any time.'
+      message: 'Your free trial has been cancelled. No charge has been made. You can choose a plan at any time.'
     });
   } catch (err) { next(err); }
 });
@@ -825,6 +976,14 @@ router.post('/start-trial', requireAuth, async (req, res, next) => {
 // Returns complete subscription, card details, credits summary, and usage breakdown
 router.get('/status', requireAuth, async (req, res, next) => {
   try {
+    if (!req.clinicId) {
+      return res.json({
+        subscription: { status: 'active', plan: 'enterprise' },
+        credits: { total: 999999, monthly_remaining: 999999, topup_balance: 0 },
+        usage_breakdown: {},
+        is_active: true
+      });
+    }
     const [subRes, creditsRes, topupsRes] = await Promise.all([
       supabase.from('subscriptions').select('*').eq('clinic_id', req.clinicId).maybeSingle(),
       supabase.from('clinic_credits').select('*').eq('clinic_id', req.clinicId).maybeSingle(),

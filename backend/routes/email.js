@@ -25,6 +25,7 @@ const emailSendLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 5,
   keyGenerator: (req) => `email:${req.clinicId || req.ip}`,
+  validate: { keyGeneratorIpFallback: false },
   message: { error: 'Too many email sends. Please wait before sending again.' },
   standardHeaders: true,
   legacyHeaders: false,

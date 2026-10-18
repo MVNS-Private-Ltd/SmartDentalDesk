@@ -25,6 +25,9 @@ router.use(requireAuth);
 // ── GET /api/credits/balance ──────────────────────────────────────────────────
 router.get('/balance', async (req, res, next) => {
   try {
+    if (!req.clinicId) {
+      return res.json({ balance: 0, plan_credits: 0, topup_credits: 0, plan: 'none' });
+    }
     const { data: credits, error } = await supabase
       .from('clinic_credits')
       .select('*')

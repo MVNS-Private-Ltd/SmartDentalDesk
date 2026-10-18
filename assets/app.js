@@ -58,6 +58,12 @@ window.api = (function() {
     return localStorage.getItem('sdd_role') || sessionStorage.getItem('sdd_role') || getCookie('sdd_role') || 'admin';
   }
 
+  function getClinic() {
+    const raw = localStorage.getItem('sdd_clinic') || sessionStorage.getItem('sdd_clinic') || getCookie('sdd_clinic');
+    if (!raw) return null;
+    try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { return null; }
+  }
+
   function saveSession(accessToken, refreshToken, user, role, clinic, remember = true) {
     const primaryStore = remember ? localStorage : sessionStorage;
     const secondaryStore = remember ? sessionStorage : localStorage;
@@ -148,6 +154,15 @@ window.api = (function() {
 
     const token = getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const clinic = getClinic();
+    if (clinic && clinic.id && !headers['X-Clinic-Id'] && !headers['x-clinic-id']) {
+      headers['X-Clinic-Id'] = clinic.id;
+    }
+    const isImpersonating = localStorage.getItem('sdd_impersonation') === 'true' || sessionStorage.getItem('sdd_impersonation') === 'true';
+    if (isImpersonating && !headers['X-Impersonation'] && !headers['x-impersonation']) {
+      headers['X-Impersonation'] = 'true';
+    }
 
     try {
       const response = await fetch(url, { credentials: 'include', ...options, headers });
@@ -336,11 +351,16 @@ window.api = (function() {
           // Wall-clock timeout: abort entire attempt after 60s no matter what
           const wallClockTimer = setTimeout(() => controller.abort('TIMEOUT'), WALL_CLOCK_MS);
 
+          const clinic = getClinic();
+          const isImpersonating = localStorage.getItem('sdd_impersonation') === 'true' || sessionStorage.getItem('sdd_impersonation') === 'true';
+
           const res = await fetch(`${BASE_URL}/ai/chat/stream`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+              ...(clinic && clinic.id ? { 'X-Clinic-Id': clinic.id } : {}),
+              ...(isImpersonating ? { 'X-Impersonation': 'true' } : {}),
             },
             body: JSON.stringify(payload),
             signal: controller.signal,
@@ -447,9 +467,15 @@ window.api = (function() {
       const formData = new FormData();
       formData.append('file', file);
       const token = getToken();
+      const clinic = getClinic();
+      const isImpersonating = localStorage.getItem('sdd_impersonation') === 'true' || sessionStorage.getItem('sdd_impersonation') === 'true';
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      if (clinic && clinic.id) headers['X-Clinic-Id'] = clinic.id;
+      if (isImpersonating) headers['X-Impersonation'] = 'true';
+
       const res = await fetch(`${BASE_URL}/patients/import`, {
         method: 'POST',
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        headers,
         body: formData,
       });
       const data = await res.json();
@@ -458,10 +484,13 @@ window.api = (function() {
     },
     downloadImportTemplate: () => {
       const token = getToken();
+      const clinic = getClinic();
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      if (clinic && clinic.id) headers['X-Clinic-Id'] = clinic.id;
       const a = document.createElement('a');
       a.href = `${BASE_URL}/patients/import/template`;
       // Trigger a fetch with auth header and download the blob
-      fetch(`${BASE_URL}/patients/import/template`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} })
+      fetch(`${BASE_URL}/patients/import/template`, { headers })
         .then(r => r.blob())
         .then(blob => {
           const url = URL.createObjectURL(blob);
@@ -577,7 +606,8 @@ window.api = (function() {
       // 5. Navigate with ?logout=true so the login page's auto-redirect guard skips the check
       window.location.replace('./login.html?logout=true');
     },
-    isAuthenticated: () => !!getToken()
+    isAuthenticated: () => !!getToken(),
+    getClinic: () => getClinic()
   };
 })();
 

@@ -14,6 +14,19 @@ router.use(requireActiveSubscription);
 // ── GET /api/dashboard/stats ──────────────────────────────────────────────────
 router.get('/stats', async (req, res, next) => {
   try {
+    if (!req.clinicId) {
+      return res.json({
+        todayAppointments: 0,
+        totalPatients: 0,
+        todayRevenue: 0,
+        totalRevenue: 0,
+        pendingRevenue: 0,
+        pendingInvoices: 0,
+        pendingApprovals: 0,
+        occupancyRate: 0,
+        monthlyRevenue: []
+      });
+    }
     const today = new Date().toISOString().slice(0, 10);
     
     // 1. Today's appointments count

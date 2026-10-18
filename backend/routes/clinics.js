@@ -15,6 +15,9 @@ function validate(req, res) {
 // Returns all clinic fields including public marketplace profile fields
 router.get('/settings', requireAuth, async (req, res, next) => {
   try {
+    if (!req.clinicId) {
+      return res.json({ settings: null });
+    }
     const { data, error } = await supabase
       .from('clinics')
       .select(`

@@ -78,7 +78,7 @@ app.use('/api', globalLimiter);
 app.use(cors({
   origin : process.env.FRONTEND_ORIGIN || '*',
   methods : ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Clinic-Id', 'x-clinic-id', 'X-Impersonation', 'x-impersonation'],
   credentials: true
 }));
 

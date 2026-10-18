@@ -2022,6 +2022,7 @@
     try {
       const res = await window.api.impersonateClinic(id);
       localStorage.setItem('sdd_clinic', JSON.stringify(res.clinic));
+      localStorage.setItem('sdd_clinic_name', res.clinic.name);
       localStorage.setItem('sdd_impersonation', 'true');
       showToast(`Switched session to ${res.clinic.name}. Opening dashboard…`);
       setTimeout(() => {

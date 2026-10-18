@@ -99,6 +99,9 @@ async function sendAppointmentStatusEmail(appointmentId, clinicId, newStatus, re
 // ── GET /api/appointments ─────────────────────────────────────────────────────
 router.get('/', async (req, res, next) => {
   try {
+    if (!req.clinicId) {
+      return res.json({ appointments: [], total: 0 });
+    }
     const { date, status, page = 1, limit = 50 } = req.query;
     const offset = (page - 1) * limit;
 
@@ -146,6 +149,9 @@ router.get('/', async (req, res, next) => {
 router.get('/today', async (req, res, next) => {
   try {
     const today = new Date().toISOString().slice(0, 10);
+    if (!req.clinicId) {
+      return res.json({ appointments: [], date: today });
+    }
     const { data, error } = await supabase
       .from('appointments')
       .select(`
@@ -165,6 +171,7 @@ router.get('/today', async (req, res, next) => {
 // ── GET /api/appointments/:id ─────────────────────────────────────────────────
 router.get('/:id', async (req, res, next) => {
   try {
+    if (!req.clinicId) return res.status(404).json({ error: 'Appointment not found.' });
     const { data, error } = await supabase
       .from('appointments')
       .select(`*, patients(id, name, phone, email)`)
@@ -188,6 +195,7 @@ const createRules = [
 router.post('/', createRules, async (req, res, next) => {
   try {
     if (!validate(req, res)) return;
+    if (!req.clinicId) return res.status(400).json({ error: 'Clinic context required.' });
     const { patient_id, date, time, service, reason, notes } = req.body;
 
     const { data, error } = await supabase

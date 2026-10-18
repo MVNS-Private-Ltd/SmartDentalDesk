@@ -2138,12 +2138,21 @@
       banner.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:linear-gradient(135deg, #1e1b4b, #312e81);border:1px solid rgba(99,102,241,0.5);color:#fff;padding:0.65rem 1.25rem;border-radius:9999px;display:flex;align-items:center;gap:0.85rem;z-index:9999;font-size:0.85rem;font-weight:600;box-shadow:0 10px 25px -5px rgba(0,0,0,0.6);backdrop-filter:blur(8px);';
       
       if (isImpersonating) {
+        let clinicDisplayName = '';
+        try {
+          const c = JSON.parse(localStorage.getItem('sdd_clinic') || '{}');
+          if (c.name) clinicDisplayName = c.name;
+        } catch(_) {}
+        if (!clinicDisplayName) {
+          clinicDisplayName = localStorage.getItem('sdd_clinic_name') || 'Clinic';
+        }
+
         banner.innerHTML = `
           <span style="display:flex;align-items:center;gap:0.4rem;color:#c7d2fe;">
             <span style="width:8px;height:8px;border-radius:50%;background:#06b6d4;box-shadow:0 0 8px #06b6d4;"></span>
-            Super Admin Impersonation Mode
+            Super Admin Impersonating: <strong style="color:#fff;margin-left:2px;">${clinicDisplayName}</strong>
           </span>
-          <button onclick="localStorage.removeItem('sdd_impersonation'); window.location.href='./super-admin.html';" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:#fff;padding:0.25rem 0.65rem;border-radius:6px;cursor:pointer;font-size:0.78rem;font-weight:700;">
+          <button onclick="localStorage.removeItem('sdd_impersonation'); localStorage.removeItem('sdd_clinic'); localStorage.removeItem('sdd_clinic_name'); window.location.href='./super-admin.html';" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:#fff;padding:0.25rem 0.65rem;border-radius:6px;cursor:pointer;font-size:0.78rem;font-weight:700;">
             Return to Command Center ➔
           </button>
         `;

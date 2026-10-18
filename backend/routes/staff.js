@@ -39,6 +39,9 @@ function validate(req, res) {
 // ── GET /api/staff ────────────────────────────────────────────────────────────
 router.get('/', async (req, res, next) => {
   try {
+    if (!req.clinicId) {
+      return res.json({ staff: [] });
+    }
     const { data, error } = await supabase
       .from('staff')
       .select('*')

@@ -81,7 +81,7 @@ async function handleSubscriptionEvent(eventType, rzpSub, eventId, fullPayload) 
   // Find existing subscription
   const { data: subRecord } = await supabase
     .from('subscriptions')
-    .select('id, status, plan, current_period_end')
+    .select('id, status, plan, trial_ends_at, current_period_end, updated_at')
     .eq('clinic_id', clinicId)
     .single();
 
@@ -93,31 +93,68 @@ async function handleSubscriptionEvent(eventType, rzpSub, eventId, fullPayload) 
   let newStatus = subRecord.status;
   const now = new Date().toISOString();
 
-  // ── State machine ──────────────────────────────────────────────────────────
-  if (eventType === 'subscription.authenticated') {
-    newStatus = 'trialing';
+  // Out-of-order event detection:
+  // If the webhook payload timestamp is older than the record's last update,
+  // do not allow older events to regress terminal or cancel_pending states.
+  const eventTimestamp = fullPayload.created_at ? new Date(fullPayload.created_at * 1000) : null;
+  const isStaleEvent = eventTimestamp && subRecord.updated_at && (new Date(subRecord.updated_at).getTime() - eventTimestamp.getTime() > 10000);
 
-  } else if (eventType === 'subscription.activated' || eventType === 'subscription.charged') {
-    // A charge has occurred — subscription is now active regardless of previous state.
-    // If it was cancel_pending (Razorpay fired a final charge before cancel took effect),
-    // that is unexpected; keep as active and let the next cycle end handle it.
-    newStatus = 'active';
+  // ── State machine ──────────────────────────────────────────────────────────
+  if (isStaleEvent && ['cancel_pending', 'canceled', 'expired'].includes(subRecord.status)) {
+    console.warn(`[Webhook] Out-of-order event ${eventType} received for clinic ${clinicId} (event time: ${eventTimestamp.toISOString()}, record updated: ${subRecord.updated_at}). Preserving current state ${subRecord.status}.`);
+    newStatus = subRecord.status;
+
+  } else if (eventType === 'subscription.authenticated') {
+    // Only transition to trialing if not already active or cancel_pending
+    if (subRecord.status !== 'active' && subRecord.status !== 'cancel_pending') {
+      newStatus = 'trialing';
+    }
+
+  } else if (eventType === 'subscription.charged') {
+    // A charge has occurred.
+    // Delayed charge must NOT erase cancellation intent!
+    if (subRecord.status === 'cancel_pending') {
+      console.log(`[Webhook] subscription.charged received for clinic ${clinicId} while in cancel_pending. Preserving cancel_pending status.`);
+      newStatus = 'cancel_pending';
+    } else if (subRecord.status === 'canceled' || subRecord.status === 'expired') {
+      console.warn(`[Webhook] subscription.charged received for clinic ${clinicId} in terminal state ${subRecord.status}. Preserving status.`);
+      newStatus = subRecord.status;
+    } else {
+      newStatus = 'active';
+    }
+
+  } else if (eventType === 'subscription.activated') {
+    if (subRecord.status === 'cancel_pending' || subRecord.status === 'canceled' || subRecord.status === 'expired') {
+      console.warn(`[Webhook] subscription.activated received while in ${subRecord.status}. Preserving status.`);
+      newStatus = subRecord.status;
+    } else {
+      newStatus = 'active';
+    }
 
   } else if (eventType === 'subscription.pending') {
-    newStatus = 'past_due';
+    if (subRecord.status !== 'canceled' && subRecord.status !== 'expired') {
+      newStatus = 'past_due';
+    }
 
   } else if (eventType === 'subscription.cancelled') {
-    // Razorpay fires this when cancellation actually takes effect at cycle end.
-    // If we had cancel_pending locally, this is the expected terminal event —
-    // the paid period has genuinely ended and Razorpay has confirmed it.
-    // Transition to 'canceled' (full termination, no remaining access).
-    if (subRecord.status === 'cancel_pending' || subRecord.status === 'active') {
-      newStatus = 'canceled';
-    } else if (subRecord.status === 'trialing') {
-      // Trial mandate cancelled — immediate termination
-      newStatus = 'canceled';
+    // Razorpay fires this when a subscription or mandate is cancelled.
+    if (subRecord.status === 'trialing') {
+      // Mandate cancellation must NOT terminate the clinic's remaining free trial entitlement!
+      const trialEndsAt = subRecord.trial_ends_at ? new Date(subRecord.trial_ends_at) : null;
+      if (trialEndsAt && trialEndsAt > new Date()) {
+        console.log(`[Webhook] Mandate cancelled for trialing clinic ${clinicId}, but trial remains valid until ${trialEndsAt.toISOString()}. Preserving 'trialing' status.`);
+        newStatus = 'trialing';
+      } else {
+        newStatus = 'canceled';
+      }
+    } else if (subRecord.status === 'cancel_pending' || subRecord.status === 'active') {
+      const periodEnd = subRecord.current_period_end ? new Date(subRecord.current_period_end) : null;
+      if (periodEnd && periodEnd > new Date()) {
+        newStatus = 'cancel_pending';
+      } else {
+        newStatus = 'canceled';
+      }
     }
-    // If already canceled, expired, or other terminal state: no change.
 
   } else if (eventType === 'subscription.halted') {
     newStatus = 'canceled';
@@ -160,7 +197,7 @@ async function handleSubscriptionEvent(eventType, rzpSub, eventId, fullPayload) 
   });
 
   // Provision initial credits if entering trialing or active state for the first time
-  if (eventType === 'subscription.authenticated' || eventType === 'subscription.activated') {
+  if ((eventType === 'subscription.authenticated' || eventType === 'subscription.activated') && newStatus !== 'cancel_pending') {
     const creditsToAllocate = PLAN_CREDITS[subRecord.plan] || 900;
 
     await supabase.from('clinic_credits').upsert({

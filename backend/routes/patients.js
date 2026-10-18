@@ -60,7 +60,10 @@ function validate(req, res) {
 // ── GET /api/patients ─────────────────────────────────────────────────────────
 router.get('/', async (req, res, next) => {
   try {
-    const supabase = createScopedClient(req.token);
+    if (!req.clinicId || req.clinicId === 'null' || req.clinicId === 'undefined') {
+      return res.json({ patients: [], total: 0, page: Number(req.query.page || 1), limit: Number(req.query.limit || 50) });
+    }
+    const supabase = createScopedClient(req);
     const { page = 1, limit = 50, search, type = 'all' } = req.query;
     const offset = (page - 1) * limit;
 
@@ -92,14 +95,18 @@ router.get('/', async (req, res, next) => {
     const { data, error, count } = await q;
     if (error) throw error;
 
-    res.json({ patients: data, total: count, page: Number(page), limit: Number(limit) });
+    res.json({ patients: data || [], total: count || 0, page: Number(page), limit: Number(limit) });
   } catch (err) { next(err); }
 });
 
 // ── GET /api/patients/search ──────────────────────────────────────────────────
 router.get('/search', [query('q').notEmpty()], async (req, res, next) => {
   try {
-    const supabase = createScopedClient(req.token);
+    if (!validate(req, res)) return;
+    if (!req.clinicId) {
+      return res.json({ patients: [] });
+    }
+    const supabase = createScopedClient(req);
     const { q } = req.query;
     const { data, error } = await supabase
       .from('patients')
@@ -110,7 +117,7 @@ router.get('/search', [query('q').notEmpty()], async (req, res, next) => {
       .limit(10);
 
     if (error) throw error;
-    res.json({ patients: data });
+    res.json({ patients: data || [] });
   } catch (err) { next(err); }
 });
 
@@ -145,6 +152,7 @@ router.get('/import/template', (req, res) => {
 // ── POST /api/patients/import ─────────────────────────────────────────────────
 router.post('/import', upload.single('file'), async (req, res, next) => {
   try {
+    if (!req.clinicId) return res.status(400).json({ error: 'Clinic context is required for patient import.' });
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     
     const fileContent = req.file.buffer.toString('utf8');
@@ -291,7 +299,8 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
 // ── GET /api/patients/:id ─────────────────────────────────────────────────────
 router.get('/:id', async (req, res, next) => {
   try {
-    const supabase = createScopedClient(req.token);
+    if (!req.clinicId) return res.status(404).json({ error: 'Patient not found.' });
+    const supabase = createScopedClient(req);
     const { data: patient, error } = await supabase
       .from('patients')
       .select('*')
@@ -347,7 +356,8 @@ router.get('/:id', async (req, res, next) => {
 // ── GET /api/patients/:id/files ────────────────────────────────────────────────
 router.get('/:id/files', async (req, res, next) => {
   try {
-    const supabase = createScopedClient(req.token);
+    if (!req.clinicId) return res.status(404).json({ error: 'Patient not found.' });
+    const supabase = createScopedClient(req);
     // Verify patient belongs to the clinic
     const { data: patient, error: patientErr } = await supabase
       .from('patients')
@@ -392,9 +402,10 @@ router.get('/:id/files', async (req, res, next) => {
 // ── POST /api/patients/:id/files ───────────────────────────────────────────────
 router.post('/:id/files', uploadPatientFile.single('file'), async (req, res, next) => {
   try {
+    if (!req.clinicId) return res.status(400).json({ error: 'Clinic context required.' });
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-    const supabase = createScopedClient(req.token);
+    const supabase = createScopedClient(req);
     // Verify patient belongs to clinic
     const { data: patient, error: patientErr } = await supabase
       .from('patients')
@@ -456,9 +467,10 @@ const createRules = [
 router.post('/', createRules, async (req, res, next) => {
   try {
     if (!validate(req, res)) return;
+    if (!req.clinicId) return res.status(400).json({ error: 'Clinic context required.' });
     const { name, phone, email, dob, gender, address, notes } = req.body;
     
-    const supabase = createScopedClient(req.token);
+    const supabase = createScopedClient(req);
 
     // ── Duplicate checks before insert ───────────────────────────────────────
     if (phone) {
@@ -492,11 +504,12 @@ router.post('/', createRules, async (req, res, next) => {
 // ── PUT /api/patients/:id ─────────────────────────────────────────────────────
 router.put('/:id', async (req, res, next) => {
   try {
+    if (!req.clinicId) return res.status(400).json({ error: 'Clinic context required.' });
     const allowed = ['name','phone','email','dob','gender','address','notes'];
     const updates = {};
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
 
-    const supabase = createScopedClient(req.token);
+    const supabase = createScopedClient(req);
     const { data, error } = await supabase
       .from('patients')
       .update({ ...updates, updated_at: new Date().toISOString() })
@@ -513,8 +526,9 @@ router.put('/:id', async (req, res, next) => {
 // ── PATCH /api/patients/:id/star ─────────────────────────────────────────────
 router.patch('/:id/star', async (req, res, next) => {
   try {
+    if (!req.clinicId) return res.status(400).json({ error: 'Clinic context required.' });
     const { is_starred } = req.body;
-    const supabase = createScopedClient(req.token);
+    const supabase = createScopedClient(req);
 
     let targetStar = is_starred;
     if (targetStar === undefined) {
@@ -543,7 +557,8 @@ router.patch('/:id/star', async (req, res, next) => {
 // ── DELETE /api/patients/:id ──────────────────────────────────────────────────
 router.delete('/:id', async (req, res, next) => {
   try {
-    const supabase = createScopedClient(req.token);
+    if (!req.clinicId) return res.status(400).json({ error: 'Clinic context required.' });
+    const supabase = createScopedClient(req);
     const { data, error } = await supabase
       .from('patients')
       .update({ is_deleted: true, updated_at: new Date().toISOString() })
@@ -560,12 +575,13 @@ router.delete('/:id', async (req, res, next) => {
 // ── DELETE /api/patients (bulk) ───────────────────────────────────────────────
 router.delete('/', async (req, res, next) => {
   try {
+    if (!req.clinicId) return res.status(400).json({ error: 'Clinic context required.' });
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'Provide an array of patient IDs to delete.' });
     }
 
-    const supabase = createScopedClient(req.token);
+    const supabase = createScopedClient(req);
     const { error } = await supabase
       .from('patients')
       .update({ is_deleted: true, updated_at: new Date().toISOString() })
@@ -580,11 +596,12 @@ router.delete('/', async (req, res, next) => {
 // ── DELETE /api/patients/:id/erase (Right to Erasure) ─────────────────────────
 router.delete('/:id/erase', async (req, res, next) => {
   try {
+    if (!req.clinicId) return res.status(400).json({ error: 'Clinic context required.' });
     if (req.userRole !== 'super_admin' && req.userRole !== 'admin') {
       return res.status(403).json({ error: 'Admin privileges required to erase patients.' });
     }
 
-    const supabase = createScopedClient(req.token);
+    const supabase = createScopedClient(req);
     
     // Validate patient exists in clinic
     const { data: patient, error: patientErr } = await supabase

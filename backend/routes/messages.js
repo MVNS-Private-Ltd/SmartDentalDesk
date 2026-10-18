@@ -28,12 +28,14 @@ function validate(req, res) {
 }
 
 // Helper: resolve clinicId even for super-admin testing
+const isValidUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
 async function resolveClinicId(req) {
-  if (req.clinicId) return req.clinicId;
+  if (isValidUuid(req.clinicId)) return req.clinicId;
   const headerClinic = req.headers['x-clinic-id'];
-  if (headerClinic) return headerClinic;
+  if (isValidUuid(headerClinic)) return headerClinic;
   if (req.isSuperAdmin) {
-    const { data: firstClinic } = await supabase.from('clinics').select('id').limit(1).maybeSingle();
+    const { data: firstClinic } = await supabase.from('clinics').select('id').eq('is_active', true).limit(1).maybeSingle();
     return firstClinic?.id || null;
   }
   return null;

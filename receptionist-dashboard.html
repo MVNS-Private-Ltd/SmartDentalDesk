@@ -1227,6 +1227,8 @@
           id="appointmentSearchInput"
           placeholder="Search by patient name, phone, service, or date…"
           autocomplete="off"
+          oninput="window.filterAndRenderAppointments && window.filterAndRenderAppointments()"
+          onsearch="window.filterAndRenderAppointments && window.filterAndRenderAppointments()"
           style="width:100%; padding:10px 14px 10px 40px; border:1px solid var(--color-border); border-radius:10px; background:var(--color-surface); color:var(--color-text); font-size:0.9rem; outline:none; box-shadow:0 1px 4px rgba(0,0,0,0.06); transition:border-color 0.2s, box-shadow 0.2s; box-sizing:border-box;"
           onfocus="this.style.borderColor='var(--color-primary)'; this.style.boxShadow='0 0 0 3px rgba(var(--color-primary-rgb,99,102,241),0.12)';"
           onblur="this.style.borderColor='var(--color-border)'; this.style.boxShadow='0 1px 4px rgba(0,0,0,0.06)';"
@@ -2059,17 +2061,24 @@
     // Stores the last-fetched appointments so search can filter without re-fetching
     let allAppointments = [];
 
-    function filterAndRenderAppointments() {
-      const query = (document.getElementById('appointmentSearchInput')?.value || '').toLowerCase().trim();
+    window.filterAndRenderAppointments = function filterAndRenderAppointments() {
+      const inputEl = document.getElementById('appointmentSearchInput');
+      const query = (inputEl ? inputEl.value : '').toLowerCase().trim();
       const tbody = document.getElementById('appointmentsTableBody');
+      if (!tbody) return;
+
       const filtered = query
         ? allAppointments.filter(a => {
-            const name  = (a.patients?.name  || '').toLowerCase();
-            const phone = (a.patients?.phone || '').toLowerCase();
-            const email = (a.patients?.email || '').toLowerCase();
-            const svc   = (a.service || '').toLowerCase();
-            const date  = (a.date   || '').toLowerCase();
-            return name.includes(query) || phone.includes(query) || email.includes(query) || svc.includes(query) || date.includes(query);
+            const pat = Array.isArray(a.patients) ? a.patients[0] : a.patients;
+            const name   = (pat?.name   || a.patient_name  || '').toLowerCase();
+            const phone  = (pat?.phone  || a.patient_phone || '').toLowerCase();
+            const email  = (pat?.email  || a.patient_email || '').toLowerCase();
+            const svc    = (a.service   || '').toLowerCase();
+            const date   = (a.date      || '').toLowerCase();
+            const notes  = (a.notes     || '').toLowerCase();
+            const reason = (a.reason    || '').toLowerCase();
+            const status = (a.status    || '').toLowerCase();
+            return name.includes(query) || phone.includes(query) || email.includes(query) || svc.includes(query) || date.includes(query) || notes.includes(query) || reason.includes(query) || status.includes(query);
           })
         : allAppointments;
 
@@ -2078,13 +2087,21 @@
         return;
       }
       tbody.innerHTML = filtered.map(a => renderAppointmentRow(a)).join('');
-    }
+    };
 
-    // Wire up the search input
-    document.addEventListener('DOMContentLoaded', () => {
+    // Wire up the search input immediately and on load
+    function initAppointmentSearch() {
       const apptSearch = document.getElementById('appointmentSearchInput');
-      if (apptSearch) apptSearch.addEventListener('input', filterAndRenderAppointments);
-    });
+      if (apptSearch && !apptSearch._searchBound) {
+        apptSearch._searchBound = true;
+        apptSearch.addEventListener('input', window.filterAndRenderAppointments);
+        apptSearch.addEventListener('search', window.filterAndRenderAppointments);
+      }
+    }
+    initAppointmentSearch();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAppointmentSearch);
+    }
 
     async function loadAppointments(statusFilter = currentAppointmentStatus) {
       const tbody = document.getElementById('appointmentsTableBody');
@@ -2110,7 +2127,7 @@
           return;
         }
 
-        filterAndRenderAppointments();
+        window.filterAndRenderAppointments();
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center; padding:2rem;">Error loading appointments: ${err.message}</td></tr>`;
       }
@@ -2118,7 +2135,8 @@
 
     function renderAppointmentRow(a) {
       const st = a.status || 'scheduled';
-      const isStarred = a.patients?.is_starred || false;
+      const pat = Array.isArray(a.patients) ? a.patients[0] : a.patients;
+      const isStarred = pat?.is_starred || false;
 
       let statusBadge = '';
       if (st === 'pending') {
@@ -2133,9 +2151,9 @@
         statusBadge = `<span style="display:inline-block; padding:3px 9px; border-radius:12px; background:#f1f5f9; color:var(--color-text); font-size:0.75rem; text-transform:capitalize;">${st}</span>`;
       }
 
-      const patientName = a.patients?.name || 'Unknown Patient';
-      const patientPhone = a.patients?.phone || '';
-      const patientEmail = a.patients?.email || '';
+      const patientName = pat?.name || a.patient_name || 'Unknown Patient';
+      const patientPhone = pat?.phone || a.patient_phone || '';
+      const patientEmail = pat?.email || a.patient_email || '';
 
       let actionsHtml = '';
       if (st === 'pending') {
@@ -2174,7 +2192,7 @@
           </td>
           <td>
             <div style="display:flex; align-items:center; gap:4px;">
-              ${a.patients?.id ? `<button type="button" class="star-btn ${isStarred ? 'starred' : ''}" onclick="handleToggleStar(event, '${a.patients.id}', ${!isStarred})" title="${isStarred ? 'VIP Patient' : 'Star as VIP'}">${isStarred ? '★' : '☆'}</button>` : ''}
+              ${pat?.id ? `<button type="button" class="star-btn ${isStarred ? 'starred' : ''}" onclick="handleToggleStar(event, '${pat.id}', ${!isStarred})" title="${isStarred ? 'VIP Patient' : 'Star as VIP'}">${isStarred ? '★' : '☆'}</button>` : ''}
               <strong style="color:var(--color-text);">${escapeHtml(patientName)}</strong>
               ${isStarred ? '<span style="background:#fef3c7; color:#92400e; font-size:0.65rem; font-weight:700; padding:1px 5px; border-radius:8px; border:1px solid #fde68a;">VIP</span>' : ''}
             </div>

@@ -1261,6 +1261,7 @@
                 <th>Clinic Name & Slug</th>
                 <th>Owner Details</th>
                 <th>Plan Tier</th>
+                <th>Registered</th>
                 <th>Patients</th>
                 <th>Appts</th>
                 <th>Revenue</th>
@@ -1269,7 +1270,7 @@
               </tr>
             </thead>
             <tbody id="clinicsTableBody">
-              <tr><td colspan="8" style="text-align:center; color: var(--text-dim); padding: 2rem;"><span class="loading-spinner"></span> Loading clinics fleet…</td></tr>
+              <tr><td colspan="9" style="text-align:center; color: var(--text-dim); padding: 2rem;"><span class="loading-spinner"></span> Loading clinics fleet…</td></tr>
             </tbody>
           </table>
         </div>
@@ -1882,13 +1883,19 @@
   function renderClinicsTable(clinics) {
     const tbody = document.getElementById('clinicsTableBody');
     if (clinics.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: var(--text-dim); padding: 2rem;">No clinics found matching criteria.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color: var(--text-dim); padding: 2rem;">No clinics found matching criteria.</td></tr>';
       return;
     }
 
     tbody.innerHTML = clinics.map(c => {
       const plan = c.subscription_plan || 'free';
       const isSuspended = c.is_active === false;
+      const registeredDate = c.created_at
+        ? new Date(c.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+        : '—';
+      const registeredTime = c.created_at
+        ? new Date(c.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+        : '';
       return `
         <tr>
           <td>
@@ -1902,6 +1909,10 @@
           <td>
             <span class="badge badge-${plan}">${plan.toUpperCase()}</span>
             ${isSuspended ? '<span class="badge badge-suspended" style="margin-left: 4px;">SUSPENDED</span>' : ''}
+          </td>
+          <td>
+            <span style="font-size: 0.82rem; white-space: nowrap;">${registeredDate}</span><br>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">${registeredTime}</span>
           </td>
           <td>${c.patient_count || 0}</td>
           <td>${c.appointment_count || 0}</td>
@@ -1935,7 +1946,15 @@
       const stats = data.stats;
 
       document.getElementById('dossierClinicName').textContent = c.name;
+      const regTs = c.created_at
+        ? new Date(c.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+        : 'Unknown';
       body.innerHTML = `
+        <div style="background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.25); border-radius: 8px; padding: 0.65rem 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.6rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span style="font-size: 0.78rem; color: var(--text-muted);">REGISTERED ON</span>
+          <span style="font-size: 0.82rem; font-weight: 600; color: #a5b4fc; letter-spacing: 0.01em;">${regTs}</span>
+        </div>
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
           <div style="background: rgba(255,255,255,0.03); padding: 0.85rem; border-radius: 8px;">
             <div style="font-size: 0.75rem; color: var(--text-muted);">TOTAL PATIENTS</div>

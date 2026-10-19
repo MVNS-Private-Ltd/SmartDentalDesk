@@ -1565,6 +1565,20 @@
         <button class="tab-btn" data-tab="all">All</button>
       </div>
 
+      <!-- Appointments Search Bar -->
+      <div style="position:relative; margin-bottom:var(--space-3);">
+        <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:1rem; color:var(--color-text-muted); pointer-events:none;">🔍</span>
+        <input
+          type="search"
+          id="appointmentSearchInput"
+          placeholder="Search by patient name, phone, service, or date…"
+          autocomplete="off"
+          style="width:100%; padding:10px 14px 10px 40px; border:1px solid var(--color-border); border-radius:10px; background:var(--color-surface); color:var(--color-text); font-size:0.9rem; outline:none; box-shadow:0 1px 4px rgba(0,0,0,0.06); transition:border-color 0.2s, box-shadow 0.2s; box-sizing:border-box;"
+          onfocus="this.style.borderColor='var(--color-primary)'; this.style.boxShadow='0 0 0 3px rgba(var(--color-primary-rgb,99,102,241),0.12)';"
+          onblur="this.style.borderColor='var(--color-border)'; this.style.boxShadow='0 1px 4px rgba(0,0,0,0.06)';"
+        />
+      </div>
+
       <div class="card table-responsive">
         <table class="data-table">
           <thead>
@@ -3073,19 +3087,52 @@
       });
     });
 
+    // Stores the last-fetched appointments so search can filter without re-fetching
+    let allAppointments = [];
+
+    function filterAndRenderAppointments() {
+      const query = (document.getElementById('appointmentSearchInput')?.value || '').toLowerCase().trim();
+      const tbody = document.getElementById('appointmentsTableBody');
+      const filtered = query
+        ? allAppointments.filter(a => {
+            const name  = (a.patients?.name  || '').toLowerCase();
+            const phone = (a.patients?.phone || '').toLowerCase();
+            const email = (a.patients?.email || '').toLowerCase();
+            const svc   = (a.service || '').toLowerCase();
+            const date  = (a.date   || '').toLowerCase();
+            return name.includes(query) || phone.includes(query) || email.includes(query) || svc.includes(query) || date.includes(query);
+          })
+        : allAppointments;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2.5rem; color:var(--color-text-muted);">${query ? 'No appointments match your search.' : 'No appointments found.'}</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = filtered.map(a => renderAppointmentRow(a)).join('');
+    }
+
+    // Wire up the search input
+    document.addEventListener('DOMContentLoaded', () => {
+      const apptSearch = document.getElementById('appointmentSearchInput');
+      if (apptSearch) apptSearch.addEventListener('input', filterAndRenderAppointments);
+    });
+
     async function loadAppointments(statusFilter = currentAppointmentStatus) {
       const tbody = document.getElementById('appointmentsTableBody');
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem;">Loading appointments...</td></tr>';
+      // Clear search on tab switch
+      const apptSearch = document.getElementById('appointmentSearchInput');
+      if (apptSearch) apptSearch.value = '';
       try {
         const res = await window.api.getAppointments(statusFilter);
-        const appts = res.appointments || [];
+        allAppointments = res.appointments || [];
 
         // Also update pending count on badges if in 'active' or 'pending' view
         if (statusFilter === 'pending' || statusFilter === 'active' || statusFilter === 'all') {
           loadHomeStats();
         }
 
-        if (appts.length === 0) {
+        if (allAppointments.length === 0) {
           let emptyMsg = `No ${statusFilter === 'all' ? '' : statusFilter} appointments found.`;
           if (statusFilter === 'pending') emptyMsg = 'No pending appointment requests. All caught up!';
           if (statusFilter === 'active') emptyMsg = 'No active appointments.';
@@ -3094,86 +3141,88 @@
           return;
         }
 
-        tbody.innerHTML = appts.map(a => {
-          const st = a.status || 'scheduled';
-          const isStarred = a.patients?.is_starred || false;
-          
-          let statusBadge = '';
-          if (st === 'pending') {
-            statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#fef3c7; color:#b45309; font-weight:700; font-size:0.75rem; border:1px solid #fde68a;">⏳ Pending Approval</span>';
-          } else if (st === 'scheduled' || st === 'confirmed') {
-            statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#dbeafe; color:#1d4ed8; font-weight:600; font-size:0.75rem; border:1px solid #bfdbfe;">📅 Scheduled</span>';
-          } else if (st === 'completed') {
-            statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#dcfce7; color:#15803d; font-weight:600; font-size:0.75rem; border:1px solid #bbf7d0;">✓ Completed</span>';
-          } else if (st === 'cancelled') {
-            statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#f1f5f9; color:#64748b; font-weight:600; font-size:0.75rem; border:1px solid #e2e8f0;">✕ Cancelled</span>';
-          } else {
-            statusBadge = `<span style="display:inline-block; padding:3px 9px; border-radius:12px; background:#f1f5f9; color:var(--color-text); font-size:0.75rem; text-transform:capitalize;">${st}</span>`;
-          }
-
-          const patientName = a.patients?.name || 'Unknown Patient';
-          const patientPhone = a.patients?.phone || '';
-          const patientEmail = a.patients?.email || '';
-
-          let actionsHtml = '';
-          if (st === 'pending') {
-            actionsHtml = `
-              <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
-                <button type="button" class="btn btn-sm" id="btnApprove-${a.id}" onclick="handleApproveAppt('${a.id}')" style="background:#16a34a; color:#fff; padding:6px 12px; font-size:0.78rem; border-radius:6px; border:none; font-weight:600; cursor:pointer;" title="Approve booking and send confirmation email">✓ Approve</button>
-                <button type="button" class="btn btn-sm" id="btnReject-${a.id}" onclick="handleRejectAppt('${a.id}')" style="background:transparent; color:#dc2626; border:1px solid #dc2626; padding:5px 10px; font-size:0.78rem; border-radius:6px; font-weight:600; cursor:pointer;" title="Decline booking and notify patient">✕ Decline</button>
-              </div>
-            `;
-          } else if (st === 'scheduled' || st === 'confirmed') {
-            const rawApptData = JSON.stringify({
-              id: a.id,
-              patientName: patientName,
-              service: a.service || 'Consultation',
-              date: a.date,
-              time: a.time,
-              phone: patientPhone,
-              email: patientEmail
-            }).replace(/"/g, '&quot;');
-
-            actionsHtml = `
-              <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
-                <button type="button" class="btn btn-sm" onclick="openCheckoutModal(${rawApptData})" style="background:#16a34a; color:#fff; border:none; padding:5px 11px; font-size:0.76rem; border-radius:6px; font-weight:600; cursor:pointer;" title="Complete visit, add treatment notes & generate receipt">✓ Complete</button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="handleStatusChange('${a.id}', 'cancelled')" style="padding:4px 8px; font-size:0.75rem; color:#dc2626;">Cancel</button>
-              </div>
-            `;
-          } else {
-            actionsHtml = '<span class="text-muted" style="font-size:0.8rem; display:block; text-align:right;">—</span>';
-          }
-
-          return `
-            <tr>
-              <td>
-                <strong style="color:var(--color-text);">${a.date}</strong>
-                <div style="font-size:0.8rem; color:var(--color-text-muted); margin-top:2px;">${formatTime12h(a.time)}</div>
-              </td>
-              <td>
-                <div style="display:flex; align-items:center; gap:4px;">
-                  ${a.patients?.id ? `<button type="button" class="star-btn ${isStarred ? 'starred' : ''}" onclick="handleToggleStar(event, '${a.patients.id}', ${!isStarred})" title="${isStarred ? 'VIP Patient' : 'Star as VIP'}">${isStarred ? '★' : '☆'}</button>` : ''}
-                  <strong style="color:var(--color-text);">${escapeHtml(patientName)}</strong>
-                  ${isStarred ? '<span style="background:#fef3c7; color:#92400e; font-size:0.65rem; font-weight:700; padding:1px 5px; border-radius:8px; border:1px solid #fde68a;">VIP</span>' : ''}
-                </div>
-                <div style="font-size:0.78rem; color:var(--color-text-muted); margin-top:2px;">
-                  ${patientPhone ? `📞 ${escapeHtml(patientPhone)}` : ''}
-                  ${patientEmail ? `<br>✉️ ${escapeHtml(patientEmail)}` : ''}
-                </div>
-              </td>
-              <td>
-                <strong>${escapeHtml(a.service)}</strong>
-                ${a.reason ? `<div style="font-size:0.78rem; color:var(--color-text-muted); margin-top:2px; font-style:italic;">"${escapeHtml(a.reason)}"</div>` : ''}
-                ${a.notes ? `<div style="font-size:0.75rem; color:#059669; margin-top:2px;">📝 ${escapeHtml(a.notes)}</div>` : ''}
-              </td>
-              <td>${statusBadge}</td>
-              <td style="text-align:right;">${actionsHtml}</td>
-            </tr>
-          `;
-        }).join('');
+        filterAndRenderAppointments();
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center; padding:2rem;">Error loading appointments: ${err.message}</td></tr>`;
       }
+    }
+
+    function renderAppointmentRow(a) {
+      const st = a.status || 'scheduled';
+      const isStarred = a.patients?.is_starred || false;
+
+      let statusBadge = '';
+      if (st === 'pending') {
+        statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#fef3c7; color:#b45309; font-weight:700; font-size:0.75rem; border:1px solid #fde68a;">⏳ Pending Approval</span>';
+      } else if (st === 'scheduled' || st === 'confirmed') {
+        statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#dbeafe; color:#1d4ed8; font-weight:600; font-size:0.75rem; border:1px solid #bfdbfe;">📅 Scheduled</span>';
+      } else if (st === 'completed') {
+        statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#dcfce7; color:#15803d; font-weight:600; font-size:0.75rem; border:1px solid #bbf7d0;">✓ Completed</span>';
+      } else if (st === 'cancelled') {
+        statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#f1f5f9; color:#64748b; font-weight:600; font-size:0.75rem; border:1px solid #e2e8f0;">✕ Cancelled</span>';
+      } else {
+        statusBadge = `<span style="display:inline-block; padding:3px 9px; border-radius:12px; background:#f1f5f9; color:var(--color-text); font-size:0.75rem; text-transform:capitalize;">${st}</span>`;
+      }
+
+      const patientName = a.patients?.name || 'Unknown Patient';
+      const patientPhone = a.patients?.phone || '';
+      const patientEmail = a.patients?.email || '';
+
+      let actionsHtml = '';
+      if (st === 'pending') {
+        actionsHtml = `
+          <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
+            <button type="button" class="btn btn-sm" id="btnApprove-${a.id}" onclick="handleApproveAppt('${a.id}')" style="background:#16a34a; color:#fff; padding:6px 12px; font-size:0.78rem; border-radius:6px; border:none; font-weight:600; cursor:pointer;" title="Approve booking and send confirmation email">✓ Approve</button>
+            <button type="button" class="btn btn-sm" id="btnReject-${a.id}" onclick="handleRejectAppt('${a.id}')" style="background:transparent; color:#dc2626; border:1px solid #dc2626; padding:5px 10px; font-size:0.78rem; border-radius:6px; font-weight:600; cursor:pointer;" title="Decline booking and notify patient">✕ Decline</button>
+          </div>
+        `;
+      } else if (st === 'scheduled' || st === 'confirmed') {
+        const rawApptData = JSON.stringify({
+          id: a.id,
+          patientName: patientName,
+          service: a.service || 'Consultation',
+          date: a.date,
+          time: a.time,
+          phone: patientPhone,
+          email: patientEmail
+        }).replace(/"/g, '&quot;');
+
+        actionsHtml = `
+          <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
+            <button type="button" class="btn btn-sm" onclick="openCheckoutModal(${rawApptData})" style="background:#16a34a; color:#fff; border:none; padding:5px 11px; font-size:0.76rem; border-radius:6px; font-weight:600; cursor:pointer;" title="Complete visit, add treatment notes & generate receipt">✓ Complete</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="handleStatusChange('${a.id}', 'cancelled')" style="padding:4px 8px; font-size:0.75rem; color:#dc2626;">Cancel</button>
+          </div>
+        `;
+      } else {
+        actionsHtml = '<span class="text-muted" style="font-size:0.8rem; display:block; text-align:right;">—</span>';
+      }
+
+      return `
+        <tr>
+          <td>
+            <strong style="color:var(--color-text);">${a.date}</strong>
+            <div style="font-size:0.8rem; color:var(--color-text-muted); margin-top:2px;">${formatTime12h(a.time)}</div>
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:4px;">
+              ${a.patients?.id ? `<button type="button" class="star-btn ${isStarred ? 'starred' : ''}" onclick="handleToggleStar(event, '${a.patients.id}', ${!isStarred})" title="${isStarred ? 'VIP Patient' : 'Star as VIP'}">${isStarred ? '★' : '☆'}</button>` : ''}
+              <strong style="color:var(--color-text);">${escapeHtml(patientName)}</strong>
+              ${isStarred ? '<span style="background:#fef3c7; color:#92400e; font-size:0.65rem; font-weight:700; padding:1px 5px; border-radius:8px; border:1px solid #fde68a;">VIP</span>' : ''}
+            </div>
+            <div style="font-size:0.78rem; color:var(--color-text-muted); margin-top:2px;">
+              ${patientPhone ? `📞 ${escapeHtml(patientPhone)}` : ''}
+              ${patientEmail ? `<br>✉️ ${escapeHtml(patientEmail)}` : ''}
+            </div>
+          </td>
+          <td>
+            <strong>${escapeHtml(a.service)}</strong>
+            ${a.reason ? `<div style="font-size:0.78rem; color:var(--color-text-muted); margin-top:2px; font-style:italic;">"${escapeHtml(a.reason)}"</div>` : ''}
+            ${a.notes ? `<div style="font-size:0.75rem; color:#059669; margin-top:2px;">📝 ${escapeHtml(a.notes)}</div>` : ''}
+          </td>
+          <td>${statusBadge}</td>
+          <td style="text-align:right;">${actionsHtml}</td>
+        </tr>
+      `;
     }
 
     // ── Checkout & Completion Modal Handlers ──────────────────────────────────

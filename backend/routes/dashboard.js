@@ -181,30 +181,66 @@ router.get('/reports', async (req, res, next) => {
       }
     });
 
-    // ── 5. Top Treatments by Completed Procedure Count & Billed Amount ────────
-    const treatmentAgg = {};
+    // ── 5. Completed Visits by Service & Item-Level Procedure Billing ─────────
+    // A. Completed visits count by appointment service
+    const serviceVisitMap = {};
     completedApptsInPeriod.forEach(a => {
-      const s = a.service || 'General Dental';
-      if (!treatmentAgg[s]) {
-        treatmentAgg[s] = { service: s, completed_count: 0, billed_amount: 0 };
-      }
-      treatmentAgg[s].completed_count += 1;
-
-      // Find linked invoice or treatment record for billed amount
-      const linkedInv = allInvoices.find(i => i.appointment_id === a.id);
-      if (linkedInv && linkedInv.status !== 'cancelled') {
-        treatmentAgg[s].billed_amount += Number(linkedInv.total_amount || 0);
-      } else {
-        const linkedTr = allTreatments.find(t => t.appointment_id === a.id);
-        if (linkedTr && linkedTr.cost) {
-          treatmentAgg[s].billed_amount += Number(linkedTr.cost || 0);
-        }
-      }
+      const s = (a.service || 'General Dental').trim();
+      serviceVisitMap[s] = (serviceVisitMap[s] || 0) + 1;
     });
 
-    const topTreatments = Object.values(treatmentAgg)
-      .sort((a, b) => b.completed_count - a.completed_count)
-      .slice(0, 8);
+    const completedVisitsByService = Object.entries(serviceVisitMap)
+      .map(([service, visit_count]) => ({ service, visit_count }))
+      .sort((a, b) => b.visit_count - a.visit_count)
+      .slice(0, 10);
+
+    // B. Item-level procedure billing aggregated directly from invoices created in period
+    // Safely handles JSON array or string items, without duplicating whole invoices or inventing taxes
+    const itemProcedureAgg = {};
+    let totalLineItemAmount = 0;
+    let totalInvoiceTaxInPeriod = 0;
+
+    createdInvoicesInPeriod.forEach(inv => {
+      totalInvoiceTaxInPeriod += Number(inv.tax_amount || 0);
+
+      let items = inv.items;
+      if (typeof items === 'string') {
+        try { items = JSON.parse(items); } catch (_) { items = []; }
+      }
+      if (!Array.isArray(items)) items = [];
+
+      items.forEach(it => {
+        const procName = (it.description || it.procedure || 'Clinical Care').trim();
+        const lineTotal = Number(it.total !== undefined ? it.total : (Number(it.unit_price || 0) * Number(it.quantity || 1))) || 0;
+        const lineQty = Number(it.quantity || 1);
+
+        if (!itemProcedureAgg[procName]) {
+          itemProcedureAgg[procName] = {
+            procedure: procName,
+            billed_amount: 0,
+            quantity: 0
+          };
+        }
+        itemProcedureAgg[procName].billed_amount += lineTotal;
+        itemProcedureAgg[procName].quantity += lineQty;
+        totalLineItemAmount += lineTotal;
+      });
+    });
+
+    const topBilledProcedures = Object.values(itemProcedureAgg)
+      .sort((a, b) => b.billed_amount - a.billed_amount)
+      .slice(0, 10);
+
+    // Composite top treatments combining visit counts and item-level pre-tax billing
+    const topTreatments = completedVisitsByService.map(sv => {
+      // Find matching procedure in item billing if any
+      const matchingProc = topBilledProcedures.find(p => p.procedure.toLowerCase().includes(sv.service.toLowerCase()) || sv.service.toLowerCase().includes(p.procedure.toLowerCase()));
+      return {
+        service: sv.service,
+        completed_count: sv.visit_count,
+        billed_amount: matchingProc ? matchingProc.billed_amount : 0
+      };
+    });
 
     // ── 6. Determine Buckets (Daily vs Monthly) for Charts ────────────────────
     const dStart = new Date(fromStr + 'T00:00:00Z');
@@ -320,7 +356,15 @@ router.get('/reports', async (req, res, next) => {
           returning_patients: returningPatientsCount
         },
         payment_methods: methodMap,
+        completed_visits_by_service: completedVisitsByService,
+        top_billed_procedures: topBilledProcedures,
         top_treatments: topTreatments
+      },
+      disclosures: {
+        timezone: 'Asia/Kolkata (IST, UTC+05:30). Configurable per-clinic timezone is not currently supported in database schema.',
+        outstanding_balance: 'Current unpaid balance across active invoices as of request time. Historical point-in-time balance reconstruction is not supported without dedicated ledger tables.',
+        refunds: 'Refunds are tracked as an invoice status. Marking an invoice as refunded excludes it from collections in its original period (gross restatement) rather than creating a dated negative cash-flow entry in the refund period. Invoiced totals preserve the original billed amount.',
+        treatment_billing: 'Visit counts reflect completed appointments by booked service. Billed amounts reflect pre-tax line item amounts from clinic invoices. Taxes are billed at the invoice level and excluded from item-level procedure allocations.'
       }
     });
   } catch (err) {

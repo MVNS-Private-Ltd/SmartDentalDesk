@@ -30,8 +30,85 @@ router.get('/', async (req, res, next) => {
     }
     const { status, patient_id, search, from, to, page = 1, limit = 20, export_all } = req.query;
     const isExport = export_all === 'true' || export_all === true;
-    const pageSize = isExport ? 2000 : Math.min(100, Math.max(1, Number(limit) || 20));
-    const offset = isExport ? 0 : (Math.max(1, Number(page) || 1) - 1) * pageSize;
+
+    if (isExport) {
+      // ── Safe batched pagination to export the COMPLETE filtered dataset ──────
+      const batchSize = 1000;
+      let allExportInvoices = [];
+      let currentOffset = 0;
+      let hasMore = true;
+      const MAX_SAFETY_EXPORT_LIMIT = 50000; // Hard ceiling to guard against node out-of-memory
+
+      while (hasMore && allExportInvoices.length < MAX_SAFETY_EXPORT_LIMIT) {
+        let bq = supabase
+          .from('invoices')
+          .select(`
+            id, invoice_number, amount, tax_amount, total_amount, status, payment_method,
+            due_date, paid_at, created_at,
+            patients(id, name, phone, email),
+            appointments(id, date, time, service)
+          `)
+          .eq('clinic_id', req.clinicId)
+          .order('created_at', { ascending: false })
+          .range(currentOffset, currentOffset + batchSize - 1);
+
+        if (status && status !== 'all') {
+          if (status === 'unpaid') {
+            bq = bq.in('status', ['unpaid', 'pending']);
+          } else {
+            bq = bq.eq('status', status);
+          }
+        }
+        if (patient_id) {
+          bq = bq.eq('patient_id', patient_id);
+        }
+        if (from) {
+          bq = bq.gte('created_at', `${from}T00:00:00.000+05:30`);
+        }
+        if (to) {
+          bq = bq.lte('created_at', `${to}T23:59:59.999+05:30`);
+        }
+
+        const { data: batchData, error: batchErr } = await bq;
+        if (batchErr) throw batchErr;
+
+        if (!batchData || batchData.length === 0) {
+          hasMore = false;
+        } else {
+          allExportInvoices.push(...batchData);
+          currentOffset += batchData.length;
+          if (batchData.length < batchSize) {
+            hasMore = false;
+          }
+        }
+      }
+
+      // In-memory search filter if search parameter was provided
+      if (search && search.trim()) {
+        const s = search.trim().toLowerCase();
+        allExportInvoices = allExportInvoices.filter(inv => {
+          const invNo = (inv.invoice_number || '').toLowerCase();
+          const pName = (inv.patients?.name || '').toLowerCase();
+          const pPhone = (inv.patients?.phone || '').toLowerCase();
+          const pEmail = (inv.patients?.email || '').toLowerCase();
+          return invNo.includes(s) || pName.includes(s) || pPhone.includes(s) || pEmail.includes(s);
+        });
+      }
+
+      return res.json({
+        invoices: allExportInvoices,
+        total: allExportInvoices.length,
+        exported_count: allExportInvoices.length,
+        is_truncated: allExportInvoices.length >= MAX_SAFETY_EXPORT_LIMIT,
+        max_limit: MAX_SAFETY_EXPORT_LIMIT,
+        page: 1,
+        limit: allExportInvoices.length
+      });
+    }
+
+    // ── Standard paginated view ──────────────────────────────────────────────
+    const pageSize = Math.min(100, Math.max(1, Number(limit) || 20));
+    const offset = (Math.max(1, Number(page) || 1) - 1) * pageSize;
 
     let q = supabase
       .from('invoices')
@@ -84,7 +161,7 @@ router.get('/', async (req, res, next) => {
     res.json({
       invoices,
       total: search ? invoices.length : (count || invoices.length),
-      page: isExport ? 1 : Number(page) || 1,
+      page: Number(page) || 1,
       limit: pageSize
     });
   } catch (err) { next(err); }
@@ -157,59 +234,83 @@ router.patch('/:id/pay', [
   try {
     if (!validate(req, res)) return;
 
-    // 1. Fetch existing invoice scoped to this clinic
-    const { data: existing, error: findErr } = await supabase
-      .from('invoices')
-      .select('*')
-      .eq('id', req.params.id)
-      .eq('clinic_id', req.clinicId)
-      .single();
-
-    if (findErr || !existing) {
-      return res.status(404).json({ error: 'Invoice not found.' });
+    // 1. Role Authorization Policy
+    // Only administrative/billing clinic staff can record financial transactions
+    const allowedRoles = ['admin', 'super_admin', 'manager', 'receptionist', 'dentist'];
+    const userRole = (req.userRole || req.staff?.role || 'admin').toLowerCase();
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'Unauthorized: Your role does not have permission to record invoice payments.' });
     }
 
-    // 2. Prevent duplicate payments or overwriting non-payable statuses
-    if (existing.status === 'paid') {
-      return res.status(400).json({ error: 'Invoice is already marked as paid.' });
-    }
-    if (existing.status === 'cancelled') {
-      return res.status(400).json({ error: 'Cannot record payment on a cancelled invoice.' });
-    }
-    if (existing.status === 'refunded') {
-      return res.status(400).json({ error: 'Cannot record payment on a refunded invoice.' });
+    // 2. Payment Method Policy Validation
+    const allowedMethods = ['cash', 'upi', 'card', 'bank_transfer', 'cheque', 'other'];
+    const pMethod = (req.body.payment_method || '').toLowerCase().trim();
+    if (!allowedMethods.includes(pMethod)) {
+      return res.status(400).json({ error: `Invalid payment method. Allowed methods: ${allowedMethods.join(', ')}.` });
     }
 
-    // 3. Validate payment method
-    const allowedMethods = ['cash', 'upi', 'card', 'bank_transfer', 'other'];
-    const pMethod = req.body.payment_method.toLowerCase();
-    const cleanMethod = allowedMethods.includes(pMethod) ? pMethod : 'other';
+    // 3. Payment Date Policy Validation
+    // Cannot record future payment dates beyond end-of-day today in clinic timezone (Asia/Kolkata)
+    const now = new Date();
+    const todayISTStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const endOfTodayIST = new Date(`${todayISTStr}T23:59:59.999+05:30`);
 
-    // 4. Validate payment date
-    let paymentDate = new Date();
+    let paymentDate = now;
     if (req.body.paid_at) {
       const parsed = new Date(req.body.paid_at);
-      if (!isNaN(parsed.getTime())) {
-        paymentDate = parsed;
+      if (isNaN(parsed.getTime())) {
+        return res.status(400).json({ error: 'Invalid payment date format.' });
       }
+      if (parsed > endOfTodayIST) {
+        return res.status(400).json({ error: 'Payment date cannot be in the future.' });
+      }
+      paymentDate = parsed;
     }
 
-    // 5. Update invoice securely (never trusting client amount)
-    const { data, error } = await supabase
+    // 4. Atomic Conditional Update
+    // Concurrency safe: under Postgres MVCC, only a row matching status IN ('unpaid', 'pending')
+    // and clinic_id = req.clinicId can be updated. Concurrent duplicate requests will affect 0 rows.
+    const { data: updatedRows, error: updateErr } = await supabase
       .from('invoices')
       .update({
         status        : 'paid',
         paid_at       : paymentDate.toISOString(),
-        payment_method: cleanMethod,
+        payment_method: pMethod,
+        notes         : req.body.notes ? String(req.body.notes).slice(0, 500) : null,
         updated_at    : new Date().toISOString()
       })
       .eq('id', req.params.id)
       .eq('clinic_id', req.clinicId)
-      .select(`*, patients(id, name, phone, email)`)
-      .single();
+      .in('status', ['unpaid', 'pending'])
+      .select(`*, patients(id, name, phone, email)`);
 
-    if (error || !data) throw (error || new Error('Failed to update invoice payment.'));
-    res.json({ message: 'Full payment recorded successfully.', invoice: data });
+    if (updateErr) throw updateErr;
+
+    // 5. If conditional update matched 0 rows, determine exact cause
+    if (!updatedRows || updatedRows.length === 0) {
+      const { data: existing } = await supabase
+        .from('invoices')
+        .select('id, status, clinic_id')
+        .eq('id', req.params.id)
+        .maybeSingle();
+
+      if (!existing || existing.clinic_id !== req.clinicId) {
+        return res.status(404).json({ error: 'Invoice not found.' });
+      }
+      if (existing.status === 'paid') {
+        return res.status(409).json({ error: 'Invoice is already marked as paid. Duplicate payment rejected.' });
+      }
+      if (existing.status === 'cancelled') {
+        return res.status(400).json({ error: 'Cannot record payment on a cancelled invoice.' });
+      }
+      if (existing.status === 'refunded') {
+        return res.status(400).json({ error: 'Cannot record payment on a refunded invoice.' });
+      }
+
+      return res.status(400).json({ error: 'Invoice cannot be transitioned to paid.' });
+    }
+
+    res.json({ message: 'Full payment recorded successfully.', invoice: updatedRows[0] });
   } catch (err) { next(err); }
 });
 

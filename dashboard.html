@@ -1755,30 +1755,40 @@
           </div>
         </div>
 
-        <!-- Top Treatments Breakdown -->
+        <!-- Completed Visits by Service & Billed Procedures -->
         <div class="chart-box" style="background:#fff; border:1px solid var(--color-divider); border-radius:var(--radius-lg); padding:1.5rem;">
           <div class="chart-box-header" style="margin-bottom:1rem;">
-            <h3 class="chart-box-title" style="margin:0; font-size:1.05rem; color:var(--color-text);">Top Treatments &amp; Procedures</h3>
-            <p class="chart-box-desc" style="margin:2px 0 0; font-size:0.82rem; color:var(--color-text-muted);">Completed procedure counts and linked billed amounts</p>
+            <h3 class="chart-box-title" style="margin:0; font-size:1.05rem; color:var(--color-text);">Completed Visits by Service</h3>
+            <p class="chart-box-desc" style="margin:2px 0 0; font-size:0.82rem; color:var(--color-text-muted);">Completed patient visits and item-level pre-tax procedure billing</p>
           </div>
           <div style="max-height:220px; overflow-y:auto;">
             <table style="width:100%; font-size:0.82rem; border-collapse:collapse;">
               <thead>
                 <tr style="border-bottom:1px solid var(--color-divider); color:var(--color-text-muted); text-align:left;">
-                  <th style="padding:6px 0;">Treatment / Service</th>
-                  <th style="padding:6px 8px; text-align:center;">Visits</th>
-                  <th style="padding:6px 0; text-align:right;">Billed Amount</th>
+                  <th style="padding:6px 0;">Service / Procedure</th>
+                  <th style="padding:6px 8px; text-align:center;">Completed Visits</th>
+                  <th style="padding:6px 0; text-align:right;">Billed (Pre-Tax)</th>
                 </tr>
               </thead>
               <tbody id="repTopTreatmentsBody">
-                <tr><td colspan="3" style="text-align:center; padding:1.5rem; color:var(--color-text-muted);">Loading treatments...</td></tr>
+                <tr><td colspan="3" style="text-align:center; padding:1.5rem; color:var(--color-text-muted);">Loading visits &amp; treatments...</td></tr>
               </tbody>
             </table>
           </div>
-          <div style="margin-top:8px; font-size:0.72rem; color:var(--color-text-muted);">
-            * Note: Billed amounts reflect linked patient invoices. Counts reflect completed clinical visits.
+          <div style="margin-top:8px; font-size:0.72rem; color:var(--color-text-muted); line-height:1.4;">
+            * Note: Visit counts reflect completed appointments by booked service. Billed amounts reflect pre-tax line item amounts from patient invoices; invoice-level taxes are excluded from item allocations.
           </div>
         </div>
+      </div>
+
+      <!-- Reporting Disclosures & Data Policy Note -->
+      <div style="background:var(--color-surface); border:1px solid var(--color-divider); border-radius:var(--radius-md); padding:12px 16px; margin-top:1.5rem; font-size:0.75rem; color:var(--color-text-muted); line-height:1.45;">
+        <strong style="color:var(--color-text);">ℹ️ Accounting &amp; Timezone Disclosures:</strong>
+        <ul style="margin:4px 0 0; padding-left:18px;">
+          <li><strong>Timezone:</strong> All report calculations operate in <code>Asia/Kolkata</code> (IST, UTC+05:30) as standard clinic timezone. Configurable per-clinic timezone is not currently supported in the database schema.</li>
+          <li><strong>Refunds:</strong> Refunded invoices are tracked as a status change and excluded from gross collections in their original period (historical restatement). Because individual refund transaction dates are not stored, timestamped net cash-outflow accounting is not supported. Invoiced amounts preserve the original billed amount.</li>
+          <li><strong>Outstanding Balance:</strong> Displays the current snapshot balance across all unpaid invoices right now; historical point-in-time balance reconstruction is not supported without dedicated ledger tables.</li>
+        </ul>
       </div>
     </section>
 
@@ -3479,16 +3489,18 @@
       rows.push(['DENTAL SMART CLINIC REPORT SUMMARY']);
       rows.push(['Period', period.label || '', 'From', period.from || '', 'To', period.to || '', 'Timezone', 'Asia/Kolkata (IST)']);
       rows.push(['Exported At', new Date().toISOString()]);
+      rows.push(['Refund Policy Disclosure', 'Refunded invoices are excluded from gross collections in original period (historical restatement). Timestamped refund cash outflows not supported.']);
+      rows.push(['Outstanding Balance Disclosure', 'Snapshot across all currently unpaid invoices. Historical balances not supported.']);
       rows.push([]);
 
       rows.push(['METRIC', 'VALUE', 'UNIT / NOTES']);
       rows.push(['Money Collected', s.collected_revenue || 0, 'INR (received payments in period)']);
-      rows.push(['Invoiced Amount', s.invoiced_revenue || 0, 'INR (billed in period)']);
+      rows.push(['Invoiced Amount', s.invoiced_revenue || 0, 'INR (billed in period, preserving original billed amount)']);
       rows.push(['Current Outstanding Balance', s.current_outstanding_balance || 0, 'INR (Snapshot across all unpaid invoices)']);
       rows.push(['Current Outstanding Invoices Count', s.current_outstanding_count || 0, 'Count (Snapshot)']);
-      rows.push(['Completed Appointments', s.completed_appointments || 0, 'Visits in period']);
+      rows.push(['Completed Appointments', s.completed_appointments || 0, 'Completed visits in period']);
       rows.push(['New Patients (First Visit)', s.new_patients || 0, 'Unique patients whose first visit was in period']);
-      rows.push(['Returning Patients', s.returning_patients || 0, 'Unique patients with visit in period + prior visit']);
+      rows.push(['Returning Patients', s.returning_patients || 0, 'Unique patients with visit in period + prior completed visit']);
       rows.push(['Cancellations', s.cancellations_count || 0, 'Count']);
       rows.push(['Cancellation Rate', `${s.cancellation_rate || 0}%`, 'Against resolved appointments']);
       rows.push(['No-Shows', s.no_shows_count || 0, 'Count']);
@@ -3503,8 +3515,8 @@
       rows.push(['Other / Unspecified', pm.other || 0]);
       rows.push([]);
 
-      rows.push(['TOP TREATMENTS & PROCEDURES']);
-      rows.push(['Service', 'Completed Visits', 'Billed Amount (INR)']);
+      rows.push(['COMPLETED VISITS BY SERVICE & PRE-TAX BILLED AMOUNTS']);
+      rows.push(['Service / Procedure', 'Completed Visits', 'Billed Amount (INR, Pre-tax)']);
       tt.forEach(item => {
         rows.push([item.service, item.completed_count, item.billed_amount || 0]);
       });
@@ -3688,10 +3700,13 @@
       document.getElementById('payModalPatientName').textContent = inv.patients?.name || 'Walk-in Patient';
       document.getElementById('payModalTotalAmount').textContent = `₹${Number(inv.total_amount || 0).toLocaleString('en-IN')}`;
 
-      // Default date to today in YYYY-MM-DD
+      // Default date to today in YYYY-MM-DD and prevent future dates
       const todayIso = new Date().toISOString().slice(0, 10);
       const dateInput = document.getElementById('payModalDate');
-      if (dateInput) dateInput.value = todayIso;
+      if (dateInput) {
+        dateInput.value = todayIso;
+        dateInput.max = todayIso;
+      }
 
       const methodSelect = document.getElementById('payModalMethod');
       if (methodSelect) methodSelect.value = 'cash';
@@ -3793,6 +3808,10 @@
           return;
         }
 
+        if (res.is_truncated) {
+          alert(`Notice: Export reached safety ceiling of ${res.max_limit} records (out of ${res.total} matching). An incomplete export has been downloaded.`);
+        }
+
         const headers = [
           'Invoice Number',
           'Patient Name',
@@ -3806,7 +3825,12 @@
           'Payment Date'
         ];
 
-        const rows = [headers];
+        const rows = [];
+        if (res.is_truncated) {
+          rows.push(['WARNING: INCOMPLETE EXPORT TRUNCATED AT SAFETY CEILING', res.max_limit, 'RECORDS OUT OF', res.total, 'TOTAL MATCHING INVOICES']);
+          rows.push([]);
+        }
+        rows.push(headers);
         invoices.forEach(inv => {
           rows.push([
             inv.invoice_number || '',

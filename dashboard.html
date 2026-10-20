@@ -1102,6 +1102,143 @@
     }
   }
 
+  /* ── BANNER OVERLAP & PRINT FIXES ── */
+  .has-impersonation-banner .dashboard-content {
+    padding-bottom: 6.5rem !important;
+  }
+  @media print {
+    #superAdminFloatingBanner {
+      display: none !important;
+    }
+    body.printing-report * {
+      visibility: hidden;
+    }
+    body.printing-report #section-reports,
+    body.printing-report #section-reports * {
+      visibility: visible;
+    }
+    body.printing-report #section-reports {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      background: #ffffff !important;
+      display: block !important;
+      margin: 0 !important;
+      padding: 15px !important;
+    }
+    body.printing-report .no-print-report {
+      display: none !important;
+    }
+  }
+
+  /* ── REPORT & INVOICES STYLES ── */
+  .report-date-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-divider, #e2e8f0);
+    border-radius: var(--radius-lg, 12px);
+    padding: 12px 18px;
+    margin-bottom: 1.5rem;
+  }
+  .report-filter-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .report-pill-btn {
+    padding: 6px 14px;
+    border-radius: 9999px;
+    border: 1px solid var(--color-divider, #cbd5e1);
+    background: transparent;
+    color: var(--color-text, #334155);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .report-pill-btn:hover {
+    border-color: var(--color-primary, #0284c7);
+    color: var(--color-primary, #0284c7);
+  }
+  .report-pill-btn.active {
+    background: var(--color-primary, #0284c7);
+    color: #fff;
+    border-color: var(--color-primary, #0284c7);
+  }
+  .report-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.75rem;
+  }
+  .report-card {
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-divider, #e2e8f0);
+    border-radius: var(--radius-lg, 14px);
+    padding: 1.35rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .report-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  }
+  .report-card-title {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted, #64748b);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+  .report-card-value {
+    font-size: 1.85rem;
+    font-weight: 800;
+    color: var(--color-text, #0f172a);
+    line-height: 1.15;
+    margin-bottom: 0.4rem;
+  }
+  .report-card-desc {
+    font-size: 0.78rem;
+    color: var(--color-text-muted, #64748b);
+    line-height: 1.35;
+  }
+  .report-card-link {
+    margin-top: 0.65rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-primary, #0284c7);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+  }
+  .report-card-link:hover {
+    text-decoration: underline;
+  }
+  .badge-snapshot {
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    border: 1px solid #fde68a;
+    letter-spacing: normal;
+  }
+
   /* ── SETTINGS SUB-NAV TABS ── */
   .settings-subnav {
     display: flex;
@@ -1318,6 +1455,7 @@
       </button>
       <button class="sidebar-link" data-target="team">Team / Staff</button>
       <button class="sidebar-link" data-target="reports">Reports</button>
+      <button class="sidebar-link" data-target="invoices">Patient Invoices</button>
       <a href="./clinic-profile.html" class="sidebar-link" style="text-decoration:none; display:block; box-sizing:border-box;">Clinic Profile (Marketplace)</a>
             <button class="sidebar-link" data-target="scheduled-messages">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -1434,57 +1572,282 @@
 
     <!-- SECTION: REPORTS -->
     <section id="section-reports" class="dashboard-section">
-      <div class="dashboard-header" style="margin-bottom: 2rem;">
+      <div class="dashboard-header" style="margin-bottom: 1.5rem; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
         <div>
-          <h2 style="margin:0;">Clinic Reports & Analytics</h2>
-          <p class="text-muted" style="margin:4px 0 0; font-size:var(--text-sm);">Comprehensive insights into your clinic's performance.</p>
+          <h2 style="margin:0;">Clinic Reports &amp; Analytics</h2>
+          <p class="text-muted" style="margin:4px 0 0; font-size:var(--text-sm);">Period-accurate revenue collections, visit dynamics, and clinical insights.</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;" class="no-print-report">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="exportReportCsv()" style="display:flex; align-items:center; gap:6px; font-weight:600;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export Report (CSV)
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="printReport()" style="display:flex; align-items:center; gap:6px; font-weight:600;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print / PDF Summary
+          </button>
         </div>
       </div>
-      
-      <div class="module-grid" style="grid-template-columns: 1fr; gap: 1.5rem;">
-        <!-- Revenue Chart (Moved from Home) -->
-        <div class="chart-box" style="background: #fff; border: 1px solid var(--color-divider); border-radius: var(--radius-lg); padding: 1.5rem;">
-          <div class="chart-box-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
-            <div>
-              <h3 class="chart-box-title" style="margin: 0; font-size: 1.1rem; color: var(--color-text);">Revenue &amp; Invoicing Performance</h3>
-              <p class="chart-box-desc" style="margin: 0; font-size: 0.85rem; color: var(--color-text-muted);">Collected revenue vs pending invoice balance (Past 6 Months)</p>
-            </div>
-            <div style="display:flex; gap:6px; align-items:center;">
-              <span class="chart-badge-pill" style="background:#ecfdf5; color:#059669; font-weight:700; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">Collected: <span id="statRevenueCollected">₹0</span></span>
-              <span class="chart-badge-pill" style="background:#fff1f2; color:#e11d48; font-weight:700; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">Pending: <span id="statRevenuePending">₹0</span></span>
-            </div>
-          </div>
-          <div class="chart-canvas-wrap" style="height: 300px; position: relative;">
-            <canvas id="revenueChart"></canvas>
-          </div>
+
+      <!-- Report Date Filters Bar -->
+      <div class="report-date-bar">
+        <div class="report-filter-pills" id="reportRangePills">
+          <button type="button" class="report-pill-btn active" data-range="this_month">This Month</button>
+          <button type="button" class="report-pill-btn" data-range="last_month">Last Month</button>
+          <button type="button" class="report-pill-btn" data-range="last_6_months">Last 6 Months</button>
+          <button type="button" class="report-pill-btn" data-range="year_to_date">Year to Date</button>
+          <button type="button" class="report-pill-btn" data-range="custom">Custom Range</button>
+        </div>
+        <div id="reportCustomDateWrap" style="display:none; align-items:center; gap:8px; flex-wrap:wrap;">
+          <input type="date" id="reportFromDate" style="padding:5px 9px; font-size:0.8rem; border-radius:6px; border:1px solid var(--color-divider); background:var(--color-surface); color:var(--color-text);">
+          <span style="font-size:0.8rem; color:var(--color-text-muted);">to</span>
+          <input type="date" id="reportToDate" style="padding:5px 9px; font-size:0.8rem; border-radius:6px; border:1px solid var(--color-divider); background:var(--color-surface); color:var(--color-text);">
+          <button type="button" class="btn btn-sm btn-primary" onclick="applyCustomReportDateRange()" style="padding:5px 12px; font-size:0.8rem;">Apply</button>
+        </div>
+        <div style="font-size:0.8rem; font-weight:600; color:var(--color-text-muted); display:flex; align-items:center; gap:6px;">
+          <span id="reportPeriodBadge" style="background:var(--color-primary-highlight, #eff6ff); color:var(--color-primary, #0284c7); padding:4px 10px; border-radius:9999px;">This Month</span>
+          <span style="font-size:0.74rem; color:var(--color-text-muted);">· Timezone: Asia/Kolkata (IST)</span>
         </div>
       </div>
-      
-      <div class="module-grid" style="grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
-        <!-- Return Rate Chart -->
-        <div class="chart-box" style="background: #fff; border: 1px solid var(--color-divider); border-radius: var(--radius-lg); padding: 1.5rem;">
-          <div class="chart-box-header" style="margin-bottom: 1.5rem;">
-            <div>
-              <h3 class="chart-box-title" style="margin: 0; font-size: 1.1rem; color: var(--color-text);">Patient Return Rate</h3>
-              <p class="chart-box-desc" style="margin: 0; font-size: 0.85rem; color: var(--color-text-muted);">Percentage of returning vs new patients</p>
-            </div>
+
+      <!-- 4 Summary Metric Cards -->
+      <div class="report-summary-grid">
+        <!-- 1. Money Collected -->
+        <div class="report-card">
+          <div class="report-card-title">
+            <span>Money Collected</span>
+            <span style="color:#16a34a; font-size:1.05rem;">₹</span>
           </div>
-          <div class="chart-canvas-wrap" style="height: 250px; position: relative;">
-            <canvas id="returnRateChart"></canvas>
+          <div class="report-card-value" id="cardReportCollected" style="color:#16a34a;">₹0</div>
+          <div class="report-card-desc">
+            Received in selected period (based on payment date).
+            <div style="margin-top:3px; color:var(--color-text-muted);" id="cardReportInvoicedSub">Billed: ₹0</div>
           </div>
         </div>
 
-        <!-- No Shows Chart -->
-        <div class="chart-box" style="background: #fff; border: 1px solid var(--color-divider); border-radius: var(--radius-lg); padding: 1.5rem;">
-          <div class="chart-box-header" style="margin-bottom: 1.5rem;">
+        <!-- 2. Current Outstanding Balance (Snapshot) -->
+        <div class="report-card" style="border-left: 3px solid #f59e0b;">
+          <div class="report-card-title">
+            <span>Current Outstanding</span>
+            <span class="badge-snapshot">Snapshot</span>
+          </div>
+          <div class="report-card-value" id="cardReportOutstanding" style="color:#d97706;">₹0</div>
+          <div class="report-card-desc">
+            Currently unpaid balance across active clinic invoices. Does not follow collection date range.
+          </div>
+          <a href="#" onclick="showPatientInvoicesWithStatus('unpaid'); return false;" class="report-card-link">
+            → View <span id="cardReportOutstandingCount">0</span> Unpaid Invoices
+          </a>
+        </div>
+
+        <!-- 3. Completed Appointments -->
+        <div class="report-card">
+          <div class="report-card-title">
+            <span>Completed Visits</span>
+            <span style="color:#2563eb; font-size:1.05rem;">✓</span>
+          </div>
+          <div class="report-card-value" id="cardReportCompleted" style="color:#2563eb;">0</div>
+          <div class="report-card-desc">
+            Completed clinic appointments during the selected period.
+          </div>
+          <a href="#" onclick="showAppointmentsWithTab('completed'); return false;" class="report-card-link">
+            → View Completed Visits
+          </a>
+        </div>
+
+        <!-- 4. New vs Returning Patients -->
+        <div class="report-card">
+          <div class="report-card-title">
+            <span>New vs Returning</span>
+            <span style="color:#6366f1; font-size:1.05rem;">👥</span>
+          </div>
+          <div class="report-card-value" id="cardReportPatientsTotal" style="color:#6366f1; font-size:1.45rem;">0 / 0</div>
+          <div class="report-card-desc">
+            <span id="cardReportPatientsDetail">0 New · 0 Returning</span>
+            <div style="font-size:0.72rem; margin-top:3px; color:var(--color-text-muted);">Based on first completed visit. Mutually exclusive.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row 1: Collections & Invoiced over Time -->
+      <div class="chart-box" style="background:#fff; border:1px solid var(--color-divider); border-radius:var(--radius-lg); padding:1.5rem; margin-bottom:1.5rem;">
+        <div class="chart-box-header" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.25rem; flex-wrap:wrap; gap:10px;">
+          <div>
+            <h3 class="chart-box-title" style="margin:0; font-size:1.05rem; color:var(--color-text);">Collections Over Time</h3>
+            <p class="chart-box-desc" style="margin:2px 0 0; font-size:0.83rem; color:var(--color-text-muted);">
+              Money collected by payment date vs invoiced amount by creation date (<span id="timelineGroupingLabel">Daily</span>)
+            </p>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="chart-badge-pill" style="background:#ecfdf5; color:#059669; font-weight:700;">Collected: <span id="statRepCollectedPill">₹0</span></span>
+            <span class="chart-badge-pill" style="background:#f1f5f9; color:#475569; font-weight:700;">Invoiced: <span id="statRepInvoicedPill">₹0</span></span>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap" style="height:310px; position:relative;">
+          <canvas id="repCollectionsChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Charts Row 2: New vs Returning & Cancellations / No-Shows -->
+      <div class="module-grid" style="grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom:1.5rem;">
+        <!-- New vs Returning Patients Chart -->
+        <div class="chart-box" style="background:#fff; border:1px solid var(--color-divider); border-radius:var(--radius-lg); padding:1.5rem;">
+          <div class="chart-box-header" style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:flex-start;">
             <div>
-              <h3 class="chart-box-title" style="margin: 0; font-size: 1.1rem; color: var(--color-text);">No-Shows & Cancellations</h3>
-              <p class="chart-box-desc" style="margin: 0; font-size: 0.85rem; color: var(--color-text-muted);">Historical missed appointments</p>
+              <h3 class="chart-box-title" style="margin:0; font-size:1.05rem; color:var(--color-text);">New vs Returning Patients</h3>
+              <p class="chart-box-desc" style="margin:2px 0 0; font-size:0.82rem; color:var(--color-text-muted);">Unique patients with completed visits during period</p>
             </div>
           </div>
-          <div class="chart-canvas-wrap" style="height: 250px; position: relative;">
-            <canvas id="noShowsChart"></canvas>
+          <div class="chart-canvas-wrap" style="height:250px; position:relative;">
+            <canvas id="repNewVsReturningChart"></canvas>
           </div>
+          <div style="display:flex; justify-content:space-around; padding-top:10px; border-top:1px solid var(--color-divider); font-size:0.8rem;">
+            <span style="color:#0284c7; font-weight:700;">● First-Time: <strong id="repNewCount" style="color:var(--color-text);">0</strong></span>
+            <span style="color:#6366f1; font-weight:700;">● Returning: <strong id="repReturningCount" style="color:var(--color-text);">0</strong></span>
+          </div>
+        </div>
+
+        <!-- Cancellations & No-Shows Chart -->
+        <div class="chart-box" style="background:#fff; border:1px solid var(--color-divider); border-radius:var(--radius-lg); padding:1.5rem;">
+          <div class="chart-box-header" style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+            <div>
+              <h3 class="chart-box-title" style="margin:0; font-size:1.05rem; color:var(--color-text);">Cancellations &amp; No-Shows</h3>
+              <p class="chart-box-desc" style="margin:2px 0 0; font-size:0.82rem; color:var(--color-text-muted);">Grouped by scheduled appointment date</p>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <span class="chart-badge-pill" style="background:#f1f5f9; color:#475569; font-size:0.75rem;" title="Cancelled bookings as % of resolved appointments">Cancel Rate: <strong id="repCancelRate">0%</strong></span>
+              <span class="chart-badge-pill" style="background:#fee2e2; color:#b91c1c; font-size:0.75rem;" title="No-shows as % of resolved appointments">No-Show Rate: <strong id="repNoShowRate">0%</strong></span>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap" style="height:225px; position:relative;">
+            <canvas id="repMissedApptsChart"></canvas>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding-top:10px; border-top:1px solid var(--color-divider); font-size:0.8rem;">
+            <a href="#" onclick="showAppointmentsWithTab('cancelled'); return false;" style="color:#64748b; font-weight:600; text-decoration:none;">→ View Cancelled (<span id="repCancelCount">0</span>)</a>
+            <a href="#" onclick="showAppointmentsWithTab('no-show'); return false;" style="color:#dc2626; font-weight:700; text-decoration:none;">→ View No-Shows (<span id="repNoShowCount">0</span>)</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row 3: Payment Methods & Top Treatments -->
+      <div class="module-grid" style="grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        <!-- Payment Methods Breakdown -->
+        <div class="chart-box" style="background:#fff; border:1px solid var(--color-divider); border-radius:var(--radius-lg); padding:1.5rem;">
+          <div class="chart-box-header" style="margin-bottom:1rem;">
+            <h3 class="chart-box-title" style="margin:0; font-size:1.05rem; color:var(--color-text);">Collections by Payment Method</h3>
+            <p class="chart-box-desc" style="margin:2px 0 0; font-size:0.82rem; color:var(--color-text-muted);">Breakdown of actual received payments (unpaid excluded)</p>
+          </div>
+          <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+            <div style="width:160px; height:160px; position:relative; flex-shrink:0;">
+              <canvas id="repPaymentMethodsChart"></canvas>
+            </div>
+            <div style="flex:1; min-width:180px;">
+              <table style="width:100%; font-size:0.82rem; border-collapse:collapse;" id="repPaymentMethodsTable">
+                <tbody>
+                  <tr><td style="padding:4px 0; color:var(--color-text-muted);">Cash</td><td style="text-align:right; font-weight:700;" id="pmCash">₹0</td></tr>
+                  <tr><td style="padding:4px 0; color:var(--color-text-muted);">UPI</td><td style="text-align:right; font-weight:700;" id="pmUpi">₹0</td></tr>
+                  <tr><td style="padding:4px 0; color:var(--color-text-muted);">Card</td><td style="text-align:right; font-weight:700;" id="pmCard">₹0</td></tr>
+                  <tr><td style="padding:4px 0; color:var(--color-text-muted);">Bank Transfer</td><td style="text-align:right; font-weight:700;" id="pmBank">₹0</td></tr>
+                  <tr><td style="padding:4px 0; color:var(--color-text-muted);">Other / Unspecified</td><td style="text-align:right; font-weight:700;" id="pmOther">₹0</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Treatments Breakdown -->
+        <div class="chart-box" style="background:#fff; border:1px solid var(--color-divider); border-radius:var(--radius-lg); padding:1.5rem;">
+          <div class="chart-box-header" style="margin-bottom:1rem;">
+            <h3 class="chart-box-title" style="margin:0; font-size:1.05rem; color:var(--color-text);">Top Treatments &amp; Procedures</h3>
+            <p class="chart-box-desc" style="margin:2px 0 0; font-size:0.82rem; color:var(--color-text-muted);">Completed procedure counts and linked billed amounts</p>
+          </div>
+          <div style="max-height:220px; overflow-y:auto;">
+            <table style="width:100%; font-size:0.82rem; border-collapse:collapse;">
+              <thead>
+                <tr style="border-bottom:1px solid var(--color-divider); color:var(--color-text-muted); text-align:left;">
+                  <th style="padding:6px 0;">Treatment / Service</th>
+                  <th style="padding:6px 8px; text-align:center;">Visits</th>
+                  <th style="padding:6px 0; text-align:right;">Billed Amount</th>
+                </tr>
+              </thead>
+              <tbody id="repTopTreatmentsBody">
+                <tr><td colspan="3" style="text-align:center; padding:1.5rem; color:var(--color-text-muted);">Loading treatments...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top:8px; font-size:0.72rem; color:var(--color-text-muted);">
+            * Note: Billed amounts reflect linked patient invoices. Counts reflect completed clinical visits.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: PATIENT INVOICES -->
+    <section id="section-invoices" class="dashboard-section">
+      <div class="dashboard-header" style="margin-bottom: 1.5rem; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+        <div>
+          <h2 style="margin:0;">Patient Invoices &amp; Billing</h2>
+          <p class="text-muted" style="margin:4px 0 0; font-size:var(--text-sm);">View clinic treatment billing, record patient payments, and issue receipts.</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="exportInvoicesCsv()" style="display:flex; align-items:center; gap:6px; font-weight:600;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export Filtered Invoices (CSV)
+          </button>
+        </div>
+      </div>
+
+      <!-- Invoices Toolbar: Search + Status Tabs + Date Filters -->
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:1rem;">
+        <div class="tabs-nav" id="invoiceStatusTabs" style="margin-bottom:0;">
+          <button class="tab-btn active" data-status="all">All Invoices</button>
+          <button class="tab-btn" data-status="unpaid">Unpaid / Pending</button>
+          <button class="tab-btn" data-status="paid">Paid</button>
+          <button class="tab-btn" data-status="cancelled">Cancelled</button>
+          <button class="tab-btn" data-status="refunded">Refunded</button>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <div style="position:relative;">
+            <svg style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--color-text-muted);" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="invoiceSearchInput" type="text" placeholder="Search invoice #, patient, phone..." oninput="handleInvoiceSearch(this.value)" style="padding:6px 12px 6px 32px; border-radius:var(--radius-md); border:1px solid var(--color-divider); background:var(--color-surface); color:var(--color-text); font-size:var(--text-sm); width:240px; outline:none;">
+          </div>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <input type="date" id="invoiceFilterFrom" title="Invoice Date From" style="padding:5px 8px; font-size:0.8rem; border-radius:6px; border:1px solid var(--color-divider); background:var(--color-surface); color:var(--color-text);" onchange="applyInvoiceFilters()">
+            <span style="font-size:0.75rem; color:var(--color-text-muted);">to</span>
+            <input type="date" id="invoiceFilterTo" title="Invoice Date To" style="padding:5px 8px; font-size:0.8rem; border-radius:6px; border:1px solid var(--color-divider); background:var(--color-surface); color:var(--color-text);" onchange="applyInvoiceFilters()">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="clearInvoiceDateFilters()" title="Clear Dates" style="padding:4px 8px; font-size:0.75rem;">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Invoices Table -->
+      <div class="card table-responsive" style="overflow:visible; margin-bottom:1rem;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Invoice #</th>
+              <th>Patient</th>
+              <th>Date</th>
+              <th>Total Amount</th>
+              <th>Status</th>
+              <th>Payment Details</th>
+              <th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="patientInvoicesTableBody">
+            <tr><td colspan="7" style="text-align:center; padding:2.5rem; color:var(--color-text-muted);">Loading patient invoices...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Footer -->
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; font-size:0.85rem; color:var(--color-text-muted);">
+        <div id="invoicePaginationInfo">Showing 0 of 0 invoices</div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-sm btn-secondary" id="invoicePrevPageBtn" onclick="changeInvoicePage(-1)" disabled>◀ Previous</button>
+          <span id="invoicePageIndicator" style="padding:5px 12px; font-weight:600; color:var(--color-text);">Page 1</span>
+          <button type="button" class="btn btn-sm btn-secondary" id="invoiceNextPageBtn" onclick="changeInvoicePage(1)" disabled>Next ▶</button>
         </div>
       </div>
     </section>
@@ -1563,6 +1926,7 @@
         <button class="tab-btn" data-tab="scheduled">Scheduled / Upcoming</button>
         <button class="tab-btn" data-tab="completed">Completed</button>
         <button class="tab-btn" data-tab="cancelled">Cancelled</button>
+        <button class="tab-btn" data-tab="no-show">No-Show</button>
         <button class="tab-btn" data-tab="all">All</button>
       </div>
 
@@ -2244,6 +2608,8 @@
       if (targetId === 'home') loadHomeStats();
       if (targetId === 'patients') loadPatients('all');
       if (targetId === 'appointments') loadAppointments();
+      if (targetId === 'reports') loadReportsData();
+      if (targetId === 'invoices') loadPatientInvoices();
       if (targetId === 'settings') {
         loadSettings();
         if (window.loadBillingSettings) window.loadBillingSettings();
@@ -2697,7 +3063,7 @@
         if (totalPatientsEl) totalPatientsEl.textContent = stats.total_patients || 0;
 
         const revCollectedEl = document.getElementById('statRevenueCollected');
-        if (revCollectedEl) revCollectedEl.textContent = `₹${(stats.today_revenue || stats.total_revenue || 0).toLocaleString()}`;
+        if (revCollectedEl) revCollectedEl.textContent = `₹${(Number(stats.today_revenue) || 0).toLocaleString()}`;
 
         const revPendingEl = document.getElementById('statRevenuePending');
         if (revPendingEl) revPendingEl.textContent = `₹${(stats.pending_revenue || 0).toLocaleString()}`;
@@ -2734,6 +3100,736 @@
 
     // Call loadHomeStats on page load immediately!
     loadHomeStats();
+
+    // ── Safe CSV Escaper (protects against formula injection) ───────────────────
+    function csvSafe(val) {
+      if (val === null || val === undefined) return '""';
+      let s = String(val).replace(/"/g, '""');
+      if (/^[=+\-@\t\r]/.test(s)) {
+        s = "'" + s;
+      }
+      return `"${s}"`;
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // ── CLINIC REPORTS CONTROLLER ─────────────────────────────────────────────
+    let repCollectionsChartInstance = null;
+    let repNewVsReturningChartInstance = null;
+    let repMissedApptsChartInstance = null;
+    let repPaymentMethodsChartInstance = null;
+
+    let currentReportRange = 'this_month';
+    let currentReportFrom = '';
+    let currentReportTo = '';
+    let lastLoadedReport = null;
+
+    function initReportPills() {
+      const pills = document.querySelectorAll('#reportRangePills .report-pill-btn');
+      pills.forEach(btn => {
+        btn.addEventListener('click', () => {
+          pills.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const range = btn.getAttribute('data-range');
+          currentReportRange = range;
+          const customWrap = document.getElementById('reportCustomDateWrap');
+          if (range === 'custom') {
+            if (customWrap) customWrap.style.display = 'flex';
+          } else {
+            if (customWrap) customWrap.style.display = 'none';
+            currentReportFrom = '';
+            currentReportTo = '';
+            loadReportsData(range);
+          }
+        });
+      });
+    }
+    initReportPills();
+
+    window.applyCustomReportDateRange = function applyCustomReportDateRange() {
+      const from = document.getElementById('reportFromDate')?.value;
+      const to = document.getElementById('reportToDate')?.value;
+      if (!from || !to) {
+        alert('Please choose both a start date and an end date.');
+        return;
+      }
+      currentReportFrom = from;
+      currentReportTo = to;
+      loadReportsData('custom', from, to);
+    };
+
+    window.loadReportsData = async function loadReportsData(range = currentReportRange, customFrom = currentReportFrom, customTo = currentReportTo) {
+      try {
+        const theme = getChartTheme();
+        const data = await window.api.getReports({ range, from: customFrom, to: customTo });
+        lastLoadedReport = data;
+
+        const period  = data.period || {};
+        const summary = data.summary || {};
+        const charts  = data.charts || {};
+
+        // Update Period Badge with timezone & status
+        const periodBadge = document.getElementById('reportPeriodBadge');
+        if (periodBadge) {
+          const toDateLabel = period.is_to_date ? ' (to date)' : '';
+          periodBadge.textContent = `${period.label || 'This Month'}: ${period.from || ''} to ${period.to || ''}${toDateLabel}`;
+        }
+
+        // Summary Cards
+        const cardCollected = document.getElementById('cardReportCollected');
+        if (cardCollected) cardCollected.textContent = `₹${Number(summary.collected_revenue || 0).toLocaleString('en-IN')}`;
+
+        const cardInvoicedSub = document.getElementById('cardReportInvoicedSub');
+        if (cardInvoicedSub) cardInvoicedSub.textContent = `Billed in period: ₹${Number(summary.invoiced_revenue || 0).toLocaleString('en-IN')}`;
+
+        const cardOutstanding = document.getElementById('cardReportOutstanding');
+        if (cardOutstanding) cardOutstanding.textContent = `₹${Number(summary.current_outstanding_balance || 0).toLocaleString('en-IN')}`;
+
+        const cardOutstandingCount = document.getElementById('cardReportOutstandingCount');
+        if (cardOutstandingCount) cardOutstandingCount.textContent = summary.current_outstanding_count || 0;
+
+        const cardCompleted = document.getElementById('cardReportCompleted');
+        if (cardCompleted) cardCompleted.textContent = summary.completed_appointments || 0;
+
+        const cardPatientsTotal = document.getElementById('cardReportPatientsTotal');
+        if (cardPatientsTotal) cardPatientsTotal.textContent = `${summary.new_patients || 0} / ${summary.returning_patients || 0}`;
+
+        const cardPatientsDetail = document.getElementById('cardReportPatientsDetail');
+        if (cardPatientsDetail) cardPatientsDetail.textContent = `${summary.new_patients || 0} First-Time · ${summary.returning_patients || 0} Returning`;
+
+        // Pill metrics
+        const statRepCollected = document.getElementById('statRepCollectedPill');
+        if (statRepCollected) statRepCollected.textContent = `₹${Number(summary.collected_revenue || 0).toLocaleString('en-IN')}`;
+
+        const statRepInvoiced = document.getElementById('statRepInvoicedPill');
+        if (statRepInvoiced) statRepInvoiced.textContent = `₹${Number(summary.invoiced_revenue || 0).toLocaleString('en-IN')}`;
+
+        const timelineGroupingLabel = document.getElementById('timelineGroupingLabel');
+        if (timelineGroupingLabel) timelineGroupingLabel.textContent = (period.total_days <= 31) ? 'Daily' : 'Monthly';
+
+        const repCancelRate = document.getElementById('repCancelRate');
+        if (repCancelRate) repCancelRate.textContent = `${summary.cancellation_rate || 0}%`;
+
+        const repNoShowRate = document.getElementById('repNoShowRate');
+        if (repNoShowRate) repNoShowRate.textContent = `${summary.no_show_rate || 0}%`;
+
+        const repCancelCount = document.getElementById('repCancelCount');
+        if (repCancelCount) repCancelCount.textContent = summary.cancellations_count || 0;
+
+        const repNoShowCount = document.getElementById('repNoShowCount');
+        if (repNoShowCount) repNoShowCount.textContent = summary.no_shows_count || 0;
+
+        const repNewCount = document.getElementById('repNewCount');
+        if (repNewCount) repNewCount.textContent = charts.new_vs_returning?.new_patients || 0;
+
+        const repReturningCount = document.getElementById('repReturningCount');
+        if (repReturningCount) repReturningCount.textContent = charts.new_vs_returning?.returning_patients || 0;
+
+        // 1. Collections Over Time Chart
+        const colCanvas = document.getElementById('repCollectionsChart');
+        if (colCanvas && window.Chart) {
+          const ctx = colCanvas.getContext('2d');
+          if (repCollectionsChartInstance) repCollectionsChartInstance.destroy();
+
+          const tLine = charts.collections_timeline || { labels: [], collected: [], invoiced: [] };
+          repCollectionsChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: tLine.labels || [],
+              datasets: [
+                {
+                  label: 'Money Collected',
+                  data: tLine.collected || [],
+                  backgroundColor: '#16a34a',
+                  borderRadius: 6
+                },
+                {
+                  label: 'Invoiced Amount',
+                  data: tLine.invoiced || [],
+                  backgroundColor: '#94a3b8',
+                  borderRadius: 6
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'top',
+                  labels: { color: theme.textColor, font: { family: theme.fontFamily, size: 11, weight: '600' }, boxWidth: 12, usePointStyle: true }
+                },
+                tooltip: {
+                  backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                  callbacks: {
+                    label: (ctx) => ` ${ctx.dataset.label}: ₹${Number(ctx.raw || 0).toLocaleString('en-IN')}`
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  grid: { display: false },
+                  ticks: { color: theme.textColor, font: { family: theme.fontFamily, size: 11 } }
+                },
+                y: {
+                  beginAtZero: true,
+                  grid: { color: theme.gridColor },
+                  ticks: {
+                    color: theme.textColor,
+                    font: { family: theme.fontFamily, size: 11 },
+                    callback: (val) => `₹${Number(val).toLocaleString('en-IN')}`
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        // 2. New vs Returning Chart (Doughnut)
+        const nrCanvas = document.getElementById('repNewVsReturningChart');
+        if (nrCanvas && window.Chart) {
+          const ctx = nrCanvas.getContext('2d');
+          if (repNewVsReturningChartInstance) repNewVsReturningChartInstance.destroy();
+
+          const nPatients = charts.new_vs_returning?.new_patients || 0;
+          const rPatients = charts.new_vs_returning?.returning_patients || 0;
+          let nrData = [nPatients, rPatients];
+          if (nPatients === 0 && rPatients === 0) nrData = [1, 0];
+
+          repNewVsReturningChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: ['First-Time Patients', 'Returning Patients'],
+              datasets: [{
+                data: nrData,
+                backgroundColor: ['#0284c7', '#6366f1'],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '68%',
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: { color: theme.textColor, font: { family: theme.fontFamily, size: 11 }, boxWidth: 12, usePointStyle: true }
+                },
+                tooltip: {
+                  callbacks: {
+                    label: (ctx) => {
+                      const total = nPatients + rPatients;
+                      const raw = (nPatients === 0 && rPatients === 0) ? 0 : ctx.raw;
+                      const pct = total > 0 ? Math.round((raw / total) * 100) : 0;
+                      return ` ${ctx.label}: ${raw} (${pct}%)`;
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        // 3. Cancellations & No-Shows Chart (Whole Numbers)
+        const missedCanvas = document.getElementById('repMissedApptsChart');
+        if (missedCanvas && window.Chart) {
+          const ctx = missedCanvas.getContext('2d');
+          if (repMissedApptsChartInstance) repMissedApptsChartInstance.destroy();
+
+          const mLine = charts.missed_timeline || { labels: [], cancellations: [], no_shows: [] };
+          repMissedApptsChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: mLine.labels || [],
+              datasets: [
+                {
+                  label: 'Cancellations',
+                  data: mLine.cancellations || [],
+                  backgroundColor: '#64748b',
+                  borderRadius: 4
+                },
+                {
+                  label: 'No-Shows',
+                  data: mLine.no_shows || [],
+                  backgroundColor: '#dc2626',
+                  borderRadius: 4
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'top',
+                  labels: { color: theme.textColor, font: { family: theme.fontFamily, size: 11 }, boxWidth: 10, usePointStyle: true }
+                }
+              },
+              scales: {
+                x: {
+                  grid: { display: false },
+                  ticks: { color: theme.textColor, font: { family: theme.fontFamily, size: 10 } }
+                },
+                y: {
+                  beginAtZero: true,
+                  grid: { color: theme.gridColor },
+                  ticks: {
+                    precision: 0,
+                    stepSize: 1,
+                    color: theme.textColor,
+                    font: { family: theme.fontFamily, size: 10 }
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        // 4. Payment Methods Breakdown
+        const pm = charts.payment_methods || { cash: 0, upi: 0, card: 0, bank_transfer: 0, other: 0 };
+        document.getElementById('pmCash').textContent = `₹${Number(pm.cash || 0).toLocaleString('en-IN')}`;
+        document.getElementById('pmUpi').textContent = `₹${Number(pm.upi || 0).toLocaleString('en-IN')}`;
+        document.getElementById('pmCard').textContent = `₹${Number(pm.card || 0).toLocaleString('en-IN')}`;
+        document.getElementById('pmBank').textContent = `₹${Number(pm.bank_transfer || 0).toLocaleString('en-IN')}`;
+        document.getElementById('pmOther').textContent = `₹${Number(pm.other || 0).toLocaleString('en-IN')}`;
+
+        const pmCanvas = document.getElementById('repPaymentMethodsChart');
+        if (pmCanvas && window.Chart) {
+          const ctx = pmCanvas.getContext('2d');
+          if (repPaymentMethodsChartInstance) repPaymentMethodsChartInstance.destroy();
+
+          const pmVals = [pm.cash || 0, pm.upi || 0, pm.card || 0, pm.bank_transfer || 0, pm.other || 0];
+          const pmTotal = pmVals.reduce((a, b) => a + b, 0);
+
+          repPaymentMethodsChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: ['Cash', 'UPI', 'Card', 'Bank Transfer', 'Other'],
+              datasets: [{
+                data: pmTotal === 0 ? [1, 0, 0, 0, 0] : pmVals,
+                backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#64748b'],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '65%',
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: (ctx) => ` ${ctx.label}: ₹${Number(ctx.raw || 0).toLocaleString('en-IN')}`
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        // 5. Top Treatments Table
+        const ttBody = document.getElementById('repTopTreatmentsBody');
+        if (ttBody) {
+          const treatments = charts.top_treatments || [];
+          if (treatments.length === 0) {
+            ttBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:1.5rem; color:var(--color-text-muted);">No completed clinical procedures recorded in this period.</td></tr>`;
+          } else {
+            ttBody.innerHTML = treatments.map(t => `
+              <tr style="border-bottom:1px solid var(--color-divider);">
+                <td style="padding:7px 0; font-weight:600; color:var(--color-text);">${escapeHtml(t.service)}</td>
+                <td style="padding:7px 8px; text-align:center; font-weight:700; color:#2563eb;">${t.completed_count}</td>
+                <td style="padding:7px 0; text-align:right; font-weight:700; color:#16a34a;">₹${Number(t.billed_amount || 0).toLocaleString('en-IN')}</td>
+              </tr>
+            `).join('');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load clinic reports:', err);
+      }
+    };
+
+    window.printReport = function printReport() {
+      document.body.classList.add('printing-report');
+      window.print();
+      setTimeout(() => document.body.classList.remove('printing-report'), 800);
+    };
+
+    window.exportReportCsv = function exportReportCsv() {
+      if (!lastLoadedReport) {
+        alert('Report data is still loading, please wait.');
+        return;
+      }
+      const period = lastLoadedReport.period || {};
+      const s = lastLoadedReport.summary || {};
+      const pm = lastLoadedReport.charts?.payment_methods || {};
+      const tt = lastLoadedReport.charts?.top_treatments || [];
+
+      const rows = [];
+      rows.push(['DENTAL SMART CLINIC REPORT SUMMARY']);
+      rows.push(['Period', period.label || '', 'From', period.from || '', 'To', period.to || '', 'Timezone', 'Asia/Kolkata (IST)']);
+      rows.push(['Exported At', new Date().toISOString()]);
+      rows.push([]);
+
+      rows.push(['METRIC', 'VALUE', 'UNIT / NOTES']);
+      rows.push(['Money Collected', s.collected_revenue || 0, 'INR (received payments in period)']);
+      rows.push(['Invoiced Amount', s.invoiced_revenue || 0, 'INR (billed in period)']);
+      rows.push(['Current Outstanding Balance', s.current_outstanding_balance || 0, 'INR (Snapshot across all unpaid invoices)']);
+      rows.push(['Current Outstanding Invoices Count', s.current_outstanding_count || 0, 'Count (Snapshot)']);
+      rows.push(['Completed Appointments', s.completed_appointments || 0, 'Visits in period']);
+      rows.push(['New Patients (First Visit)', s.new_patients || 0, 'Unique patients whose first visit was in period']);
+      rows.push(['Returning Patients', s.returning_patients || 0, 'Unique patients with visit in period + prior visit']);
+      rows.push(['Cancellations', s.cancellations_count || 0, 'Count']);
+      rows.push(['Cancellation Rate', `${s.cancellation_rate || 0}%`, 'Against resolved appointments']);
+      rows.push(['No-Shows', s.no_shows_count || 0, 'Count']);
+      rows.push(['No-Show Rate', `${s.no_show_rate || 0}%`, 'Against resolved appointments']);
+      rows.push([]);
+
+      rows.push(['PAYMENT METHOD', 'COLLECTED AMOUNT (INR)']);
+      rows.push(['Cash', pm.cash || 0]);
+      rows.push(['UPI', pm.upi || 0]);
+      rows.push(['Card', pm.card || 0]);
+      rows.push(['Bank Transfer', pm.bank_transfer || 0]);
+      rows.push(['Other / Unspecified', pm.other || 0]);
+      rows.push([]);
+
+      rows.push(['TOP TREATMENTS & PROCEDURES']);
+      rows.push(['Service', 'Completed Visits', 'Billed Amount (INR)']);
+      tt.forEach(item => {
+        rows.push([item.service, item.completed_count, item.billed_amount || 0]);
+      });
+
+      const csvContent = rows.map(r => r.map(csvSafe).join(',')).join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      downloadBlob(blob, `clinic_report_${period.from || 'start'}_to_${period.to || 'end'}.csv`);
+    };
+
+    // ── PATIENT INVOICES CONTROLLER ───────────────────────────────────────────
+    let currentInvoiceStatus = 'all';
+    let currentInvoiceSearch = '';
+    let currentInvoiceFrom = '';
+    let currentInvoiceTo = '';
+    let currentInvoicePage = 1;
+    let currentInvoicesData = [];
+    let invoiceSearchTimeout = null;
+
+    function initInvoiceFilters() {
+      const tabs = document.querySelectorAll('#invoiceStatusTabs .tab-btn');
+      tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+          tabs.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentInvoiceStatus = btn.getAttribute('data-status') || 'all';
+          currentInvoicePage = 1;
+          loadPatientInvoices();
+        });
+      });
+    }
+    initInvoiceFilters();
+
+    window.handleInvoiceSearch = function handleInvoiceSearch(val) {
+      clearTimeout(invoiceSearchTimeout);
+      invoiceSearchTimeout = setTimeout(() => {
+        currentInvoiceSearch = val.trim();
+        currentInvoicePage = 1;
+        loadPatientInvoices();
+      }, 250);
+    };
+
+    window.applyInvoiceFilters = function applyInvoiceFilters() {
+      currentInvoiceFrom = document.getElementById('invoiceFilterFrom')?.value || '';
+      currentInvoiceTo   = document.getElementById('invoiceFilterTo')?.value || '';
+      currentInvoicePage = 1;
+      loadPatientInvoices();
+    };
+
+    window.clearInvoiceDateFilters = function clearInvoiceDateFilters() {
+      const f = document.getElementById('invoiceFilterFrom');
+      const t = document.getElementById('invoiceFilterTo');
+      if (f) f.value = '';
+      if (t) t.value = '';
+      currentInvoiceFrom = '';
+      currentInvoiceTo = '';
+      currentInvoicePage = 1;
+      loadPatientInvoices();
+    };
+
+    window.changeInvoicePage = function changeInvoicePage(delta) {
+      currentInvoicePage = Math.max(1, currentInvoicePage + delta);
+      loadPatientInvoices(currentInvoicePage);
+    };
+
+    window.showPatientInvoicesWithStatus = function showPatientInvoicesWithStatus(status) {
+      showSection('invoices');
+      const targetTab = document.querySelector(`#invoiceStatusTabs .tab-btn[data-status="${status}"]`);
+      if (targetTab) {
+        targetTab.click();
+      } else {
+        currentInvoiceStatus = status;
+        currentInvoicePage = 1;
+        loadPatientInvoices();
+      }
+    };
+
+    window.loadPatientInvoices = async function loadPatientInvoices(page = currentInvoicePage) {
+      const tbody = document.getElementById('patientInvoicesTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--color-text-muted);">Loading patient invoices...</td></tr>`;
+
+      try {
+        const res = await window.api.getInvoices({
+          status: currentInvoiceStatus,
+          search: currentInvoiceSearch,
+          from: currentInvoiceFrom,
+          to: currentInvoiceTo,
+          page: page,
+          limit: 15
+        });
+
+        currentInvoicesData = res.invoices || [];
+        const total = res.total || 0;
+        const totalPages = Math.max(1, Math.ceil(total / (res.limit || 15)));
+
+        // Update pagination
+        const infoEl = document.getElementById('invoicePaginationInfo');
+        if (infoEl) infoEl.textContent = `Showing ${currentInvoicesData.length} of ${total} invoices`;
+
+        const indEl = document.getElementById('invoicePageIndicator');
+        if (indEl) indEl.textContent = `Page ${page} of ${totalPages}`;
+
+        const prevBtn = document.getElementById('invoicePrevPageBtn');
+        if (prevBtn) prevBtn.disabled = page <= 1;
+
+        const nextBtn = document.getElementById('invoiceNextPageBtn');
+        if (nextBtn) nextBtn.disabled = page >= totalPages;
+
+        if (currentInvoicesData.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2.5rem; color:var(--color-text-muted);">No invoices found matching your active filters.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = currentInvoicesData.map(inv => {
+          const isPaid = inv.status === 'paid';
+          const isUnpaid = inv.status === 'unpaid' || inv.status === 'pending';
+          const isCancelled = inv.status === 'cancelled';
+          const isRefunded = inv.status === 'refunded';
+
+          let statusBadge = '';
+          if (isPaid) {
+            statusBadge = '<span style="background:#dcfce7; color:#15803d; font-weight:700; font-size:0.75rem; padding:3px 9px; border-radius:12px; border:1px solid #bbf7d0;">✓ Paid</span>';
+          } else if (isUnpaid) {
+            statusBadge = '<span style="background:#fef3c7; color:#b45309; font-weight:700; font-size:0.75rem; padding:3px 9px; border-radius:12px; border:1px solid #fde68a;">⏳ Unpaid</span>';
+          } else if (isCancelled) {
+            statusBadge = '<span style="background:#f1f5f9; color:#64748b; font-weight:600; font-size:0.75rem; padding:3px 9px; border-radius:12px; border:1px solid #e2e8f0;">✕ Cancelled</span>';
+          } else if (isRefunded) {
+            statusBadge = '<span style="background:#f5f3ff; color:#7c3aed; font-weight:700; font-size:0.75rem; padding:3px 9px; border-radius:12px; border:1px solid #ddd6fe;">↩ Refunded</span>';
+          } else {
+            statusBadge = `<span style="background:#f1f5f9; color:var(--color-text); font-size:0.75rem; padding:3px 9px; border-radius:12px;">${escapeHtml(inv.status)}</span>`;
+          }
+
+          let paymentDetails = '—';
+          if (isPaid) {
+            const method = (inv.payment_method || 'other').toUpperCase();
+            const pDate = inv.paid_at ? new Date(inv.paid_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : '';
+            paymentDetails = `<strong style="color:var(--color-text);">${method}</strong>${pDate ? `<div style="font-size:0.74rem; color:var(--color-text-muted);">${pDate}</div>` : ''}`;
+          } else if (isUnpaid) {
+            paymentDetails = `<span style="color:#d97706; font-size:0.78rem;">Due: ${inv.due_date || 'Immediate'}</span>`;
+          }
+
+          const createdDate = inv.created_at ? new Date(inv.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : '—';
+          const patientName = inv.patients?.name || 'Walk-in Patient';
+          const patientContact = inv.patients?.phone || inv.patients?.email || '';
+
+          return `
+            <tr>
+              <td><strong style="font-family:monospace; color:var(--color-primary);">${escapeHtml(inv.invoice_number)}</strong></td>
+              <td>
+                <div style="font-weight:600; color:var(--color-text);">${escapeHtml(patientName)}</div>
+                ${patientContact ? `<div style="font-size:0.78rem; color:var(--color-text-muted);">${escapeHtml(patientContact)}</div>` : ''}
+              </td>
+              <td><span style="font-size:0.82rem; color:var(--color-text);">${createdDate}</span></td>
+              <td><strong style="font-size:0.92rem; color:var(--color-text);">₹${Number(inv.total_amount || 0).toLocaleString('en-IN')}</strong></td>
+              <td>${statusBadge}</td>
+              <td>${paymentDetails}</td>
+              <td style="text-align:right;">
+                <div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">
+                  <button type="button" class="btn btn-sm btn-secondary" onclick="viewPatientInvoiceReceipt('${inv.id}')" style="padding:4px 9px; font-size:0.76rem;" title="View and print official patient receipt">Receipt</button>
+                  ${isUnpaid ? `
+                    <button type="button" class="btn btn-sm" onclick="openRecordPaymentModal('${inv.id}')" style="background:#16a34a; color:#fff; border:none; padding:4px 10px; font-size:0.76rem; border-radius:6px; font-weight:600; cursor:pointer;" title="Record full payment for this invoice">Record Payment</button>
+                  ` : ''}
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color:#dc2626; text-align:center; padding:2rem;">Error loading invoices: ${escapeHtml(err.message)}</td></tr>`;
+      }
+    };
+
+    window.openRecordPaymentModal = function openRecordPaymentModal(invoiceId) {
+      const inv = currentInvoicesData.find(i => i.id === invoiceId);
+      if (!inv) {
+        alert('Invoice data not found. Please refresh.');
+        return;
+      }
+      document.getElementById('payModalInvoiceId').value = inv.id;
+      document.getElementById('payModalInvoiceNo').textContent = inv.invoice_number;
+      document.getElementById('payModalPatientName').textContent = inv.patients?.name || 'Walk-in Patient';
+      document.getElementById('payModalTotalAmount').textContent = `₹${Number(inv.total_amount || 0).toLocaleString('en-IN')}`;
+
+      // Default date to today in YYYY-MM-DD
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const dateInput = document.getElementById('payModalDate');
+      if (dateInput) dateInput.value = todayIso;
+
+      const methodSelect = document.getElementById('payModalMethod');
+      if (methodSelect) methodSelect.value = 'cash';
+
+      const notesInput = document.getElementById('payModalNotes');
+      if (notesInput) notesInput.value = '';
+
+      const btn = document.getElementById('btnSubmitPayment');
+      if (btn) btn.disabled = false;
+      const btnText = document.getElementById('btnSubmitPaymentText');
+      if (btnText) btnText.textContent = '✓ Confirm & Record Full Payment';
+
+      document.getElementById('recordPaymentModal').style.display = 'flex';
+    };
+
+    window.closeRecordPaymentModal = function closeRecordPaymentModal() {
+      document.getElementById('recordPaymentModal').style.display = 'none';
+    };
+
+    window.handleRecordPaymentSubmit = async function handleRecordPaymentSubmit(e) {
+      e.preventDefault();
+      const invoiceId = document.getElementById('payModalInvoiceId').value;
+      const method = document.getElementById('payModalMethod').value;
+      const dateStr = document.getElementById('payModalDate').value;
+      const notes = document.getElementById('payModalNotes')?.value;
+      const amountText = document.getElementById('payModalTotalAmount')?.textContent || '';
+
+      if (!invoiceId) return;
+
+      const confirmed = window.confirm(`Confirm recording full payment of ${amountText} via ${method.toUpperCase()} on ${dateStr}?`);
+      if (!confirmed) return;
+
+      const btn = document.getElementById('btnSubmitPayment');
+      const btnText = document.getElementById('btnSubmitPaymentText');
+      if (btn) btn.disabled = true;
+      if (btnText) btnText.textContent = 'Recording Payment...';
+
+      try {
+        await window.api.recordInvoicePayment(invoiceId, {
+          payment_method: method,
+          paid_at: `${dateStr}T12:00:00.000+05:30`,
+          notes: notes
+        });
+
+        closeRecordPaymentModal();
+        alert('Payment recorded successfully!');
+
+        // Refresh invoices and reports
+        loadPatientInvoices();
+        loadReportsData();
+      } catch (err) {
+        alert(`Failed to record payment: ${err.message}`);
+        if (btn) btn.disabled = false;
+        if (btnText) btnText.textContent = '✓ Confirm & Record Full Payment';
+      }
+    };
+
+    window.viewPatientInvoiceReceipt = function viewPatientInvoiceReceipt(invoiceId) {
+      const inv = currentInvoicesData.find(i => i.id === invoiceId);
+      if (!inv) return;
+
+      const clinicName = localStorage.getItem('sdd_clinic_name') || 'Dental Smart Clinic';
+      openReceiptModal({
+        clinic: { name: clinicName, address: 'Dental Care & Clinic Services' },
+        invoice: {
+          invoice_number: inv.invoice_number,
+          status: inv.status,
+          amount: inv.amount,
+          total_amount: inv.total_amount
+        },
+        appointment: {
+          patientName: inv.patients?.name || 'Valued Patient',
+          phone: inv.patients?.phone || '',
+          email: inv.patients?.email || '',
+          service: inv.appointments?.service || (inv.items && inv.items[0]?.description) || 'Clinical Dental Procedure',
+          date: inv.appointments?.date || (inv.created_at ? inv.created_at.slice(0, 10) : 'Today'),
+          time: inv.appointments?.time || '10:00'
+        },
+        payment_status: inv.status,
+        payment_method: inv.payment_method || 'CASH',
+        amount: inv.total_amount,
+        notes: inv.notes
+      });
+    };
+
+    window.exportInvoicesCsv = async function exportInvoicesCsv() {
+      try {
+        const res = await window.api.getInvoices({
+          status: currentInvoiceStatus,
+          search: currentInvoiceSearch,
+          from: currentInvoiceFrom,
+          to: currentInvoiceTo,
+          export_all: true
+        });
+
+        const invoices = res.invoices || [];
+        if (invoices.length === 0) {
+          alert('No invoices to export with current filters.');
+          return;
+        }
+
+        const headers = [
+          'Invoice Number',
+          'Patient Name',
+          'Patient Phone',
+          'Patient Email',
+          'Created Date',
+          'Due Date',
+          'Status',
+          'Total Amount (INR)',
+          'Payment Method',
+          'Payment Date'
+        ];
+
+        const rows = [headers];
+        invoices.forEach(inv => {
+          rows.push([
+            inv.invoice_number || '',
+            inv.patients?.name || '',
+            inv.patients?.phone || '',
+            inv.patients?.email || '',
+            inv.created_at ? inv.created_at.slice(0, 10) : '',
+            inv.due_date || '',
+            inv.status || '',
+            inv.total_amount || 0,
+            inv.payment_method || '',
+            inv.paid_at ? inv.paid_at.slice(0, 10) : ''
+          ]);
+        });
+
+        const csvString = rows.map(r => r.map(csvSafe).join(',')).join('\r\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const todayStr = new Date().toISOString().slice(0, 10);
+        downloadBlob(blob, `patient_invoices_${currentInvoiceStatus}_${todayStr}.csv`);
+      } catch (err) {
+        alert(`Export failed: ${err.message}`);
+      }
+    };
 
     // ── Staff & Team Management Logic ────────────────────────────────────────
     window.currentStaffList = [];
@@ -3276,6 +4372,8 @@
         statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#dcfce7; color:#15803d; font-weight:600; font-size:0.75rem; border:1px solid #bbf7d0;">✓ Completed</span>';
       } else if (st === 'cancelled') {
         statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#f1f5f9; color:#64748b; font-weight:600; font-size:0.75rem; border:1px solid #e2e8f0;">✕ Cancelled</span>';
+      } else if (st === 'no-show' || st === 'no_show') {
+        statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#fee2e2; color:#b91c1c; font-weight:600; font-size:0.75rem; border:1px solid #fca5a5;">⚠️ No-Show</span>';
       } else {
         statusBadge = `<span style="display:inline-block; padding:3px 9px; border-radius:12px; background:#f1f5f9; color:var(--color-text); font-size:0.75rem; text-transform:capitalize;">${st}</span>`;
       }
@@ -3306,6 +4404,7 @@
         actionsHtml = `
           <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
             <button type="button" class="btn btn-sm" onclick="openCheckoutModal(${rawApptData})" style="background:#16a34a; color:#fff; border:none; padding:5px 11px; font-size:0.76rem; border-radius:6px; font-weight:600; cursor:pointer;" title="Complete visit, add treatment notes & generate receipt">✓ Complete</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="handleStatusChange('${a.id}', 'no-show')" style="padding:4px 8px; font-size:0.75rem; color:#b91c1c;">No-Show</button>
             <button type="button" class="btn btn-sm btn-secondary" onclick="handleStatusChange('${a.id}', 'cancelled')" style="padding:4px 8px; font-size:0.75rem; color:#dc2626;">Cancel</button>
           </div>
         `;
@@ -5303,6 +6402,77 @@ setTimeout(() => {
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Modal: Record Full Payment -->
+<div id="recordPaymentModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); align-items: center; justify-content: center; z-index: 1055; overflow-y: auto; padding: 20px;">
+  <div class="modal-content" style="background: #ffffff; color: #1e293b; padding: 0; border-radius: 14px; width: 100%; max-width: 480px; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden;">
+    <!-- Modal Header -->
+    <div style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="width:34px; height:34px; border-radius:10px; background:#dcfce7; color:#15803d; display:flex; align-items:center; justify-content:center; font-size:1.1rem; font-weight:700;">₹</div>
+        <div>
+          <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a;">Record Full Payment</h3>
+          <p style="margin: 2px 0 0; font-size: 0.78rem; color: #64748b;">Record received payment for unpaid invoice</p>
+        </div>
+      </div>
+      <button type="button" onclick="closeRecordPaymentModal()" style="background:none; border:none; color:#64748b; font-size:22px; cursor:pointer; line-height:1;">&times;</button>
+    </div>
+
+    <!-- Modal Form -->
+    <form id="recordPaymentForm" onsubmit="handleRecordPaymentSubmit(event)" style="padding: 20px;">
+      <input type="hidden" id="payModalInvoiceId" value="">
+
+      <!-- Read-Only Summary Banner -->
+      <div style="background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+          <span style="font-size:0.78rem; color:#64748b;">Invoice #:</span>
+          <strong style="font-size:0.85rem; font-family:monospace; color:#0f172a;" id="payModalInvoiceNo">—</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+          <span style="font-size:0.78rem; color:#64748b;">Patient:</span>
+          <strong style="font-size:0.85rem; color:#0f172a;" id="payModalPatientName">—</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-top:8px; padding-top:8px; border-top:1px dashed #cbd5e1;">
+          <span style="font-size:0.82rem; font-weight:700; color:#0f172a;">Total Amount Due:</span>
+          <span style="font-size:1.2rem; font-weight:800; color:#16a34a;" id="payModalTotalAmount">₹0</span>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="display:block; font-size:0.82rem; font-weight:600; color:#334155; margin-bottom:6px;">Payment Method <span style="color:#dc2626;">*</span></label>
+        <select id="payModalMethod" required style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid #cbd5e1; background:#fff; font-size:0.88rem; color:#0f172a;">
+          <option value="cash">Cash</option>
+          <option value="upi">UPI (GPay / PhonePe / Paytm)</option>
+          <option value="card">Credit / Debit Card</option>
+          <option value="bank_transfer">Bank Transfer / Netbanking</option>
+          <option value="other">Other / Cheque</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="display:block; font-size:0.82rem; font-weight:600; color:#334155; margin-bottom:6px;">Payment Received Date <span style="color:#dc2626;">*</span></label>
+        <input type="date" id="payModalDate" required style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid #cbd5e1; background:#fff; font-size:0.88rem; color:#0f172a;">
+        <span style="font-size:0.72rem; color:#64748b; margin-top:3px; display:block;">Report collections will be attributed to this date in Asia/Kolkata timezone.</span>
+      </div>
+
+      <div style="margin-bottom: 18px;">
+        <label style="display:block; font-size:0.82rem; font-weight:600; color:#334155; margin-bottom:6px;">Notes / Reference (Optional)</label>
+        <input type="text" id="payModalNotes" placeholder="Transaction ref, bank note, etc." style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid #cbd5e1; background:#fff; font-size:0.85rem; color:#0f172a;">
+      </div>
+
+      <div style="background:#fffbeb; border:1px solid #fef3c7; border-radius:8px; padding:10px 12px; margin-bottom:18px; font-size:0.75rem; color:#92400e; line-height:1.35;">
+        ⚠️ <strong>Note:</strong> This records the invoice as paid in full. Partial payments or ledger instalments are not supported. Once paid, the invoice will reflect in collections for the selected date.
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeRecordPaymentModal()">Cancel</button>
+        <button type="submit" id="btnSubmitPayment" class="btn btn-primary btn-sm" style="display:flex; align-items:center; gap:6px; font-weight:600;">
+          <span id="btnSubmitPaymentText">✓ Confirm &amp; Record Full Payment</span>
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 

@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  Dashboard Routes
-//  GET /api/dashboard/stats — Get aggregated stats for the dashboard
+//  Dashboard & Clinic Analytics Routes
+//  GET /api/dashboard/stats   — Overview stats for the Home dashboard
+//  GET /api/dashboard/reports — Accurate periodic analytics & clinic reports
 // ─────────────────────────────────────────────────────────────────────────────
 const express     = require('express');
 const supabase    = require('../lib/supabase');
@@ -11,7 +12,323 @@ const router = express.Router();
 router.use(requireAuth);
 router.use(requireActiveSubscription);
 
-// ── GET /api/dashboard/stats ──────────────────────────────────────────────────
+// ── Date Range Resolver for Clinic Reports ───────────────────────────────────
+// Documented default timezone: Asia/Kolkata (IST, UTC+05:30)
+function resolveClinicDateRange(range = 'this_month', customFrom, customTo, tz = 'Asia/Kolkata') {
+  const now = new Date();
+  const todayStr = now.toLocaleDateString('en-CA', { timeZone: tz }); // 'YYYY-MM-DD'
+  const [curYear, curMonth, curDay] = todayStr.split('-').map(Number);
+
+  let fromStr = '';
+  let toStr = '';
+  let rangeLabel = '';
+  let isToDate = false;
+
+  if (range === 'this_month') {
+    fromStr = `${curYear}-${String(curMonth).padStart(2, '0')}-01`;
+    toStr = todayStr;
+    rangeLabel = 'This Month';
+    isToDate = true;
+  } else if (range === 'last_month') {
+    const prevMonthDate = new Date(curYear, curMonth - 2, 1);
+    const pYear = prevMonthDate.getFullYear();
+    const pMonth = prevMonthDate.getMonth() + 1;
+    fromStr = `${pYear}-${String(pMonth).padStart(2, '0')}-01`;
+    const lastDayPrev = new Date(pYear, pMonth, 0).getDate();
+    toStr = `${pYear}-${String(pMonth).padStart(2, '0')}-${String(lastDayPrev).padStart(2, '0')}`;
+    rangeLabel = 'Last Month';
+    isToDate = false;
+  } else if (range === 'last_6_months') {
+    const start6MDate = new Date(curYear, curMonth - 6, 1);
+    const sYear = start6MDate.getFullYear();
+    const sMonth = start6MDate.getMonth() + 1;
+    fromStr = `${sYear}-${String(sMonth).padStart(2, '0')}-01`;
+    toStr = todayStr;
+    rangeLabel = 'Last 6 Months';
+    isToDate = true;
+  } else if (range === 'year_to_date') {
+    fromStr = `${curYear}-01-01`;
+    toStr = todayStr;
+    rangeLabel = `Year to Date (${curYear})`;
+    isToDate = true;
+  } else if (range === 'custom') {
+    fromStr = customFrom || `${curYear}-${String(curMonth).padStart(2, '0')}-01`;
+    toStr = customTo || todayStr;
+    rangeLabel = 'Custom Range';
+    if (toStr >= todayStr) isToDate = true;
+  } else {
+    fromStr = `${curYear}-${String(curMonth).padStart(2, '0')}-01`;
+    toStr = todayStr;
+    rangeLabel = 'This Month';
+    isToDate = true;
+  }
+
+  // Ensure fromStr <= toStr
+  if (fromStr > toStr) {
+    const tmp = fromStr; fromStr = toStr; toStr = tmp;
+  }
+
+  // Inclusive boundaries for Timestamptz (ISO with +05:30)
+  const startISO = `${fromStr}T00:00:00.000+05:30`;
+  const endISO   = `${toStr}T23:59:59.999+05:30`;
+
+  return { fromStr, toStr, startISO, endISO, rangeLabel, isToDate, todayStr, tz };
+}
+
+// ── GET /api/dashboard/reports ────────────────────────────────────────────────
+router.get('/reports', async (req, res, next) => {
+  try {
+    if (!req.clinicId) {
+      return res.json({ error: 'No clinic found for user.' });
+    }
+
+    const { range = 'this_month', from, to } = req.query;
+    const resolved = resolveClinicDateRange(range, from, to);
+    const { fromStr, toStr, startISO, endISO, rangeLabel, isToDate, todayStr } = resolved;
+
+    // Parallel fetch of clinic data (tenant-scoped)
+    const [invRes, apptRes, treatRes] = await Promise.all([
+      supabase
+        .from('invoices')
+        .select('id, invoice_number, amount, tax_amount, total_amount, status, payment_method, due_date, paid_at, created_at, appointment_id')
+        .eq('clinic_id', req.clinicId),
+      supabase
+        .from('appointments')
+        .select('id, patient_id, date, time, service, status, created_at')
+        .eq('clinic_id', req.clinicId)
+        .order('date', { ascending: true }),
+      supabase
+        .from('treatment_records')
+        .select('id, procedure, cost, appointment_id, created_at')
+        .eq('clinic_id', req.clinicId)
+    ]);
+
+    if (invRes.error)   throw invRes.error;
+    if (apptRes.error)  throw apptRes.error;
+    if (treatRes.error) throw treatRes.error;
+
+    const allInvoices   = invRes.data || [];
+    const allAppts      = apptRes.data || [];
+    const allTreatments = treatRes.data || [];
+
+    const rangeStartDate = new Date(startISO);
+    const rangeEndDate   = new Date(endISO);
+
+    // ── 1. Revenue & Collections ──────────────────────────────────────────────
+    // A. Collected Revenue: invoices with status = 'paid' paid within selected period
+    const paidInvoicesInPeriod = allInvoices.filter(inv => {
+      if (inv.status !== 'paid' || !inv.paid_at) return false;
+      const pDate = new Date(inv.paid_at);
+      return pDate >= rangeStartDate && pDate <= rangeEndDate;
+    });
+
+    const collectedRevenue = paidInvoicesInPeriod.reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0);
+
+    // B. Invoiced Revenue: invoices created within the period (excluding cancelled)
+    const createdInvoicesInPeriod = allInvoices.filter(inv => {
+      if (inv.status === 'cancelled') return false;
+      const cDate = new Date(inv.created_at);
+      return cDate >= rangeStartDate && cDate <= rangeEndDate;
+    });
+
+    const invoicedRevenue = createdInvoicesInPeriod.reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0);
+
+    // C. Current Outstanding Balance: All unpaid invoices for the clinic as a snapshot
+    const unpaidInvoicesAllTime = allInvoices.filter(inv => inv.status === 'unpaid');
+    const currentOutstandingBalance = unpaidInvoicesAllTime.reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0);
+    const currentOutstandingCount = unpaidInvoicesAllTime.length;
+
+    // ── 2. Appointments in Selected Period ───────────────────────────────────
+    const apptsInPeriod = allAppts.filter(a => a.date >= fromStr && a.date <= toStr);
+    const completedApptsInPeriod = apptsInPeriod.filter(a => a.status === 'completed');
+    const cancelledApptsInPeriod = apptsInPeriod.filter(a => a.status === 'cancelled');
+    const noShowApptsInPeriod    = apptsInPeriod.filter(a => a.status === 'no-show' || a.status === 'no_show');
+
+    const completedVisits = completedApptsInPeriod.length;
+    const cancellationsCount = cancelledApptsInPeriod.length;
+    const noShowsCount = noShowApptsInPeriod.length;
+
+    // Denominator for rates: Resolved appointments up to today (excluding future or pending)
+    const resolvedCount = completedVisits + cancellationsCount + noShowsCount;
+    const cancellationRate = resolvedCount > 0 ? Number(((cancellationsCount / resolvedCount) * 100).toFixed(1)) : 0;
+    const noShowRate = resolvedCount > 0 ? Number(((noShowsCount / resolvedCount) * 100).toFixed(1)) : 0;
+
+    // ── 3. New vs Returning Patients (Completed Appointments Only) ────────────
+    // Unique patients who had a completed visit during this period
+    const patientIdsInPeriod = [...new Set(completedApptsInPeriod.map(a => a.patient_id).filter(Boolean))];
+    let newPatientsCount = 0;
+    let returningPatientsCount = 0;
+
+    patientIdsInPeriod.forEach(pid => {
+      // Check if patient had ANY completed visit prior to fromStr
+      const hadPriorCompleted = allAppts.some(a => a.patient_id === pid && a.status === 'completed' && a.date < fromStr);
+      if (hadPriorCompleted) {
+        returningPatientsCount++;
+      } else {
+        newPatientsCount++;
+      }
+    });
+
+    // ── 4. Payment Method Distribution (Actual Received Payments) ────────────
+    const methodMap = { cash: 0, upi: 0, card: 0, bank_transfer: 0, other: 0 };
+    paidInvoicesInPeriod.forEach(inv => {
+      const m = (inv.payment_method || 'other').toLowerCase();
+      const amt = Number(inv.total_amount || 0);
+      if (methodMap[m] !== undefined) {
+        methodMap[m] += amt;
+      } else {
+        methodMap.other += amt;
+      }
+    });
+
+    // ── 5. Top Treatments by Completed Procedure Count & Billed Amount ────────
+    const treatmentAgg = {};
+    completedApptsInPeriod.forEach(a => {
+      const s = a.service || 'General Dental';
+      if (!treatmentAgg[s]) {
+        treatmentAgg[s] = { service: s, completed_count: 0, billed_amount: 0 };
+      }
+      treatmentAgg[s].completed_count += 1;
+
+      // Find linked invoice or treatment record for billed amount
+      const linkedInv = allInvoices.find(i => i.appointment_id === a.id);
+      if (linkedInv && linkedInv.status !== 'cancelled') {
+        treatmentAgg[s].billed_amount += Number(linkedInv.total_amount || 0);
+      } else {
+        const linkedTr = allTreatments.find(t => t.appointment_id === a.id);
+        if (linkedTr && linkedTr.cost) {
+          treatmentAgg[s].billed_amount += Number(linkedTr.cost || 0);
+        }
+      }
+    });
+
+    const topTreatments = Object.values(treatmentAgg)
+      .sort((a, b) => b.completed_count - a.completed_count)
+      .slice(0, 8);
+
+    // ── 6. Determine Buckets (Daily vs Monthly) for Charts ────────────────────
+    const dStart = new Date(fromStr + 'T00:00:00Z');
+    const dEnd   = new Date(toStr + 'T00:00:00Z');
+    const totalDays = Math.round((dEnd - dStart) / (1000 * 60 * 60 * 24)) + 1;
+    const isDaily = totalDays <= 31;
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const buckets = [];
+
+    if (isDaily) {
+      const curr = new Date(dStart);
+      while (curr <= dEnd) {
+        const key = curr.toISOString().slice(0, 10);
+        const dayNum = curr.getUTCDate();
+        const monNum = curr.getUTCMonth();
+        buckets.push({
+          key,
+          label: `${dayNum} ${monthNames[monNum]}`,
+          collected: 0,
+          invoiced: 0,
+          cancellations: 0,
+          no_shows: 0
+        });
+        curr.setUTCDate(curr.getUTCDate() + 1);
+      }
+    } else {
+      // Monthly buckets
+      const [startYear, startMon] = fromStr.split('-').map(Number);
+      const [endYear, endMon]     = toStr.split('-').map(Number);
+
+      let y = startYear;
+      let m = startMon;
+      while (y < endYear || (y === endYear && m <= endMon)) {
+        const key = `${y}-${String(m).padStart(2, '0')}`;
+        buckets.push({
+          key,
+          label: `${monthNames[m - 1]} ${String(y).slice(-2)}`,
+          collected: 0,
+          invoiced: 0,
+          cancellations: 0,
+          no_shows: 0
+        });
+        m++;
+        if (m > 12) { m = 1; y++; }
+      }
+    }
+
+    // Populate collections into buckets
+    paidInvoicesInPeriod.forEach(inv => {
+      const bKey = isDaily ? inv.paid_at.slice(0, 10) : inv.paid_at.slice(0, 7);
+      const b = buckets.find(b => b.key === bKey);
+      if (b) b.collected += Number(inv.total_amount || 0);
+    });
+
+    // Populate invoiced into buckets
+    createdInvoicesInPeriod.forEach(inv => {
+      const bKey = isDaily ? inv.created_at.slice(0, 10) : inv.created_at.slice(0, 7);
+      const b = buckets.find(b => b.key === bKey);
+      if (b) b.invoiced += Number(inv.total_amount || 0);
+    });
+
+    // Populate cancellations & no-shows by appointment date
+    cancelledApptsInPeriod.forEach(a => {
+      const bKey = isDaily ? a.date : a.date.slice(0, 7);
+      const b = buckets.find(b => b.key === bKey);
+      if (b) b.cancellations += 1;
+    });
+
+    noShowApptsInPeriod.forEach(a => {
+      const bKey = isDaily ? a.date : a.date.slice(0, 7);
+      const b = buckets.find(b => b.key === bKey);
+      if (b) b.no_shows += 1;
+    });
+
+    res.json({
+      period: {
+        range,
+        from: fromStr,
+        to: toStr,
+        label: rangeLabel,
+        is_to_date: isToDate,
+        total_days: totalDays,
+        today: todayStr
+      },
+      summary: {
+        collected_revenue: collectedRevenue,
+        invoiced_revenue: invoicedRevenue,
+        current_outstanding_balance: currentOutstandingBalance,
+        current_outstanding_count: currentOutstandingCount,
+        completed_appointments: completedVisits,
+        new_patients: newPatientsCount,
+        returning_patients: returningPatientsCount,
+        resolved_appointments: resolvedCount,
+        cancellations_count: cancellationsCount,
+        cancellation_rate: cancellationRate,
+        no_shows_count: noShowsCount,
+        no_show_rate: noShowRate
+      },
+      charts: {
+        collections_timeline: {
+          labels: buckets.map(b => b.label),
+          collected: buckets.map(b => b.collected),
+          invoiced: buckets.map(b => b.invoiced)
+        },
+        missed_timeline: {
+          labels: buckets.map(b => b.label),
+          cancellations: buckets.map(b => b.cancellations),
+          no_shows: buckets.map(b => b.no_shows)
+        },
+        new_vs_returning: {
+          new_patients: newPatientsCount,
+          returning_patients: returningPatientsCount
+        },
+        payment_methods: methodMap,
+        top_treatments: topTreatments
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── GET /api/dashboard/stats (Home Dashboard Overview) ─────────────────────────
 router.get('/stats', async (req, res, next) => {
   try {
     if (!req.clinicId) {
@@ -76,7 +393,7 @@ router.get('/stats', async (req, res, next) => {
       .eq('status', 'pending');
     if (err4) throw err4;
 
-    // 5. Fetch recent appointments (last 60 days to next 30 days) for analytics charts
+    // 5. Fetch appointments for analytics charts
     const { data: recentAppointments, error: err5 } = await supabase
       .from('appointments')
       .select('id, date, status, service, created_at, patient_id')
@@ -157,18 +474,17 @@ router.get('/stats', async (req, res, next) => {
     const returningPatients = Object.values(patientApptCount).filter(c => c > 1).length;
     const newPatients = Object.values(patientApptCount).filter(c => c === 1).length;
 
-    // 5f. Monthly No-Shows & Cancellations (Past 6 Months)
+    // 5f. Monthly No-Shows & Cancellations (Past 6 Months) — Fixed 'no-show' and 'no_show'
     const noShowsMonthlyData = [];
     for (let i = 5; i >= 0; i--) {
       const mDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const yearMonth = mDate.toISOString().slice(0, 7);
       const count = appts.filter(a =>
-        (a.status === 'cancelled' || a.status === 'no_show') &&
+        (a.status === 'cancelled' || a.status === 'no-show' || a.status === 'no_show') &&
         (a.date || a.created_at || '').startsWith(yearMonth)
       ).length;
       noShowsMonthlyData.push(count);
     }
-
 
     res.json({
       today_appointments: todayAppointments || 0,

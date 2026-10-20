@@ -1217,6 +1217,7 @@
         <button class="tab-btn" data-tab="scheduled">Scheduled / Upcoming</button>
         <button class="tab-btn" data-tab="completed">Completed</button>
         <button class="tab-btn" data-tab="cancelled">Cancelled</button>
+        <button class="tab-btn" data-tab="no-show">No-Show</button>
         <button class="tab-btn" data-tab="all">All</button>
       </div>
 
@@ -2244,6 +2245,8 @@
         statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#dcfce7; color:#15803d; font-weight:600; font-size:0.75rem; border:1px solid #bbf7d0;">✓ Completed</span>';
       } else if (st === 'cancelled') {
         statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#f1f5f9; color:#64748b; font-weight:600; font-size:0.75rem; border:1px solid #e2e8f0;">✕ Cancelled</span>';
+      } else if (st === 'no-show' || st === 'no_show') {
+        statusBadge = '<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; background:#fee2e2; color:#b91c1c; font-weight:600; font-size:0.75rem; border:1px solid #fca5a5;">⚠️ No-Show</span>';
       } else {
         statusBadge = `<span style="display:inline-block; padding:3px 9px; border-radius:12px; background:#f1f5f9; color:var(--color-text); font-size:0.75rem; text-transform:capitalize;">${st}</span>`;
       }

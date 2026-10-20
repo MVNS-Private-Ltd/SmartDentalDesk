@@ -131,9 +131,11 @@ router.get('/', async (req, res, next) => {
         q = q.eq('status', 'completed');
       } else if (status === 'cancelled') {
         q = q.eq('status', 'cancelled');
+      } else if (status === 'no-show' || status === 'no_show') {
+        q = q.in('status', ['no-show', 'no_show']);
       } else if (status === 'active') {
-        // Active means not completed and not cancelled
-        q = q.not('status', 'in', '("completed","cancelled")');
+        // Active means not completed, not cancelled, and not no-show
+        q = q.not('status', 'in', '("completed","cancelled","no-show","no_show")');
       } else if (status !== 'all') {
         q = q.eq('status', status);
       }

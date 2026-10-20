@@ -273,6 +273,26 @@ window.api = (function() {
     loginWithGoogle,
     handleOAuthCallback,
     getDashboardStats: () => request('/dashboard/stats'),
+    getReports: (params = {}) => {
+      const qs = new URLSearchParams();
+      if (params.range) qs.set('range', params.range);
+      if (params.from)  qs.set('from', params.from);
+      if (params.to)    qs.set('to', params.to);
+      const str = qs.toString();
+      return request(`/dashboard/reports${str ? '?' + str : ''}`);
+    },
+    getInvoices: (params = {}) => {
+      const qs = new URLSearchParams();
+      Object.keys(params).forEach(k => {
+        if (params[k] !== undefined && params[k] !== null && params[k] !== '') {
+          qs.set(k, params[k]);
+        }
+      });
+      const str = qs.toString();
+      return request(`/invoices${str ? '?' + str : ''}`);
+    },
+    getInvoice: (id) => request(`/invoices/${encodeURIComponent(id)}`),
+    recordInvoicePayment: (id, payload) => request(`/invoices/${encodeURIComponent(id)}/pay`, { method: 'PATCH', body: JSON.stringify(payload) }),
     
     // Credits & Billing
     getCreditsBalance: () => request('/credits/balance'),

@@ -142,12 +142,29 @@ router.post('/upload-image', requireAuth, uploadImage.single('image'), async (re
     const fileName = `${req.clinicId}/${Date.now()}_cover.${ext}`;
 
     // Upload to Supabase Storage (service-role bypasses RLS)
-    const { data: uploadData, error: uploadErr } = await supabase.storage
+    let { data: uploadData, error: uploadErr } = await supabase.storage
       .from('clinic_images')
       .upload(fileName, req.file.buffer, {
         contentType: req.file.mimetype,
         upsert: true   // allow re-upload (overwrite old cover)
       });
+
+    // Auto-create bucket if missing and retry
+    if (uploadErr && (uploadErr.message?.toLowerCase().includes('not found') || uploadErr.statusCode === '404' || uploadErr.status === 404)) {
+      await supabase.storage.createBucket('clinic_images', {
+        public: true,
+        fileSizeLimit: 5242880,
+        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif']
+      });
+      const retry = await supabase.storage
+        .from('clinic_images')
+        .upload(fileName, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: true
+        });
+      uploadData = retry.data;
+      uploadErr = retry.error;
+    }
 
     if (uploadErr) throw uploadErr;
 

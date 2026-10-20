@@ -351,6 +351,21 @@ window.api = (function() {
     completeAppointmentCheckout: (id, payload) => request(`/appointments/${id}/checkout`, { method: 'POST', body: JSON.stringify(payload) }),
     getSettings: () => request('/clinics/settings'),
     updateSettings: (payload) => request('/clinics/settings', { method: 'PUT', body: JSON.stringify(payload) }),
+    uploadClinicImage: async (file) => {
+      const token = getToken();
+      const form  = new FormData();
+      form.append('image', file);
+      const res = await fetch(`${BASE_URL}/clinics/upload-image`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Image upload failed');
+      }
+      return res.json();
+    },
     estimateAiCost: (message, mode = 'thinking') => request('/ai/estimate', { method: 'POST', body: JSON.stringify({ message, mode }) }),
     sendChatMessage: async (message, mode = 'thinking', context = '', session_id = null) => {
       const payload = { message, mode, context };

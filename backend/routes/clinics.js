@@ -1,5 +1,6 @@
 const express     = require('express');
 const { body, validationResult } = require('express-validator');
+const multer      = require('multer');
 const supabase    = require('../lib/supabase');
 const requireAuth = require('../middleware/auth');
 
@@ -10,6 +11,19 @@ function validate(req, res) {
   if (!errors.isEmpty()) { res.status(400).json({ error: errors.array()[0].msg }); return false; }
   return true;
 }
+
+// Multer for clinic cover image uploads (memory storage → Supabase Storage)
+const uploadImage = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed.'));
+    }
+  }
+});
 
 // ── GET /api/clinics/settings ────────────────────────────────────────────────
 // Returns all clinic fields including public marketplace profile fields
@@ -115,6 +129,35 @@ router.post('/request-deletion', requireAuth, [
   } catch (err) {
     next(err);
   }
+});
+
+// ── POST /api/clinics/upload-image ────────────────────────────────────────────
+// Uploads a clinic cover/gallery image to Supabase Storage and returns the public URL
+router.post('/upload-image', requireAuth, uploadImage.single('image'), async (req, res, next) => {
+  try {
+    if (!req.clinicId) return res.status(400).json({ error: 'Clinic context required.' });
+    if (!req.file)     return res.status(400).json({ error: 'No image file provided.' });
+
+    const ext      = req.file.originalname.split('.').pop().toLowerCase();
+    const fileName = `${req.clinicId}/${Date.now()}_cover.${ext}`;
+
+    // Upload to Supabase Storage (service-role bypasses RLS)
+    const { data: uploadData, error: uploadErr } = await supabase.storage
+      .from('clinic_images')
+      .upload(fileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true   // allow re-upload (overwrite old cover)
+      });
+
+    if (uploadErr) throw uploadErr;
+
+    // Build public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('clinic_images')
+      .getPublicUrl(uploadData.path);
+
+    res.json({ url: publicUrl });
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

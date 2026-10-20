@@ -99,6 +99,46 @@
     background: var(--color-divider);
     margin-bottom: var(--space-3);
     object-fit: cover;
+    display: block;
+  }
+
+  .cover-upload-zone {
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    margin-bottom: var(--space-3);
+  }
+  .cover-upload-zone:hover .cover-overlay {
+    opacity: 1;
+  }
+  .cover-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.2s;
+    border-radius: var(--radius-md);
+  }
+  .cover-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: var(--space-2);
+    font-size: var(--text-sm);
+  }
+  #coverUploadStatus {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    margin-top: 4px;
   }
 </style>
 </head>
@@ -162,9 +202,29 @@
       <section class="form-section">
         <h3>Media &amp; Bio</h3>
         <div class="form-group">
-          <label>Cover Image URL (16:9 ratio recommended)</label>
-          <img id="coverPreview" class="cover-preview" src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80" alt="Cover Preview">
-          <input type="url" id="f_cover_image" class="form-control" placeholder="https://..." oninput="document.getElementById('coverPreview').src = this.value || 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80'">
+          <label>Cover Image <span style="font-weight:400; color:var(--color-text-muted); font-size:0.8rem;">(16:9 recommended · max 5 MB)</span></label>
+
+          <!-- Click-to-upload zone -->
+          <div class="cover-upload-zone" id="coverUploadZone" onclick="document.getElementById('coverFileInput').click()" title="Click to change cover image">
+            <img id="coverPreview" class="cover-preview" src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80" alt="Cover Preview">
+            <div class="cover-overlay">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span>Click to change photo</span>
+            </div>
+          </div>
+
+          <!-- Hidden native file input (opens gallery/camera) -->
+          <input type="file" id="coverFileInput" accept="image/*" style="display:none" onchange="onCoverFileSelected(this)">
+
+          <!-- Upload button (alternative trigger) -->
+          <button type="button" class="btn btn-secondary btn-sm cover-upload-btn" onclick="document.getElementById('coverFileInput').click()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Choose from Gallery
+          </button>
+          <span id="coverUploadStatus"></span>
+
+          <!-- Hidden field stores the final URL (uploaded or existing) -->
+          <input type="hidden" id="f_cover_image">
         </div>
         <div class="form-group" style="margin-top:var(--space-4);">
           <label>About / Bio</label>
@@ -266,6 +326,7 @@
 <script src="./assets/app.js"></script>
 <script>
   let currentSettings = null;
+  let pendingCoverFile = null; // holds the File object selected but not yet uploaded
 
   document.addEventListener('DOMContentLoaded', async () => {
     if (!window.api.isAuthenticated()) {
@@ -292,20 +353,20 @@
     document.getElementById('f_owner_name').value = data.owner_name || '';
     document.getElementById('f_phone').value = data.phone || '';
     document.getElementById('f_email').value = data.email || '';
-    
+
     document.getElementById('f_cover_image').value = data.cover_image || '';
     if (data.cover_image) document.getElementById('coverPreview').src = data.cover_image;
-    
+
     document.getElementById('f_about').value = data.about || '';
     document.getElementById('f_city').value = data.city || '';
     document.getElementById('f_area').value = data.area || '';
     document.getElementById('f_address').value = data.address || '';
     document.getElementById('f_pincode').value = data.pincode || '';
-    
+
     document.getElementById('f_experience').value = data.experience_years || 0;
     if (data.price_range) document.getElementById('f_price_range').value = data.price_range;
     document.getElementById('f_timings').value = data.timings || '';
-    
+
     document.getElementById('f_specialties').value = Array.isArray(data.specialties) ? data.specialties.join(', ') : '';
 
     // Amenities
@@ -325,6 +386,22 @@
     }
   }
 
+  // ── Cover image file picker ─────────────────────────────────────────────────
+  function onCoverFileSelected(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    // Instant local preview (no upload yet)
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      document.getElementById('coverPreview').src = e.target.result;
+      document.getElementById('coverUploadStatus').textContent = `📎 ${file.name} — will upload on Save`;
+    };
+    reader.readAsDataURL(file);
+
+    pendingCoverFile = file;
+  }
+
   function addServiceRow(name = '', price = '') {
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -342,42 +419,53 @@
     btn.textContent = 'Saving...';
     btn.disabled = true;
 
-    // Collect amenities
-    const amenities = [];
-    document.querySelectorAll('#amenitiesGrid input[type="checkbox"]:checked').forEach(cb => {
-      amenities.push(cb.value);
-    });
-
-    // Collect services
-    const services = [];
-    document.querySelectorAll('#servicesTbody tr').forEach(tr => {
-      const name = tr.querySelector('.srv-name').value.trim();
-      const price = parseInt(tr.querySelector('.srv-price').value.trim()) || 0;
-      if (name) services.push({ name, price });
-    });
-
-    // Collect specialties
-    const specRaw = document.getElementById('f_specialties').value;
-    const specialties = specRaw.split(',').map(s => s.trim()).filter(Boolean);
-
-    const payload = {
-      name: document.getElementById('f_name').value.trim(),
-      phone: document.getElementById('f_phone').value.trim(),
-      address: document.getElementById('f_address').value.trim(),
-      about: document.getElementById('f_about').value.trim(),
-      city: document.getElementById('f_city').value.trim(),
-      area: document.getElementById('f_area').value.trim(),
-      pincode: document.getElementById('f_pincode').value.trim(),
-      cover_image: document.getElementById('f_cover_image').value.trim(),
-      timings: document.getElementById('f_timings').value.trim(),
-      experience_years: parseInt(document.getElementById('f_experience').value) || 0,
-      price_range: document.getElementById('f_price_range').value,
-      specialties,
-      services_offered: services,
-      amenities
-    };
-
     try {
+      // 1. Upload cover image first (if user picked a new file)
+      if (pendingCoverFile) {
+        const statusEl = document.getElementById('coverUploadStatus');
+        statusEl.textContent = '⏳ Uploading image…';
+        const { url } = await window.api.uploadClinicImage(pendingCoverFile);
+        document.getElementById('f_cover_image').value = url;
+        document.getElementById('coverPreview').src = url;
+        statusEl.textContent = '✅ Image uploaded';
+        pendingCoverFile = null;
+      }
+
+      // 2. Collect amenities
+      const amenities = [];
+      document.querySelectorAll('#amenitiesGrid input[type="checkbox"]:checked').forEach(cb => {
+        amenities.push(cb.value);
+      });
+
+      // 3. Collect services
+      const services = [];
+      document.querySelectorAll('#servicesTbody tr').forEach(tr => {
+        const name = tr.querySelector('.srv-name').value.trim();
+        const price = parseInt(tr.querySelector('.srv-price').value.trim()) || 0;
+        if (name) services.push({ name, price });
+      });
+
+      // 4. Collect specialties
+      const specRaw = document.getElementById('f_specialties').value;
+      const specialties = specRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+      const payload = {
+        name: document.getElementById('f_name').value.trim(),
+        phone: document.getElementById('f_phone').value.trim(),
+        address: document.getElementById('f_address').value.trim(),
+        about: document.getElementById('f_about').value.trim(),
+        city: document.getElementById('f_city').value.trim(),
+        area: document.getElementById('f_area').value.trim(),
+        pincode: document.getElementById('f_pincode').value.trim(),
+        cover_image: document.getElementById('f_cover_image').value.trim(),
+        timings: document.getElementById('f_timings').value.trim(),
+        experience_years: parseInt(document.getElementById('f_experience').value) || 0,
+        price_range: document.getElementById('f_price_range').value,
+        specialties,
+        services_offered: services,
+        amenities
+      };
+
       await window.api.updateSettings(payload);
       window.showToast('Profile updated successfully!', 'success');
     } catch (e) {
@@ -388,6 +476,7 @@
     }
   }
 </script>
+
 <footer style="text-align:center;padding:1rem;font-size:0.8rem;color:#888;border-top:1px solid #eee;margin-top:2rem;">
   <a href="./privacy-policy.html" style="color:#555;text-decoration:none;margin:0 0.5rem;">Privacy Policy</a> |
   <a href="./terms-of-service.html" style="color:#555;text-decoration:none;margin:0 0.5rem;">Terms of Service</a> |

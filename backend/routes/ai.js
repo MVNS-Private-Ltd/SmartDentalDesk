@@ -42,11 +42,12 @@ const FALLBACK_MODELS = [
   'dots-studio/dots-3-note-preview:free',
 ];
 
-// Vision-capable models — gemma-4 supports multimodal inputs
+// Vision-capable models that support multimodal/image input
 const VISION_FALLBACK_MODELS = [
-  'google/gemma-4-31b-it:free',
-  'cohere/north-mini-code:free',
+  'openrouter/free',
+  'nvidia/nemotron-3.5-super-vl:free',
   'dots-studio/dots-3-note-preview:free',
+  'minimax/minimax-m3.1-flash:free',
 ];
 
 // ── Model selection logic ─────────────────────────────────────────────────────
@@ -654,7 +655,7 @@ router.post('/chat', chatRules, async (req, res, next) => {
     let { model, mode } = getModel(subscriptionPlan, requestedMode);
 
     if (images && images.length > 0) {
-      model = 'google/gemma-4-31b-it:free'; // gemma-4 supports vision inputs
+      model = 'openrouter/free'; // openrouter/free automatically routes to working vision models
     }
 
     // 1. Fetch live clinic context + optional patient search + total message count — in parallel
@@ -831,7 +832,10 @@ router.post('/chat', chatRules, async (req, res, next) => {
     }
 
     const aiData    = await openRouterRes.json();
-    const replyText = aiData?.choices?.[0]?.message?.content?.trim();
+    let replyText   = aiData?.choices?.[0]?.message?.content?.trim();
+    if (!replyText && aiData?.choices?.[0]?.message?.reasoning) {
+      replyText = aiData.choices[0].message.reasoning.trim();
+    }
 
     if (!replyText) {
       throw new Error('Empty response from AI model.');
@@ -897,7 +901,7 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
     let { model, mode } = getModel(subscriptionPlan, requestedMode);
     
     if (images && images.length > 0) {
-      model = 'google/gemma-4-31b-it:free'; // gemma-4 supports vision inputs
+      model = 'openrouter/free'; // openrouter/free automatically routes to working vision models
     }
 
     const [clinicCtx, patientMatch, totalMsgResStream] = await Promise.all([
@@ -1053,16 +1057,17 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
     if (typeof res.flush === 'function') res.flush();
 
     let fullReply = '';
+    let fullReasoning = '';
     const reader = openRouterRes.body;
     let buffer = '';
     const decoder = new TextDecoder();
 
-    // Global 55s wall-clock timeout for the entire stream
+    // Global 80s wall-clock timeout for the entire stream
     const streamAbort = new AbortController();
-    const streamGlobalTimer = setTimeout(() => streamAbort.abort('STREAM_TIMEOUT'), 55000);
+    const streamGlobalTimer = setTimeout(() => streamAbort.abort('STREAM_TIMEOUT'), 80000);
 
-    // Stall detection: abort if no real token content for 15s
-    let stallTimer = setTimeout(() => streamAbort.abort('STREAM_STALL'), 15000);
+    // Stall detection: abort if no token content or reasoning for 30s
+    let stallTimer = setTimeout(() => streamAbort.abort('STREAM_STALL'), 30000);
 
     try {
       for await (const chunk of reader) {
@@ -1082,19 +1087,26 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
           try {
             const parsed = JSON.parse(payload);
             const delta = parsed?.choices?.[0]?.delta?.content;
+            const reasoning = parsed?.choices?.[0]?.delta?.reasoning || parsed?.choices?.[0]?.delta?.reasoning_content;
             if (delta) {
               hadRealContent = true;
               fullReply += delta;
               res.write(`data: ${JSON.stringify({ type: 'delta', content: delta })}\n\n`);
               if (typeof res.flush === 'function') res.flush();
+            } else if (reasoning) {
+              hadRealContent = true;
+              fullReasoning += reasoning;
+              // Stream heartbeat so browser/reverse proxy knows the connection is active
+              res.write(`: keepalive\n\n`);
+              if (typeof res.flush === 'function') res.flush();
             }
           } catch { /* skip malformed */ }
         }
 
-        // Only reset stall timer when real content tokens arrive
+        // Only reset stall timer when real content or reasoning arrives
         if (hadRealContent) {
           clearTimeout(stallTimer);
-          stallTimer = setTimeout(() => streamAbort.abort('STREAM_STALL'), 15000);
+          stallTimer = setTimeout(() => streamAbort.abort('STREAM_STALL'), 30000);
         }
       }
     } catch (streamErr) {
@@ -1104,10 +1116,17 @@ router.post('/chat/stream', chatRules, async (req, res, next) => {
       clearTimeout(stallTimer);
     }
 
-    // If we got a garbage/safety response, throw so frontend shows error
+    // If model produced reasoning instead of content, use reasoning as reply
+    if (!fullReply.trim() && fullReasoning.trim()) {
+      fullReply = fullReasoning.trim();
+      res.write(`data: ${JSON.stringify({ type: 'delta', content: fullReply })}\n\n`);
+      if (typeof res.flush === 'function') res.flush();
+    }
+
+    // If we got a garbage/safety response, send a polite message
     const trimmedReply = fullReply.trim();
     if (!trimmedReply || trimmedReply.length < 5 || /^user safety:/i.test(trimmedReply)) {
-      res.write(`data: ${JSON.stringify({ type: 'error', message: 'The AI model returned an empty response. Please try again.' })}\n\n`);
+      res.write(`data: ${JSON.stringify({ type: 'error', message: 'I was unable to analyze this image clearly. Please try again with a clearer or higher-contrast photo.' })}\n\n`);
       res.end();
       return;
     }

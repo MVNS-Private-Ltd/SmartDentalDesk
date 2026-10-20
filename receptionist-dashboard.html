@@ -3232,26 +3232,39 @@
             // ── end automation action handling ───────────────────────────────
           },
           onError: (err) => {
-            if (firstToken) {
-              streamBubble.className = 'chat-bubble';
-              streamBubble.innerHTML = `<span style="color:var(--color-error)">Sorry, I encountered an error: ${err.message}</span>`;
+            const isUserAbort = err.message && (err.message.includes('Stopped') || err.message.includes('stopped') || err.message.includes('abort') || err.message.includes('cancelled'));
+            streamBubble.className = 'chat-bubble';
+            if (isUserAbort) {
+              streamBubble.innerHTML = `<span style="color:var(--color-text-muted); font-size:0.9rem;">Response cancelled</span>`;
+            } else if (firstToken) {
+              streamBubble.innerHTML = `
+                <div style="color:var(--color-text-secondary); font-size:0.9rem; line-height:1.5;">
+                  <div style="font-weight:500; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    I couldn't process this right now
+                  </div>
+                  <span>${err.message || 'Please try asking again or re-uploading the image.'}</span>
+                </div>`;
             } else {
-              streamBubble.innerHTML += `<br><br><span style="color:var(--color-error)">[Connection dropped: ${err.message}]</span>`;
+              streamBubble.innerHTML += `<br><br><span style="color:var(--color-text-muted); font-size:0.85rem;">[Connection interrupted]</span>`;
             }
           },
         });
       } catch (err) {
-        if (err.name !== 'AbortError' && !err.message.includes('abort')) {
-          streamBubble.className = 'chat-bubble';
-          streamBubble.innerHTML = `<span style="color:var(--color-error)">Sorry, I encountered an error: ${err.message}</span>`;
-          console.error('Chat error:', err);
+        const isUserAbort = err.name === 'AbortError' || (err.message && (err.message.includes('Stopped') || err.message.includes('stopped') || err.message.includes('abort') || err.message.includes('cancelled')));
+        streamBubble.className = 'chat-bubble';
+        if (isUserAbort) {
+          streamBubble.innerHTML = `<span style="color:var(--color-text-muted); font-size:0.9rem;">Response cancelled</span>`;
         } else {
-          streamBubble.className = 'chat-bubble';
-          if (firstToken) {
-            streamBubble.innerHTML = `dentalsmart AI was terminated`;
-          } else {
-            streamBubble.innerHTML += `<br><br>[dentalsmart AI was terminated]`;
-          }
+          streamBubble.innerHTML = `
+            <div style="color:var(--color-text-secondary); font-size:0.9rem; line-height:1.5;">
+              <div style="font-weight:500; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                I couldn't process this right now
+              </div>
+              <span>${err.message || 'Please try asking again or re-uploading the image.'}</span>
+            </div>`;
+          console.warn('Chat error caught:', err);
         }
       } finally {
         isAiThinking = false;

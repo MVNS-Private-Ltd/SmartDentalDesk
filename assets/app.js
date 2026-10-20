@@ -379,19 +379,24 @@ window.api = (function() {
       if (session_id) payload.session_id = session_id;
       if (images && images.length > 0) payload.images = images;
       
-      const MAX_RETRIES = 3; // Max 3 attempts before showing error
-      const WALL_CLOCK_MS = 60000; // 60s total timeout per attempt
+      const hasImages = images && images.length > 0;
+      // Vision models require extra time for multimodal image encoding, transcription & queueing
+      const FIRST_BYTE_MS = hasImages ? 45000 : 25000;
+      const STALL_MS = 25000;
+      const WALL_CLOCK_MS = 120000; // 120s total attempt timeout
+
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        let controller = null;
         try {
           const token = getToken();
 
           if (activeChatController) activeChatController.abort('NEW_STREAM');
-          const controller = new AbortController();
+          controller = new AbortController();
           activeChatController = controller;
 
-          // Enforce strict 10-second timeout for first byte
-          const timeout = setTimeout(() => controller.abort('TIMEOUT'), 10000);
-          // Wall-clock timeout: abort entire attempt after 60s no matter what
+          // Timeout for first byte
+          const timeout = setTimeout(() => controller.abort('TIMEOUT'), FIRST_BYTE_MS);
+          // Wall-clock timeout: abort entire attempt after 120s no matter what
           const wallClockTimer = setTimeout(() => controller.abort('TIMEOUT'), WALL_CLOCK_MS);
 
           const clinic = getClinic();
@@ -431,18 +436,17 @@ window.api = (function() {
           const reader = res.body.getReader();
           const decoder = new TextDecoder();
           let buffer = '';
-          // Stall detection: only reset timer when real SSE data arrives (not keep-alive pings)
-          let chunkTimeout = setTimeout(() => controller.abort('TIMEOUT'), 15000);
+          // Stall detection: reset on real SSE data or heartbeat
+          let chunkTimeout = setTimeout(() => controller.abort('TIMEOUT'), STALL_MS);
 
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
             const decoded = decoder.decode(value, { stream: true });
-            // Only reset stall timer if chunk has real SSE data (not just ':' keep-alive)
-            if (decoded.includes('data:')) {
-              clearTimeout(chunkTimeout);
-              chunkTimeout = setTimeout(() => controller.abort('TIMEOUT'), 15000);
-            }
+            // Heartbeat or real data resets stall timer
+            clearTimeout(chunkTimeout);
+            chunkTimeout = setTimeout(() => controller.abort('TIMEOUT'), STALL_MS);
+
             buffer += decoded;
             const lines = buffer.split('\n');
             buffer = lines.pop();
@@ -464,24 +468,25 @@ window.api = (function() {
           }
           clearTimeout(chunkTimeout);
           clearTimeout(wallClockTimer);
-          if (activeChatController === controller) activeChatController = null;
+          if (controller && activeChatController === controller) activeChatController = null;
           return;
 
         } catch (error) {
-          if (activeChatController === controller) activeChatController = null;
+          if (controller && activeChatController === controller) activeChatController = null;
           
-          if (error.name === 'AbortError' && controller.signal && controller.signal.reason === 'USER_STOP') {
-            if (onError) onError(new Error('Stopped by user'));
+          if (error.name === 'AbortError' && controller && controller.signal && controller.signal.reason === 'USER_STOP') {
+            if (onError) onError(new Error('Response stopped'));
             return;
           }
-          if (error.name === 'AbortError' && controller.signal && controller.signal.reason === 'NEW_STREAM') {
+          if (error.name === 'AbortError' && controller && controller.signal && controller.signal.reason === 'NEW_STREAM') {
             return;
           }
 
           console.warn(`[AI Chat] Attempt ${attempt} failed: ${error.message}. Retrying...`);
           if (attempt === MAX_RETRIES) {
-             if (onError) onError(new Error("AI is unresponsive right now. Please try again in a moment."));
-             throw error;
+             const userFriendlyMsg = "I couldn't analyze this image right now. Please try again or provide a clearer photo.";
+             if (onError) onError(new Error(userFriendlyMsg));
+             throw new Error(userFriendlyMsg);
           }
           
           if (onRetry) onRetry();

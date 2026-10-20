@@ -1555,6 +1555,7 @@
       </div>
 
       <div class="tabs-nav" id="appointmentTabs">
+        <button class="tab-btn" data-tab="today">📅 Today</button>
         <button class="tab-btn active" data-tab="active">Active Appointments</button>
         <button class="tab-btn" data-tab="pending" id="tabPendingBtn">
           Pending Approval <span id="tabPendingBadge" style="display:none; background:#d97706; color:#fff; font-size:0.7rem; font-weight:700; padding:1px 6px; border-radius:10px; margin-left:4px;">0</span>
@@ -1563,6 +1564,21 @@
         <button class="tab-btn" data-tab="completed">Completed</button>
         <button class="tab-btn" data-tab="cancelled">Cancelled</button>
         <button class="tab-btn" data-tab="all">All</button>
+      </div>
+
+      <!-- Day-by-Day View Controls (visible when "today" tab is active) -->
+      <div id="dayViewControls" style="display:none; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:12px; padding:10px 16px; margin-bottom:var(--space-3); box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" class="btn btn-sm btn-secondary" onclick="stepDayView(-1)" title="Previous Day" style="padding:6px 12px; font-weight:600; cursor:pointer;">◀ Prev Day</button>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="resetDayViewToToday()" title="Jump to Today" style="padding:6px 12px; font-weight:600; cursor:pointer;">Today</button>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="stepDayView(1)" title="Next Day" style="padding:6px 12px; font-weight:600; cursor:pointer;">Next Day ▶</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span id="dayViewDisplayLabel" style="font-weight:600; font-size:0.92rem; color:var(--color-text);">Today</span>
+          <input type="date" id="dayViewDateInput" onchange="handleDayViewDatePicked(this.value)" style="padding:5px 10px; border:1px solid var(--color-border); border-radius:8px; background:var(--color-bg); color:var(--color-text); font-size:0.85rem; outline:none; font-family:inherit; cursor:pointer;" />
+        </div>
+        <div id="dayViewCountBadge" style="font-size:0.82rem; color:var(--color-text-muted); font-weight:600;">
+        </div>
       </div>
 
       <!-- Appointments Search Bar -->
@@ -3077,7 +3093,70 @@
     window.showToast = showToast;
 
     // ── Appointments Management & Approval Flow ──────────────────────────────
+    // ── Appointments Management & Approval Flow ──────────────────────────────
     let currentAppointmentStatus = 'active';
+
+    // ── Day View / That Day's Appointments State & Helpers ─────────────────────
+    function getLocalDateString(d = new Date()) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    let selectedDayViewDate = getLocalDateString();
+
+    function formatDayViewDate(dateStr) {
+      if (!dateStr) return '';
+      const parts = dateStr.split('-');
+      if (parts.length !== 3) return dateStr;
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      const options = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+      return d.toLocaleDateString(undefined, options);
+    }
+
+    function updateDayViewUI() {
+      const dateInput = document.getElementById('dayViewDateInput');
+      const label = document.getElementById('dayViewDisplayLabel');
+      if (dateInput) dateInput.value = selectedDayViewDate;
+      if (label) {
+        const todayStr = getLocalDateString();
+        const parts = selectedDayViewDate.split('-');
+        const selDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        const todayParts = todayStr.split('-');
+        const todayDate = new Date(Number(todayParts[0]), Number(todayParts[1]) - 1, Number(todayParts[2]));
+        const diffDays = Math.round((selDate - todayDate) / (1000 * 60 * 60 * 24));
+
+        let prefix = '';
+        if (diffDays === 0) prefix = 'Today — ';
+        else if (diffDays === -1) prefix = 'Yesterday — ';
+        else if (diffDays === 1) prefix = 'Tomorrow — ';
+
+        label.textContent = `${prefix}${formatDayViewDate(selectedDayViewDate)}`;
+      }
+    }
+
+    window.stepDayView = function(offset) {
+      const parts = selectedDayViewDate.split('-');
+      const curr = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      curr.setDate(curr.getDate() + offset);
+      selectedDayViewDate = getLocalDateString(curr);
+      updateDayViewUI();
+      loadAppointments('today');
+    };
+
+    window.resetDayViewToToday = function() {
+      selectedDayViewDate = getLocalDateString();
+      updateDayViewUI();
+      loadAppointments('today');
+    };
+
+    window.handleDayViewDatePicked = function(val) {
+      if (!val) return;
+      selectedDayViewDate = val;
+      updateDayViewUI();
+      loadAppointments('today');
+    };
 
     const appointmentTabs = document.querySelectorAll('#appointmentTabs .tab-btn');
     appointmentTabs.forEach(tab => {
@@ -3140,9 +3219,25 @@
       // Clear search on tab switch
       const apptSearch = document.getElementById('appointmentSearchInput');
       if (apptSearch) apptSearch.value = '';
+
+      const isDayView = statusFilter === 'today';
+      const dayControls = document.getElementById('dayViewControls');
+      if (dayControls) dayControls.style.display = isDayView ? 'flex' : 'none';
+      if (isDayView) updateDayViewUI();
+
       try {
-        const res = await window.api.getAppointments(statusFilter);
+        let res;
+        if (isDayView) {
+          res = await window.api.getAppointments({ status: 'all', date: selectedDayViewDate });
+        } else {
+          res = await window.api.getAppointments(statusFilter);
+        }
         allAppointments = res.appointments || [];
+
+        if (isDayView) {
+          const countBadge = document.getElementById('dayViewCountBadge');
+          if (countBadge) countBadge.textContent = `${allAppointments.length} appointment${allAppointments.length === 1 ? '' : 's'}`;
+        }
 
         // Also update pending count on badges if in 'active' or 'pending' view
         if (statusFilter === 'pending' || statusFilter === 'active' || statusFilter === 'all') {
@@ -3153,7 +3248,10 @@
           let emptyMsg = `No ${statusFilter === 'all' ? '' : statusFilter} appointments found.`;
           if (statusFilter === 'pending') emptyMsg = 'No pending appointment requests. All caught up!';
           if (statusFilter === 'active') emptyMsg = 'No active appointments.';
-          
+          if (statusFilter === 'today') {
+            const isToday = selectedDayViewDate === getLocalDateString();
+            emptyMsg = `No appointments scheduled for ${isToday ? 'today' : selectedDayViewDate}.`;
+          }
           tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2.5rem; color:var(--color-text-muted);">${emptyMsg}</td></tr>`;
           return;
         }

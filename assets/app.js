@@ -316,7 +316,15 @@ window.api = (function() {
     togglePatientStar: (id, is_starred) => request(`/patients/${id}/star`, { method: 'PATCH', body: JSON.stringify({ is_starred }) }),
     deletePatient: (id) => request(`/patients/${id}`, { method: 'DELETE' }),
     bulkDeletePatients: (ids) => request(`/patients`, { method: 'DELETE', body: JSON.stringify({ ids }) }),
-    getAppointments: (status = 'all') => request(status && status !== 'all' ? `/appointments?status=${encodeURIComponent(status)}` : '/appointments'),
+    getAppointments: (statusOrOpts = 'all', dateParam = null) => {
+      let status = typeof statusOrOpts === 'object' && statusOrOpts !== null ? statusOrOpts.status : statusOrOpts;
+      let date = typeof statusOrOpts === 'object' && statusOrOpts !== null ? statusOrOpts.date : dateParam;
+      const params = new URLSearchParams();
+      if (status && status !== 'all') params.append('status', status);
+      if (date) params.append('date', date);
+      const qs = params.toString();
+      return request(qs ? `/appointments?${qs}` : '/appointments');
+    },
     approveAppointment: (id) => request(`/appointments/${id}/approve`, { method: 'POST' }),
     rejectAppointment: (id, reason = '') => request(`/appointments/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),
     updateAppointmentStatus: (id, status, reason = '') => request(`/appointments/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, reason }) }),

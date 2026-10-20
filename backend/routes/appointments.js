@@ -118,7 +118,11 @@ router.get('/', async (req, res, next) => {
 
     if (date) q = q.eq('date', date);
 
-    if (status) {
+    if (status === 'today') {
+      const today = new Date().toISOString().slice(0, 10);
+      if (!date) q = q.eq('date', today);
+      q = q.neq('status', 'cancelled');
+    } else if (status) {
       if (status === 'pending') {
         q = q.eq('status', 'pending');
       } else if (status === 'scheduled') {

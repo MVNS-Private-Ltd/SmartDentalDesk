@@ -1426,6 +1426,281 @@
   .invoices-table tr:hover td {
     background: var(--color-bg);
   }
+
+  /* ── TEAM & STAFF SECTION STYLES ──────────────────────────────── */
+  .staff-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .staff-kpi-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-divider);
+    border-radius: 16px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    cursor: pointer;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    user-select: none;
+  }
+  .staff-kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.08);
+    border-color: rgba(37, 99, 235, 0.3);
+  }
+  .staff-kpi-card.active-filter {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2), 0 8px 20px rgba(37, 99, 235, 0.08);
+    background: linear-gradient(to bottom right, var(--color-surface), rgba(37, 99, 235, 0.03));
+  }
+  .staff-kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+  .staff-kpi-card:hover .staff-kpi-icon {
+    transform: scale(1.08);
+  }
+  .staff-kpi-label {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+  }
+  .staff-kpi-value {
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: var(--color-text);
+    line-height: 1.2;
+  }
+  .staff-kpi-hint {
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+    margin-top: 2px;
+  }
+
+  /* Quick filter pills */
+  .staff-filter-pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid var(--color-divider);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+  }
+  .staff-filter-pill:hover {
+    color: var(--color-text);
+    border-color: #cbd5e1;
+    background: var(--color-bg);
+  }
+  .staff-filter-pill.active {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #93c5fd;
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.1);
+  }
+  .staff-filter-pill .pill-count {
+    background: rgba(0, 0, 0, 0.06);
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .staff-filter-pill.active .pill-count {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  /* Staff Table Modern Styling */
+  .staff-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .staff-table th {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--color-divider);
+    background: rgba(248, 250, 252, 0.75);
+    white-space: nowrap;
+  }
+  .staff-table td {
+    padding: 15px 18px;
+    border-bottom: 1px solid var(--color-divider);
+    vertical-align: middle;
+    transition: background 0.15s ease;
+  }
+  .staff-table tr:hover td {
+    background: rgba(241, 245, 249, 0.45);
+  }
+  .staff-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.88rem;
+    flex-shrink: 0;
+    position: relative;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+  .staff-avatar-status {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #10b981;
+    border: 2px solid #fff;
+  }
+  .staff-role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 11px;
+    border-radius: 20px;
+    text-transform: capitalize;
+    letter-spacing: 0.01em;
+  }
+  .staff-schedule-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: #334155;
+    background: #f1f5f9;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    font-weight: 500;
+    max-width: 320px;
+    line-height: 1.4;
+  }
+  .staff-contact-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-text);
+    text-decoration: none;
+    font-size: 0.84rem;
+    transition: color 0.15s ease;
+  }
+  .staff-contact-link:hover {
+    color: var(--color-primary);
+  }
+  .staff-copy-btn {
+    opacity: 0;
+    background: none;
+    border: none;
+    padding: 2px 4px;
+    cursor: pointer;
+    color: #94a3b8;
+    transition: all 0.15s ease;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .staff-table tr:hover .staff-copy-btn {
+    opacity: 1;
+  }
+  .staff-copy-btn:hover {
+    color: var(--color-primary);
+    background: #e2e8f0;
+  }
+  .staff-login-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid transparent;
+  }
+  .staff-login-badge.active {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+  }
+  .staff-login-badge.inactive {
+    background: #f8fafc;
+    color: #64748b;
+    border-color: #e2e8f0;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .staff-login-badge.inactive:hover {
+    border-color: #93c5fd;
+    color: #1d4ed8;
+    background: #eff6ff;
+  }
+  .staff-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 11px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid var(--color-divider);
+    background: var(--color-surface);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .staff-action-btn:hover {
+    background: var(--color-bg);
+    border-color: #cbd5e1;
+    color: var(--color-primary);
+  }
+  .staff-action-btn.danger:hover {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #dc2626;
+  }
+  .schedule-chip {
+    padding: 4px 10px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .schedule-chip:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+  }
 </style>
 </head>
 <body>
@@ -2170,56 +2445,75 @@
     <!-- SECTION: SETTINGS -->
     <!-- ==================== TEAM / STAFF TAB ==================== -->
     <section id="section-team" class="dashboard-section">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--space-6); flex-wrap:wrap; gap:16px;">
+      <!-- Header -->
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; flex-wrap:wrap; gap:16px;">
         <div>
-          <h2 style="margin:0; font-size:1.6rem; font-weight:800; color:var(--color-text);">Team &amp; Staff Management</h2>
-          <p class="text-muted" style="margin:4px 0 0; font-size:0.9rem;">Manage staff members, roles, and configure dedicated receptionist dashboard logins.</p>
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+            <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#2563eb,#7c3aed); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(37,99,235,0.3);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <h2 style="margin:0; font-size:1.6rem; font-weight:800; color:var(--color-text);">Team &amp; Staff Management</h2>
+          </div>
+          <p class="text-muted" style="margin:0 0 0 46px; font-size:0.88rem;">Manage staff members, roles, and configure dedicated receptionist dashboard logins.</p>
         </div>
-        <button class="btn btn-primary" onclick="openAddStaffModal()" style="display:flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(37,99,235,0.25); font-weight:600;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          <span>Add Staff Member</span>
+        <button class="btn btn-primary" id="addStaffHeaderBtn" onclick="openAddStaffModal()" style="display:flex; align-items:center; gap:8px; padding:10px 20px; box-shadow:0 4px 14px rgba(37,99,235,0.3); font-weight:600; border-radius:12px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Staff Member
         </button>
       </div>
 
-      <!-- Staff Stat Cards -->
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:24px;">
-        <div class="glass-card" style="padding:18px 20px; display:flex; align-items:center; gap:16px; border-radius:14px;">
-          <div style="width:46px; height:46px; border-radius:12px; background:rgba(37,99,235,0.12); color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:22px;">👥</div>
+      <!-- KPI Cards -->
+      <div class="staff-kpi-grid">
+        <div class="staff-kpi-card" id="kpiCardAll" onclick="staffKpiFilter('all')" title="Show all staff">
+          <div class="staff-kpi-icon" style="background:linear-gradient(135deg,rgba(37,99,235,0.12),rgba(99,102,241,0.1));">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
           <div>
-            <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--color-text-muted); letter-spacing:0.04em;">Total Staff</div>
-            <div id="staffCountTotal" style="font-size:1.5rem; font-weight:800; color:var(--color-text);">0</div>
+            <div class="staff-kpi-label">Total Staff</div>
+            <div class="staff-kpi-value" id="staffCountTotal">0</div>
+            <div class="staff-kpi-hint">Active team members</div>
           </div>
         </div>
-        <div class="glass-card" style="padding:18px 20px; display:flex; align-items:center; gap:16px; border-radius:14px;">
-          <div style="width:46px; height:46px; border-radius:12px; background:rgba(147,51,234,0.12); color:#9333ea; display:flex; align-items:center; justify-content:center; font-size:22px;">💼</div>
+        <div class="staff-kpi-card" id="kpiCardReceptionists" onclick="staffKpiFilter('receptionist')" title="Filter receptionists">
+          <div class="staff-kpi-icon" style="background:linear-gradient(135deg,rgba(147,51,234,0.12),rgba(168,85,247,0.08));">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
           <div>
-            <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--color-text-muted); letter-spacing:0.04em;">Receptionists</div>
-            <div id="staffCountReceptionists" style="font-size:1.5rem; font-weight:800; color:var(--color-text);">0</div>
+            <div class="staff-kpi-label">Receptionists</div>
+            <div class="staff-kpi-value" id="staffCountReceptionists">0</div>
+            <div class="staff-kpi-hint">Front desk staff</div>
           </div>
         </div>
-        <div class="glass-card" style="padding:18px 20px; display:flex; align-items:center; gap:16px; border-radius:14px;">
-          <div style="width:46px; height:46px; border-radius:12px; background:rgba(16,185,129,0.12); color:#10b981; display:flex; align-items:center; justify-content:center; font-size:22px;">🩺</div>
+        <div class="staff-kpi-card" id="kpiCardDentists" onclick="staffKpiFilter('dentist')" title="Filter dentists">
+          <div class="staff-kpi-icon" style="background:linear-gradient(135deg,rgba(16,185,129,0.12),rgba(5,150,105,0.08));">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          </div>
           <div>
-            <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--color-text-muted); letter-spacing:0.04em;">Dentists &amp; Doctors</div>
-            <div id="staffCountDentists" style="font-size:1.5rem; font-weight:800; color:var(--color-text);">0</div>
+            <div class="staff-kpi-label">Dentists &amp; Doctors</div>
+            <div class="staff-kpi-value" id="staffCountDentists">0</div>
+            <div class="staff-kpi-hint">Clinical practitioners</div>
           </div>
         </div>
-        <div class="glass-card" style="padding:18px 20px; display:flex; align-items:center; gap:16px; border-radius:14px;">
-          <div style="width:46px; height:46px; border-radius:12px; background:rgba(245,158,11,0.12); color:#d97706; display:flex; align-items:center; justify-content:center; font-size:22px;">🔑</div>
+        <div class="staff-kpi-card" id="kpiCardLogins" onclick="staffKpiFilter('with_login')" title="Filter staff with active login">
+          <div class="staff-kpi-icon" style="background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(217,119,6,0.08));">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
           <div>
-            <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--color-text-muted); letter-spacing:0.04em;">Active Logins</div>
-            <div id="staffCountActiveLogins" style="font-size:1.5rem; font-weight:800; color:var(--color-text);">0</div>
+            <div class="staff-kpi-label">Active Logins</div>
+            <div class="staff-kpi-value" id="staffCountActiveLogins">0</div>
+            <div class="staff-kpi-hint">Can sign in to dashboard</div>
           </div>
         </div>
       </div>
 
-      <!-- Search & Filter Controls -->
-      <div class="glass-card" style="padding:16px 20px; margin-bottom:20px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; border-radius:14px;">
-        <div style="flex:1; min-width:220px; position:relative;">
-          <input type="text" id="staffSearchInput" class="input" placeholder="🔍 Search by name, email, phone, or specialization..." style="width:100%; padding-left:14px; font-size:0.88rem;">
+      <!-- Search & Filter Bar -->
+      <div style="background:var(--color-surface); border:1px solid var(--color-divider); border-radius:14px; padding:14px 18px; margin-bottom:18px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+        <div style="flex:1; min-width:240px; position:relative; display:flex; align-items:center; gap:0;">
+          <svg style="position:absolute; left:12px; color:#94a3b8; flex-shrink:0;" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="staffSearchInput" class="input" placeholder="Search by name, email, phone, or specialization..." style="width:100%; padding-left:38px; font-size:0.87rem; border-radius:10px; background:var(--color-bg);">
         </div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <select id="staffRoleFilter" class="input" style="min-width:140px; font-size:0.88rem;">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <select id="staffRoleFilter" class="input" style="min-width:150px; font-size:0.87rem; border-radius:10px; background:var(--color-bg);">
             <option value="all">All Roles</option>
             <option value="receptionist">Receptionists</option>
             <option value="dentist">Dentists</option>
@@ -2228,18 +2522,22 @@
             <option value="manager">Managers</option>
             <option value="other">Other</option>
           </select>
-          <select id="staffLoginFilter" class="input" style="min-width:140px; font-size:0.88rem;">
+          <select id="staffLoginFilter" class="input" style="min-width:150px; font-size:0.87rem; border-radius:10px; background:var(--color-bg);">
             <option value="all">All Access</option>
             <option value="with_login">Has Login Access</option>
             <option value="no_login">No Login Access</option>
           </select>
+          <button id="staffClearFiltersBtn" onclick="clearStaffFilters()" style="display:none; background:none; border:1px solid #e2e8f0; border-radius:10px; padding:7px 12px; font-size:0.82rem; font-weight:600; color:#64748b; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;" onmouseover="this.style.borderColor='#94a3b8';this.style.color='#334155';" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#64748b';">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px; vertical-align:middle;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Clear filters
+          </button>
         </div>
+        <div id="staffResultCount" style="font-size:0.8rem; color:var(--color-text-muted); white-space:nowrap; padding-left:4px;"></div>
       </div>
 
       <!-- Staff Table Card -->
-      <div class="glass-card" style="border-radius:14px; overflow:hidden;">
+      <div style="background:var(--color-surface); border:1px solid var(--color-divider); border-radius:16px; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.04);">
         <div class="table-responsive">
-          <table class="table" style="margin:0; width:100%;">
+          <table class="staff-table">
             <thead>
               <tr>
                 <th>Staff Member</th>
@@ -2252,7 +2550,7 @@
             </thead>
             <tbody id="staffTableBody">
               <tr>
-                <td colspan="6" style="text-align:center; color:var(--text-muted); padding:var(--space-6);">Loading staff members...</td>
+                <td colspan="6" style="text-align:center; color:var(--color-text-muted); padding:var(--space-6);">Loading staff members...</td>
               </tr>
             </tbody>
           </table>
@@ -3890,25 +4188,24 @@
       }
     }
 
-    function applyStaffFiltersAndRender() {
+    window.applyStaffFiltersAndRender = function applyStaffFiltersAndRender() {
       const query = (document.getElementById('staffSearchInput')?.value || '').toLowerCase().trim();
       const roleFilter = document.getElementById('staffRoleFilter')?.value || 'all';
       const loginFilter = document.getElementById('staffLoginFilter')?.value || 'all';
 
       let filtered = window.currentStaffList || [];
+      const total = filtered.length;
 
       if (roleFilter !== 'all') {
         filtered = filtered.filter(s => s.role === roleFilter);
       }
-
       if (loginFilter === 'with_login') {
         filtered = filtered.filter(s => !!s.auth_id);
       } else if (loginFilter === 'no_login') {
         filtered = filtered.filter(s => !s.auth_id);
       }
-
       if (query) {
-        filtered = filtered.filter(s => 
+        filtered = filtered.filter(s =>
           (s.name && s.name.toLowerCase().includes(query)) ||
           (s.email && s.email.toLowerCase().includes(query)) ||
           (s.phone && s.phone.toLowerCase().includes(query)) ||
@@ -3916,24 +4213,45 @@
         );
       }
 
+      // Update result count
+      const countEl = document.getElementById('staffResultCount');
+      if (countEl) {
+        const isFiltered = query || roleFilter !== 'all' || loginFilter !== 'all';
+        countEl.textContent = isFiltered ? `Showing ${filtered.length} of ${total}` : (total > 0 ? `${total} member${total !== 1 ? 's' : ''}` : '');
+      }
+      // Show/hide clear filters button
+      const clearBtn = document.getElementById('staffClearFiltersBtn');
+      if (clearBtn) {
+        const isFiltered = query || roleFilter !== 'all' || loginFilter !== 'all';
+        clearBtn.style.display = isFiltered ? 'inline-flex' : 'none';
+      }
+      // Update KPI card active state
+      ['kpiCardAll','kpiCardReceptionists','kpiCardDentists','kpiCardLogins'].forEach(id => {
+        document.getElementById(id)?.classList.remove('active-filter');
+      });
+      if (roleFilter === 'receptionist') document.getElementById('kpiCardReceptionists')?.classList.add('active-filter');
+      else if (roleFilter === 'dentist') document.getElementById('kpiCardDentists')?.classList.add('active-filter');
+      else if (loginFilter === 'with_login') document.getElementById('kpiCardLogins')?.classList.add('active-filter');
+      else if (!query && roleFilter === 'all' && loginFilter === 'all') document.getElementById('kpiCardAll')?.classList.add('active-filter');
+
       renderStaffTable(filtered);
     }
 
-    // Role badge color helpers
+    // Role badge helpers
     function getRoleBadgeStyle(role) {
       switch (role) {
         case 'receptionist':
-          return { bg: '#f3e8ff', color: '#7e22ce', border: '#e9d5ff', label: 'Receptionist' };
+          return { bg: '#f3e8ff', color: '#7e22ce', border: '#e9d5ff', label: 'Receptionist', icon: '🖥️' };
         case 'dentist':
-          return { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', label: 'Dentist / Doctor' };
+          return { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', label: 'Dentist / Doctor', icon: '🦷' };
         case 'hygienist':
-          return { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0', label: 'Hygienist' };
+          return { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0', label: 'Hygienist', icon: '🧼' };
         case 'assistant':
-          return { bg: '#fffbeb', color: '#b45309', border: '#fde68a', label: 'Assistant' };
+          return { bg: '#fffbeb', color: '#b45309', border: '#fde68a', label: 'Assistant', icon: '🩺' };
         case 'manager':
-          return { bg: '#eef2ff', color: '#4338ca', border: '#c7d2fe', label: 'Clinic Manager' };
+          return { bg: '#eef2ff', color: '#4338ca', border: '#c7d2fe', label: 'Clinic Manager', icon: '📋' };
         default:
-          return { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1', label: role ? role.charAt(0).toUpperCase() + role.slice(1) : 'Staff' };
+          return { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1', label: role ? role.charAt(0).toUpperCase() + role.slice(1) : 'Staff', icon: '👤' };
       }
     }
 
@@ -3942,13 +4260,20 @@
       if (!tbody) return;
 
       if (!staffList || !staffList.length) {
+        const isFiltered = (document.getElementById('staffSearchInput')?.value || '').trim() ||
+          (document.getElementById('staffRoleFilter')?.value || 'all') !== 'all' ||
+          (document.getElementById('staffLoginFilter')?.value || 'all') !== 'all';
         tbody.innerHTML = `
           <tr>
-            <td colspan="6" style="text-align:center; padding:var(--space-8) var(--space-4); color:var(--color-text-muted);">
-              <div style="font-size:32px; margin-bottom:8px;">👥</div>
-              <div style="font-weight:700; font-size:1rem; color:var(--color-text); margin-bottom:4px;">No team members found</div>
-              <div style="font-size:0.84rem; margin-bottom:14px;">Add your receptionists, dentists, and assistants to manage your clinic team.</div>
-              <button class="btn btn-primary btn-sm" onclick="openAddStaffModal()">+ Add First Staff Member</button>
+            <td colspan="6" style="text-align:center; padding:48px 16px; color:var(--color-text-muted);">
+              <div style="display:inline-flex; flex-direction:column; align-items:center; gap:12px; max-width:340px;">
+                <div style="width:52px; height:52px; border-radius:16px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; font-size:26px;">👥</div>
+                <div style="font-weight:700; font-size:1rem; color:var(--color-text);">${isFiltered ? 'No matching staff found' : 'No team members yet'}</div>
+                <div style="font-size:0.84rem; color:var(--color-text-muted); text-align:center; line-height:1.5;">${isFiltered ? 'Try adjusting your search or filters.' : 'Add your receptionists, dentists, and assistants to manage your clinic team.'}</div>
+                ${!isFiltered ? `<button class="btn btn-primary" onclick="openAddStaffModal()" style="margin-top:4px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add First Staff Member
+                </button>` : `<button class="btn btn-secondary" onclick="clearStaffFilters()" style="margin-top:4px; font-size:0.85rem;">Clear Filters</button>`}
+              </div>
             </td>
           </tr>
         `;
@@ -3958,52 +4283,75 @@
       tbody.innerHTML = staffList.map(s => {
         const roleStyle = getRoleBadgeStyle(s.role);
         const initials = (s.name || 'S').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-        
+        const joiningText = s.joining_date ? `Joined ${new Date(s.joining_date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}` : '';
+        const scheduleText = s.schedule && typeof s.schedule === 'string' ? s.schedule : '';
+
         return `
           <tr>
             <td>
-              <div style="display:flex; align-items:center; gap:12px;">
-                <div style="width:38px; height:38px; border-radius:10px; background:${roleStyle.bg}; color:${roleStyle.color}; border:1.5px solid ${roleStyle.border}; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem; flex-shrink:0;">
+              <div style="display:flex; align-items:center; gap:13px;">
+                <div class="staff-avatar" style="background:${roleStyle.bg}; color:${roleStyle.color}; border:1.5px solid ${roleStyle.border};">
                   ${initials}
+                  ${s.auth_id ? '<span class="staff-avatar-status"></span>' : ''}
                 </div>
                 <div>
-                  <div style="font-weight:700; color:var(--color-text); font-size:0.92rem;">${escapeHtml(s.name)}</div>
-                  ${s.schedule ? `<div style="font-size:0.75rem; color:var(--color-text-muted); margin-top:1px;">⏰ ${escapeHtml(s.schedule)}</div>` : ''}
+                  <div style="font-weight:700; color:var(--color-text); font-size:0.92rem; white-space:nowrap;">${escapeHtml(s.name)}</div>
+                  ${joiningText ? `<div style="font-size:0.74rem; color:var(--color-text-muted); margin-top:2px;">📅 ${joiningText}</div>` : ''}
                 </div>
               </div>
             </td>
             <td>
-              <span style="background:${roleStyle.bg}; color:${roleStyle.color}; border:1px solid ${roleStyle.border}; font-size:0.75rem; font-weight:700; padding:3px 10px; border-radius:20px; text-transform:capitalize; display:inline-block;">
-                ${roleStyle.label}
+              <span class="staff-role-badge" style="background:${roleStyle.bg}; color:${roleStyle.color}; border:1px solid ${roleStyle.border};">
+                <span style="font-size:0.9em;">${roleStyle.icon}</span> ${roleStyle.label}
               </span>
+              ${scheduleText ? `<div style="margin-top:6px;"><span class="staff-schedule-badge">⏰ ${escapeHtml(scheduleText)}</span></div>` : ''}
             </td>
             <td>
-              <div style="font-size:0.84rem;">
-                ${s.email ? `<div style="display:flex; align-items:center; gap:5px; color:var(--color-text);"><span style="font-size:12px;">✉️</span> <a href="mailto:${escapeHtml(s.email)}" style="color:var(--color-primary); text-decoration:none;">${escapeHtml(s.email)}</a></div>` : '<span style="color:var(--color-text-muted);">No email</span>'}
-                ${s.phone ? `<div style="display:flex; align-items:center; gap:5px; color:var(--color-text-muted); font-size:0.78rem; margin-top:2px;"><span style="font-size:12px;">📞</span> ${escapeHtml(s.phone)}</div>` : ''}
+              <div style="display:flex; flex-direction:column; gap:5px;">
+                ${s.email ? `
+                  <div style="display:flex; align-items:center; gap:4px;">
+                    <a href="mailto:${escapeHtml(s.email)}" class="staff-contact-link">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                      ${escapeHtml(s.email)}
+                    </a>
+                    <button class="staff-copy-btn" onclick="navigator.clipboard?.writeText('${escapeHtml(s.email)}').then(()=>{if(window.showToast)window.showToast('Email copied!',false,1500)})" title="Copy email">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                  </div>` : '<span style="font-size:0.82rem; color:var(--color-text-muted);">No email</span>'}
+                ${s.phone ? `
+                  <div style="display:flex; align-items:center; gap:4px;">
+                    <a href="tel:${escapeHtml(s.phone)}" class="staff-contact-link" style="font-size:0.82rem; color:var(--color-text-muted);">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.44 2 2 0 0 1 3.59 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.07a16 16 0 0 0 6.02 6.02l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                      ${escapeHtml(s.phone)}
+                    </a>
+                  </div>` : ''}
               </div>
             </td>
             <td>
               ${s.auth_id ? `
-                <span style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-size:0.74rem; font-weight:700; padding:3px 8px; border-radius:20px; display:inline-flex; align-items:center; gap:4px;">
-                  <span style="width:6px; height:6px; border-radius:50%; background:#10b981;"></span> Can Sign In
+                <span class="staff-login-badge active">
+                  <span style="width:7px; height:7px; border-radius:50%; background:#10b981; display:inline-block;"></span> Can Sign In
                 </span>
               ` : `
-                <span style="background:#f8fafc; color:#94a3b8; border:1px solid #e2e8f0; font-size:0.74rem; font-weight:600; padding:3px 8px; border-radius:20px; display:inline-block;">
-                  — No Login
+                <span class="staff-login-badge inactive" onclick="openEditStaffModal('${s.id}')" title="Click to configure login access">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  Set Up Login
                 </span>
               `}
             </td>
             <td>
-              <span style="font-size:0.84rem; color:var(--color-text);">${s.specialization ? escapeHtml(s.specialization) : '<span style="color:var(--color-text-muted);">General</span>'}</span>
+              <span style="font-size:0.85rem; color:var(--color-text);">
+                ${s.specialization ? `<span style="display:inline-block; padding:3px 10px; border-radius:16px; background:#f1f5f9; border:1px solid #e2e8f0; font-size:0.78rem; font-weight:600; color:#334155;">${escapeHtml(s.specialization)}</span>` : '<span style="color:var(--color-text-muted); font-size:0.82rem;">General</span>'}
+              </span>
             </td>
             <td style="text-align:right;">
-              <div style="display:inline-flex; gap:6px;">
-                <button class="btn btn-secondary btn-sm" onclick="openEditStaffModal('${s.id}')" title="Edit details or login" style="padding:4px 10px; font-size:0.8rem;">
-                  ✏️ Edit
+              <div style="display:inline-flex; gap:6px; align-items:center;">
+                <button class="staff-action-btn" onclick="openEditStaffModal('${s.id}')" title="Edit staff member">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  Edit
                 </button>
-                <button class="btn btn-secondary btn-sm" onclick="deleteStaff('${s.id}')" title="Delete staff" style="padding:4px 10px; font-size:0.8rem; color:#dc2626;">
-                  🗑️
+                <button class="staff-action-btn danger" onclick="deleteStaff('${s.id}')" title="Remove staff member">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                 </button>
               </div>
             </td>
@@ -6642,6 +6990,37 @@ setTimeout(() => {
 <script>
 // ── Staff Management Global Functions (, no DOMContentLoaded dependency) ──
 // These are defined as true globals so onclick= attributes always find them.
+
+// ── Staff KPI Filter / Clear Helpers ─────────────────────────────────────────
+function staffKpiFilter(type) {
+  const roleEl = document.getElementById('staffRoleFilter');
+  const loginEl = document.getElementById('staffLoginFilter');
+  const searchEl = document.getElementById('staffSearchInput');
+  if (searchEl) searchEl.value = '';
+  if (type === 'all') {
+    if (roleEl) roleEl.value = 'all';
+    if (loginEl) loginEl.value = 'all';
+  } else if (type === 'with_login') {
+    if (roleEl) roleEl.value = 'all';
+    if (loginEl) loginEl.value = 'with_login';
+  } else {
+    if (roleEl) roleEl.value = type;
+    if (loginEl) loginEl.value = 'all';
+  }
+  if (window.applyStaffFiltersAndRender) window.applyStaffFiltersAndRender();
+  else if (typeof applyStaffFiltersAndRender === 'function') applyStaffFiltersAndRender();
+}
+
+function clearStaffFilters() {
+  const roleEl = document.getElementById('staffRoleFilter');
+  const loginEl = document.getElementById('staffLoginFilter');
+  const searchEl = document.getElementById('staffSearchInput');
+  if (searchEl) searchEl.value = '';
+  if (roleEl) roleEl.value = 'all';
+  if (loginEl) loginEl.value = 'all';
+  if (window.applyStaffFiltersAndRender) window.applyStaffFiltersAndRender();
+  else if (typeof applyStaffFiltersAndRender === 'function') applyStaffFiltersAndRender();
+}
 
 function _getStaffModal() { return document.getElementById('staffModal'); }
 function _getStaffForm()  { return document.getElementById('staffModalForm'); }

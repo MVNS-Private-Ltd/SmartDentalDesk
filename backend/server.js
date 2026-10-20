@@ -35,6 +35,10 @@ const messageRoutes     = require('./routes/messages');
 const app  = express();
 const PORT = process.env.PORT || 3001;
 
+// ── Trust Proxy for Reverse Proxies (Render, Vercel, Cloudflare) ─────────────
+// Required so req.ip reflects the actual client IP from X-Forwarded-For rather than Render's internal proxy IP
+app.set('trust proxy', 1);
+
 // ── Startup Safety Checks ─────────────────────────────────────────────────────
 const isProd = process.env.NODE_ENV === 'production';
 if (!process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID.includes('REPLACE')) {
@@ -55,32 +59,53 @@ if (!process.env.RAZORPAY_WEBHOOK_SECRET && isProd) {
 }
 
 // ── Middleware ────────────────────────────────────────────────────────────────
+// CORS MUST be mounted first so all responses (including 429 rate limit errors) include CORS headers
+const allowedOrigins = [
+  'https://dentalsmart.tech',
+  'https://www.dentalsmart.tech',
+  process.env.FRONTEND_ORIGIN
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1')
+    ) {
+      return callback(null, true);
+    }
+    // Reflect origin to properly support credentials mode ('include')
+    return callback(null, true);
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Clinic-Id', 'x-clinic-id', 'X-Impersonation', 'x-impersonation'],
+  credentials: true
+}));
+
 app.use(helmet());
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Limit each IP to 200 requests per window
+  max: 2000, // Limit each client IP to 2000 requests per window
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS' || req.path === '/health',
   message: { error: 'Too many requests from this IP, please try again after 15 minutes' }
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // Limit each IP to 20 auth requests per window
+  max: 60, // Limit each client IP to 60 auth requests per window
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
   message: { error: 'Too many auth requests from this IP, please try again after 15 minutes' }
 });
 
 app.use('/api', globalLimiter);
-
-app.use(cors({
-  origin : process.env.FRONTEND_ORIGIN || '*',
-  methods : ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Clinic-Id', 'x-clinic-id', 'X-Impersonation', 'x-impersonation'],
-  credentials: true
-}));
 
 // Webhook must use raw body — mount BEFORE express.json()
 app.use('/api/webhooks/razorpay', express.raw({ type: 'application/json', limit: '10mb' }), webhookRoutes);

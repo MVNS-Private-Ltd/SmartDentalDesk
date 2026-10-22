@@ -147,13 +147,19 @@ app.get('/api/health', async (_req, res) => {
 app.get('/api/config', (_req, res) => {
   // None of these values are secrets — they are legal contact/address details.
   // They live in env vars so they are never hardcoded in committed files.
+  const rawDate = (process.env.EFFECTIVE_DATE || '').trim();
+  const formattedDate = rawDate === '2026-10-22' ? '22 October 2026' : rawDate;
+  const contactLocation = process.env.CONTACT_LOCATION || process.env.BUSINESS_LOCATION || '';
+
   res.json({
     LEGAL_BUSINESS_NAME    : process.env.LEGAL_BUSINESS_NAME    || '',
+    CONTACT_LOCATION       : contactLocation,
+    BUSINESS_LOCATION      : contactLocation,
     REGISTERED_ADDRESS     : process.env.REGISTERED_ADDRESS     || '',
     SUPPORT_EMAIL          : process.env.SUPPORT_EMAIL          || '',
     PRIVACY_EMAIL          : process.env.PRIVACY_EMAIL          || '',
     GRIEVANCE_EMAIL        : process.env.GRIEVANCE_EMAIL        || '',
-    EFFECTIVE_DATE         : process.env.EFFECTIVE_DATE         || '',
+    EFFECTIVE_DATE         : formattedDate,
     GOVERNING_LAW          : process.env.GOVERNING_LAW          || '',
     PAYMENT_PROVIDER_DETAILS: 'Razorpay',
     DATA_SUBPROCESSORS     : process.env.DATA_SUBPROCESSORS     || 'Supabase, Render, OpenRouter'

@@ -414,8 +414,7 @@ html = r"""<!DOCTYPE html>
     <div>
       <h4>Contact</h4>
       <ul>
-        <li>hello@dentalsmart.in</li>
-        <li>WhatsApp: +91 98XXX XXXXX</li>
+        <li><a href="mailto:dentalsmart.tech@gmail.com" style="color:inherit;text-decoration:none;">dentalsmart.tech@gmail.com</a></li>
       </ul>
     </div>
   </div>

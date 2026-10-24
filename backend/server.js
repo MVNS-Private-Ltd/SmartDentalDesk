@@ -150,6 +150,7 @@ app.get('/api/config', (_req, res) => {
   const rawDate = (process.env.EFFECTIVE_DATE || '').trim();
   const formattedDate = rawDate === '2026-10-22' ? '22 October 2026' : rawDate;
   const contactLocation = process.env.CONTACT_LOCATION || process.env.BUSINESS_LOCATION || '';
+  const governingLaw = (process.env.GOVERNING_LAW || '').trim().replace(/^["']|["']$/g, '');
 
   res.json({
     LEGAL_BUSINESS_NAME    : process.env.LEGAL_BUSINESS_NAME    || '',
@@ -160,7 +161,7 @@ app.get('/api/config', (_req, res) => {
     PRIVACY_EMAIL          : process.env.PRIVACY_EMAIL          || '',
     GRIEVANCE_EMAIL        : process.env.GRIEVANCE_EMAIL        || '',
     EFFECTIVE_DATE         : formattedDate,
-    GOVERNING_LAW          : process.env.GOVERNING_LAW          || '',
+    GOVERNING_LAW          : governingLaw,
     PAYMENT_PROVIDER_DETAILS: 'Razorpay',
     DATA_SUBPROCESSORS     : process.env.DATA_SUBPROCESSORS     || 'Supabase, Render, OpenRouter'
   });

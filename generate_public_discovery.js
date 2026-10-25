@@ -440,8 +440,8 @@ async function run() {
     }
 
     clinicsHtml = clinicsHtml.replace(
-      /<div class="clinics-grid" id="clinicsGrid">[\s\S]*?<\/div>/,
-      `<div class="clinics-grid" id="clinicsGrid">\n${initialGridContent}\n      </div>`
+      /<!-- CLINICS_GRID_START -->[\s\S]*?<!-- CLINICS_GRID_END -->/,
+      `<!-- CLINICS_GRID_START -->\n      <div class="clinics-grid" id="clinicsGrid">\n${initialGridContent}\n      </div>\n      <!-- CLINICS_GRID_END -->`
     );
 
     fs.writeFileSync(clinicsHtmlPath, clinicsHtml, 'utf8');

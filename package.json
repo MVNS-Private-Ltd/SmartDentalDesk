@@ -2,7 +2,7 @@
   "name": "smartdentaldesk",
   "version": "1.0.0",
   "scripts": {
-    "build": "node generate_public_discovery.js",
+    "discovery": "node generate_public_discovery.js",
     "sitemap": "node rebuild_sitemap.js"
   },
   "dependencies": {

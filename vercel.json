@@ -1,6 +1,9 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "headers": [
     {
       "source": "/(.*)",
@@ -26,6 +29,11 @@
     }
   ],
   "routes": [
+    {
+      "src": "^/(backend|node_modules|audit|supabase|.*\\.py|.*\\.env.*|package.*\\.json|generate_public_discovery\\.js).*",
+      "status": 404,
+      "dest": "/404.html"
+    },
     {
       "src": "/401",
       "dest": "/401.html",

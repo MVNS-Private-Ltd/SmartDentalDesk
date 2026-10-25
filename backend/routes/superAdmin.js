@@ -374,6 +374,12 @@ router.patch('/clinics/:id/status', [
       throw updateErr;
     }
 
+    if (!is_active) {
+      // If suspended, rebuild public directory to remove static clinic profile and sitemap entry
+      const { scheduleDiscoveryRebuild } = require('../lib/discoveryTrigger');
+      scheduleDiscoveryRebuild(`clinic "${updated?.name || id}" suspended`);
+    }
+
     res.json({
       message: is_active
         ? `Clinic '${updated.name}' has been activated.`
@@ -386,7 +392,84 @@ router.patch('/clinics/:id/status', [
 });
 
 
-// ── 6. POST /api/super-admin/clinics/:id/impersonate ──────────────────────────
+// ── 6. PATCH /api/super-admin/clinics/:id/marketplace ─────────────────────────
+// Explicitly approve or remove a clinic from the public marketplace directory.
+// This is the only server-side path that changes is_marketplace_listed.
+// On any change it schedules a Vercel deploy-hook call to regenerate static pages.
+//
+// Rules enforced:
+//  - Only genuinely approved clinics may be listed (is_active must be true to publish).
+//  - Setting listed=false never deletes the clinic account or any records.
+//  - The deploy hook is debounced — multiple calls within 8 s collapse to one build.
+router.patch('/clinics/:id/marketplace', [
+  param('id').isUUID().withMessage('Valid clinic ID is required'),
+  body('is_marketplace_listed')
+    .isBoolean()
+    .withMessage('is_marketplace_listed must be a boolean'),
+  body('reason').optional().trim().isLength({ max: 500 })
+], async (req, res, next) => {
+  try {
+    if (!validate(req, res)) return;
+
+    const { id } = req.params;
+    const { is_marketplace_listed, reason } = req.body;
+    const now = new Date().toISOString();
+
+    // Guard: never publish an inactive/suspended clinic.
+    if (is_marketplace_listed) {
+      const { data: existing, error: fetchErr } = await supabase
+        .from('clinics')
+        .select('id, name, is_active')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (fetchErr) throw fetchErr;
+      if (!existing) return res.status(404).json({ error: 'Clinic not found.' });
+      if (!existing.is_active) {
+        return res.status(409).json({
+          error: 'Cannot publish an inactive or suspended clinic. Activate it first.'
+        });
+      }
+    }
+
+    const { data: updated, error: updateErr } = await supabase
+      .from('clinics')
+      .update({ is_marketplace_listed, updated_at: now })
+      .eq('id', id)
+      .select('id, name, booking_slug, is_active, is_marketplace_listed')
+      .maybeSingle();
+
+    if (updateErr) throw updateErr;
+    if (!updated) return res.status(404).json({ error: 'Clinic not found.' });
+
+    const { logAuditEvent } = require('../lib/auditLogger');
+    logAuditEvent(
+      is_marketplace_listed ? 'clinic.marketplace_published' : 'clinic.marketplace_unpublished',
+      { clinicId: id, slug: updated.booking_slug, reason: reason || null }
+    );
+
+    // Schedule static page rebuild via Vercel Deploy Hook (debounced, non-fatal).
+    const { scheduleDiscoveryRebuild } = require('../lib/discoveryTrigger');
+    const action = is_marketplace_listed ? 'published' : 'unpublished';
+    scheduleDiscoveryRebuild(
+      `clinic "${updated.name}" (${updated.booking_slug || id}) ${action}` +
+      (reason ? ` — reason: ${reason}` : '')
+    );
+
+    res.json({
+      message: is_marketplace_listed
+        ? `Clinic "${updated.name}" approved for public directory. Static pages will regenerate in ~30–120 s.`
+        : `Clinic "${updated.name}" removed from public directory. Static pages will regenerate in ~30–120 s.`,
+      clinic: updated,
+      rebuild_scheduled: !!process.env.VERCEL_DEPLOY_HOOK_URL
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+
+// ── 7. POST /api/super-admin/clinics/:id/impersonate ──────────────────────────
 // Returns session payload allowing the SaaS Owner to launch dashboard.html for target clinic
 router.post('/clinics/:id/impersonate', [
   param('id').isUUID().withMessage('Valid clinic ID is required')
@@ -440,6 +523,10 @@ router.delete('/clinics/:id', [
 
     const { error } = await supabase.from('clinics').delete().eq('id', id);
     if (error) throw error;
+
+    // Trigger debounced rebuild to clean up static files and sitemap
+    const { scheduleDiscoveryRebuild } = require('../lib/discoveryTrigger');
+    scheduleDiscoveryRebuild(`clinic "${clinic?.name || id}" deleted`);
 
     res.json({ message: `Clinic '${clinic?.name || id}' and all associated records deleted successfully.` });
   } catch (err) {

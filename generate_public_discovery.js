@@ -37,8 +37,82 @@ try {
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
+// Accept --fail-on-empty flag (used by Vercel build) or FAIL_ON_EMPTY env var.
+// When set: missing credentials or zero results abort the build instead of silently keeping stale files.
+const FAIL_ON_EMPTY = process.argv.includes('--fail-on-empty') ||
+  process.env.FAIL_ON_EMPTY === 'true';
+
+// Accept --out-dir flag (e.g. --out-dir dist) for dedicated build output directory
+const outDirArg = process.argv.find(a => a.startsWith('--out-dir='));
+const outDirVal = outDirArg
+  ? outDirArg.split('=')[1]
+  : (process.argv.indexOf('--out-dir') !== -1 ? process.argv[process.argv.indexOf('--out-dir') + 1] : null);
+const OUT_DIR = outDirVal ? path.resolve(__dirname, outDirVal) : __dirname;
+
+/**
+ * Prepares the dedicated output directory by copying only deployable frontend assets:
+ * - Top-level public HTML files
+ * - assets/ directory (css, js, images, fonts)
+ * - robots.txt and config.js
+ * Explicitly excludes backend/, node_modules/, .git/, .env*, test files, etc.
+ */
+function prepareDistDirectory(targetDir) {
+  if (targetDir === __dirname) return;
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true });
+  }
+
+  // 1. Copy top-level .html files
+  const entries = fs.readdirSync(__dirname, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.isFile() && entry.name.endsWith('.html')) {
+      fs.copyFileSync(
+        path.join(__dirname, entry.name),
+        path.join(targetDir, entry.name)
+      );
+    }
+  }
+
+  // 2. Copy assets directory
+  const srcAssets = path.join(__dirname, 'assets');
+  const dstAssets = path.join(targetDir, 'assets');
+  if (fs.existsSync(srcAssets)) {
+    fs.cpSync(srcAssets, dstAssets, { recursive: true });
+  }
+
+  // 3. Copy public config and robots.txt
+  const publicFiles = ['robots.txt', 'config.js'];
+  for (const pf of publicFiles) {
+    const srcPf = path.join(__dirname, pf);
+    if (fs.existsSync(srcPf)) {
+      fs.copyFileSync(srcPf, path.join(targetDir, pf));
+    }
+  }
+
+  console.log(`[generate_public_discovery] Prepared clean frontend dist at: ${targetDir}`);
+}
+
 if (!createClient || !supabaseUrl || !supabaseKey) {
-  console.log('[generate_public_discovery] Supabase credentials or library not available; using committed static discovery pages.');
+  if (FAIL_ON_EMPTY) {
+    console.error(
+      '[generate_public_discovery] FATAL: Supabase credentials not available in build environment. ' +
+      'Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY as Vercel environment variables. Failing build.'
+    );
+    process.exit(1);
+  }
+  if (OUT_DIR !== __dirname) {
+    prepareDistDirectory(OUT_DIR);
+    // Copy existing committed sitemap and clinic directory if present
+    const srcSitemap = path.join(__dirname, 'sitemap.xml');
+    if (fs.existsSync(srcSitemap)) {
+      fs.copyFileSync(srcSitemap, path.join(OUT_DIR, 'sitemap.xml'));
+    }
+    const srcClinic = path.join(__dirname, 'clinic');
+    if (fs.existsSync(srcClinic)) {
+      fs.cpSync(srcClinic, path.join(OUT_DIR, 'clinic'), { recursive: true });
+    }
+  }
+  console.log('[generate_public_discovery] Supabase credentials or library not available; preserving committed static discovery pages.');
   process.exit(0);
 }
 
@@ -343,7 +417,17 @@ async function run() {
     .eq('is_marketplace_listed', true);
 
   if (error) {
-    console.error('Error fetching clinics from Supabase:', error);
+    console.error('[generate_public_discovery] FATAL: Supabase query failed:', error.message || error);
+    process.exit(1);
+  }
+
+  // clinics is null only if Supabase returns a network-level non-error null.
+  // Treat that as a query failure, not a valid empty result.
+  if (!Array.isArray(clinics)) {
+    console.error(
+      '[generate_public_discovery] FATAL: Supabase returned null instead of an array. ' +
+      'This is a connectivity or RLS policy issue. Failing build to avoid wiping public pages.'
+    );
     process.exit(1);
   }
 
@@ -363,35 +447,84 @@ async function run() {
   console.log(`- Genuine approved clinics for public discovery: ${genuineApproved.length}`);
   console.log(`- Suspected seed/demo clinics flagged for review: ${suspectedSeed.length}`);
 
+  if (OUT_DIR !== __dirname) {
+    prepareDistDirectory(OUT_DIR);
+  }
+
   // 1. Generate clean clinic detail pages in clinic/[slug]/index.html
-  const clinicBaseDir = path.join(__dirname, 'clinic');
+  const clinicBaseDir = path.join(OUT_DIR, 'clinic');
   if (!fs.existsSync(clinicBaseDir)) {
     fs.mkdirSync(clinicBaseDir, { recursive: true });
   }
 
+  function validateAndSanitizeSlug(rawSlug) {
+    if (!rawSlug || typeof rawSlug !== 'string') return null;
+    const slug = rawSlug.trim().toLowerCase();
+    // Strictly forbid path traversal, slashes, null bytes
+    if (slug.includes('/') || slug.includes('\\') || slug.includes('..') || slug.includes('\0')) {
+      return null;
+    }
+    // Allow only alphanumeric, underscores, hyphens (length 2 to 100)
+    if (!/^[a-z0-9][a-z0-9_-]{0,98}[a-z0-9]$/.test(slug)) {
+      return null;
+    }
+    return slug;
+  }
+
+  const validGenuineApproved = [];
   const generatedClinicSlugs = [];
 
   for (const c of genuineApproved) {
-    const slug = c.booking_slug || c.id;
-    const targetDir = path.join(clinicBaseDir, slug);
+    const rawSlug = c.booking_slug || c.id;
+    const slug = validateAndSanitizeSlug(rawSlug);
+    if (!slug) {
+      console.warn(`[generate_public_discovery] WARNING: Clinic "${c.name}" has invalid or unsafe slug "${rawSlug}". Skipping static page generation.`);
+      continue;
+    }
+
+    const targetDir = path.resolve(clinicBaseDir, slug);
+    // Explicit directory containment verification
+    if (!targetDir.startsWith(path.resolve(clinicBaseDir) + path.sep)) {
+      console.warn(`[generate_public_discovery] WARNING: Path traversal detected for slug "${rawSlug}". Skipping.`);
+      continue;
+    }
+
     if (!fs.existsSync(targetDir)) {
       fs.mkdirSync(targetDir, { recursive: true });
     }
     const html = renderClinicProfileHtml(c);
     fs.writeFileSync(path.join(targetDir, 'index.html'), html, 'utf8');
     generatedClinicSlugs.push(slug);
+    validGenuineApproved.push({ clinic: c, slug });
     console.log(`  Generated: /clinic/${slug}/index.html`);
   }
 
+  // ── Stale file cleanup ───────────────────────────────────────────────────
+  // Remove any /clinic/<slug>/ directories that are NOT in the current approved set.
+  // This ensures unpublished clinics do not continue to serve static profiles.
+  if (fs.existsSync(clinicBaseDir)) {
+    const approvedSet = new Set(generatedClinicSlugs);
+    const existingDirs = fs.readdirSync(clinicBaseDir, { withFileTypes: true })
+      .filter(d => d.isDirectory())
+      .map(d => d.name);
+
+    for (const dir of existingDirs) {
+      if (!approvedSet.has(dir)) {
+        const stalePath = path.join(clinicBaseDir, dir);
+        fs.rmSync(stalePath, { recursive: true, force: true });
+        console.log(`  Removed stale profile: /clinic/${dir}/`);
+      }
+    }
+  }
+
   // 2. Pre-render clinics directory grid in clinics.html
-  const clinicsHtmlPath = path.join(__dirname, 'clinics.html');
+  const clinicsHtmlPath = path.join(OUT_DIR, 'clinics.html');
   if (fs.existsSync(clinicsHtmlPath)) {
     let clinicsHtml = fs.readFileSync(clinicsHtmlPath, 'utf8');
     
     let initialGridContent = '';
-    if (genuineApproved.length > 0) {
-      initialGridContent = genuineApproved.map(c => {
-        const slug = c.booking_slug || c.id;
+    if (validGenuineApproved.length > 0) {
+      initialGridContent = validGenuineApproved.map(({ clinic: c, slug }) => {
         const cover = c.cover_image || '/assets/clinic-fallback.png';
         const loc = [c.area, c.city].filter(Boolean).join(', ') || 'India';
         return `
@@ -445,7 +578,10 @@ async function run() {
     );
 
     fs.writeFileSync(clinicsHtmlPath, clinicsHtml, 'utf8');
-    console.log('  Updated clinics.html with truthful initial HTML content.');
+    if (OUT_DIR !== __dirname && fs.existsSync(path.join(__dirname, 'clinics.html'))) {
+      fs.writeFileSync(path.join(__dirname, 'clinics.html'), clinicsHtml, 'utf8');
+    }
+    console.log(`  Updated clinics.html with truthful initial HTML content in ${OUT_DIR}.`);
   }
 
   // 3. Generate clean canonical sitemap.xml
@@ -466,8 +602,7 @@ async function run() {
     <priority>${p.priority}</priority>
   </url>`).join('\n');
 
-  const clinicXml = genuineApproved.map(c => {
-    const slug = c.booking_slug || c.id;
+  const clinicXml = validGenuineApproved.map(({ clinic: c, slug }) => {
     const mod = (c.updated_at || c.created_at || new Date().toISOString()).split('T')[0];
     return `  <!-- ${esc(c.name)} (${esc(c.city || 'India')}) -->
   <url>
@@ -485,8 +620,11 @@ ${clinicXml ? '\n' + clinicXml : ''}
 </urlset>
 `;
 
-  fs.writeFileSync(path.join(__dirname, 'sitemap.xml'), fullSitemap, 'utf8');
-  console.log(`  Generated sitemap.xml with ${staticPages.length + genuineApproved.length} canonical URLs.`);
+  fs.writeFileSync(path.join(OUT_DIR, 'sitemap.xml'), fullSitemap, 'utf8');
+  if (OUT_DIR !== __dirname) {
+    fs.writeFileSync(path.join(__dirname, 'sitemap.xml'), fullSitemap, 'utf8');
+  }
+  console.log(`  Generated sitemap.xml with ${staticPages.length + validGenuineApproved.length} canonical URLs in ${OUT_DIR}.`);
   console.log('=== Discovery Generation Completed Successfully ===');
 }
 

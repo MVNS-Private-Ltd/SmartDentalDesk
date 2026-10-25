@@ -2,10 +2,14 @@
   "name": "smartdentaldesk",
   "version": "1.0.0",
   "scripts": {
+    "build": "node generate_public_discovery.js --fail-on-empty --out-dir dist",
     "discovery": "node generate_public_discovery.js",
+    "discovery:ci": "node generate_public_discovery.js --fail-on-empty --out-dir dist",
     "sitemap": "node rebuild_sitemap.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "dotenv": "^16.4.5",
     "jsdom": "^29.1.1"
   }
 }

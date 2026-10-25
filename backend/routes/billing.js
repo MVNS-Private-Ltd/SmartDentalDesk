@@ -828,6 +828,8 @@ router.post('/cancel-trial', requireAuth, async (req, res, next) => {
 
     // Delist from marketplace
     await supabase.from('clinics').update({ is_marketplace_listed: false }).eq('id', req.clinicId);
+    const { scheduleDiscoveryRebuild } = require('../lib/discoveryTrigger');
+    scheduleDiscoveryRebuild(`clinic ${req.clinicId} trial canceled`);
 
     // Audit log
     await supabase.from('subscription_events').insert({
@@ -933,6 +935,8 @@ router.post('/start-trial', requireAuth, async (req, res, next) => {
       subscription_plan:     trialPlan,
       is_marketplace_listed: true
     }).eq('id', clinicId);
+    const { scheduleDiscoveryRebuild: scheduleRebuildTrial } = require('../lib/discoveryTrigger');
+    scheduleRebuildTrial(`clinic ${clinicId} trial activated`);
 
     // Record trial activation in credit ledger
     await supabase.from('credit_transactions').insert({

@@ -107,6 +107,10 @@ router.put('/settings', requireAuth, updateRules, async (req, res, next) => {
     
     const { logAuditEvent } = require('../lib/auditLogger');
     logAuditEvent('clinic.profile_updated', { clinicId: req.clinicId, userId: req.user.id });
+
+    // Schedule debounced static discovery page rebuild if clinic is published
+    const { scheduleDiscoveryRebuild } = require('../lib/discoveryTrigger');
+    scheduleDiscoveryRebuild(`clinic "${data.name}" (${req.clinicId}) profile updated`);
     
     res.json({ message: 'Profile updated successfully.', settings: data });
   } catch (err) { next(err); }

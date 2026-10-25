@@ -182,9 +182,13 @@ async function handleSubscriptionEvent(eventType, rzpSub, eventId, fullPayload) 
   // - Restore when active or trialing
   if (newStatus === 'canceled' || newStatus === 'expired') {
     await supabase.from('clinics').update({ is_marketplace_listed: false }).eq('id', clinicId);
+    const { scheduleDiscoveryRebuild } = require('../lib/discoveryTrigger');
+    scheduleDiscoveryRebuild(`clinic ${clinicId} subscription ${newStatus}`);
   } else if (newStatus === 'active' || newStatus === 'trialing') {
     const isListed = PLAN_FEATURES[subRecord.plan]?.marketplace || false;
     await supabase.from('clinics').update({ is_marketplace_listed: isListed }).eq('id', clinicId);
+    const { scheduleDiscoveryRebuild } = require('../lib/discoveryTrigger');
+    scheduleDiscoveryRebuild(`clinic ${clinicId} subscription ${newStatus} (listed=${isListed})`);
   }
   // cancel_pending: leave marketplace visibility unchanged — access still valid
 

@@ -67,6 +67,10 @@
       "status": 404
     },
     {
+      "src": "/clinic/([^/]+)/?",
+      "dest": "/clinic/$1/index.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/$1"
     }

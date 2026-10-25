@@ -362,37 +362,37 @@
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
                 Profile information supplied by the clinic
               </span>
-              <span id="planBadge" style="font-size:0.75rem; font-weight:700; background:#f1f5f9; padding:0.25rem 0.55rem; border-radius:6px; color:#475569;">14+ Years Experience</span>
+              <span id="planBadge" style="display:none; font-size:0.75rem; font-weight:700; background:#f1f5f9; padding:0.25rem 0.55rem; border-radius:6px; color:#475569;"></span>
             </div>
             <h1 class="showcase-title" id="cName">Clinic Name</h1>
-            <div class="showcase-doctor" id="cDoctor">Dr. Mayank Sharma</div>
+            <div class="showcase-doctor" id="cDoctor"></div>
             <div class="showcase-meta-row">
               <div class="meta-item">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                <span id="cAddress">Connaught Place, New Delhi</span>
+                <span id="cAddress"></span>
               </div>
               <div class="meta-item">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <span id="cTimings">Mon - Sat: 09:00 AM - 08:00 PM</span>
+                <span id="cTimings"></span>
               </div>
               <div class="meta-item">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                <span id="cPhone">+91 98101 23456</span>
+                <span id="cPhone"></span>
               </div>
             </div>
           </div>
 
-          <!-- Large Rating Score -->
-          <div class="rating-badge-large">
+          <!-- Large Rating Score (Shown only when clinic has genuine ratings) -->
+          <div class="rating-badge-large" id="cRatingWrap" style="display:none;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="#eab308" stroke="#eab308"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            <span id="cRating">4.9</span>
-            <span style="font-size:0.8rem; color:#15803d; font-weight:500;" id="cReviewCount">(342 Reviews)</span>
+            <span id="cRating"></span>
+            <span style="font-size:0.8rem; color:#15803d; font-weight:500;" id="cReviewCount"></span>
           </div>
         </div>
       </section>
 
       <!-- Photos Gallery Grid -->
-      <section class="gallery-grid" id="galleryGrid">
+      <section class="gallery-grid" id="galleryGrid" style="display:none;">
         <div class="gallery-item gallery-item-main">
           <img src="" alt="Clinic Main" class="gallery-img" id="imgMain">
         </div>
@@ -411,13 +411,13 @@
         <div class="detail-left-content">
           
           <!-- About Section -->
-          <div class="content-card">
+          <div class="content-card" id="aboutSection">
             <h2 class="card-heading">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
               About the Clinic
             </h2>
             <p id="cAbout" style="color:#475569; line-height:1.7; font-size:0.95rem;">
-              Premier multispeciality dental clinic with comprehensive diagnostics and advanced treatments.
+              Profile information provided directly by the clinic.
             </p>
           </div>
 
@@ -428,25 +428,21 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 Treatments &amp; Transparent Pricing
               </h2>
-              <span style="font-size:0.8rem; color:#64748b;">No Hidden Fees</span>
+              <span style="font-size:0.8rem; color:#64748b;">Pricing Set by Clinic</span>
             </div>
             <div id="treatmentsList">
-              <!-- Dynamically populated -->
+              <!-- Dynamically populated from clinic services -->
             </div>
           </div>
 
           <!-- Amenities & Standards -->
-          <div class="content-card">
+          <div class="content-card" id="amenitiesSection" style="display:none;">
             <h2 class="card-heading">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               Hygiene, Safety &amp; Amenities
             </h2>
             <div class="amenities-wrap" id="amenitiesList">
-              <span class="amenity-pill">Class-B Autoclave Sterilization</span>
-              <span class="amenity-pill">Digital OPG &amp; Intraoral 3D Camera</span>
-              <span class="amenity-pill">Painless Wand Anesthesia</span>
-              <span class="amenity-pill">Valet Parking Available</span>
-              <span class="amenity-pill">All Cards &amp; UPI Accepted</span>
+              <!-- Dynamically populated from clinic data -->
             </div>
           </div>
 
@@ -458,26 +454,22 @@
             <div class="booking-card-header">
               <div>
                 <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Online Consultation / Visit</span>
-                <div style="font-size:1.4rem; font-weight:700; color:#0f172a;" id="cardPriceFrom">From ₹500</div>
+                <div style="font-size:1.4rem; font-weight:700; color:#0f172a;" id="cardPriceFrom">Consultation</div>
               </div>
-              <span class="instant-confirm-badge">Instant Slot</span>
+              <span class="instant-confirm-badge">Direct Booking</span>
             </div>
 
             <div style="margin-bottom:1rem;">
               <label style="display:block; font-size:0.82rem; font-weight:600; color:#334155; margin-bottom:0.4rem;">Select Treatment</label>
               <select id="quickServiceSelect" style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid #cbd5e1; font-size:0.9rem; font-weight:500; outline:none; background:white;">
-                <option value="Comprehensive Dental Checkup & Digital X-Ray">Comprehensive Dental Checkup (₹500)</option>
+                <option value="">Select treatment</option>
               </select>
             </div>
 
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem; font-size:0.82rem; color:#475569; margin-bottom:1.25rem;">
-              <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;">
-                <span>Next Available Slot:</span>
-                <strong style="color:#16a34a;">Today</strong>
-              </div>
               <div style="display:flex; justify-content:space-between;">
-                <span>Confirmation:</span>
-                <strong>Instant via Email/SMS</strong>
+                <span>Booking Mode:</span>
+                <strong>Direct Clinic Appointment</strong>
               </div>
             </div>
 
@@ -585,35 +577,54 @@
         const res = await window.api.getPublicClinic(slug);
         const clinic = res.clinic;
 
-        if (!clinic) throw new Error('Clinic not found');
+        if (!clinic || clinic.is_active !== true) {
+          throw new Error('Clinic not found or inactive.');
+        }
+
+        // If clinic has not explicitly consented to public listing, do not expose public profile
+        if (clinic.is_marketplace_listed !== true) {
+          let metaRobots = document.querySelector('meta[name="robots"]') || document.createElement('meta');
+          metaRobots.name = "robots";
+          metaRobots.content = "noindex, nofollow";
+          document.head.appendChild(metaRobots);
+
+          document.getElementById('loadingPlaceholder').innerHTML = `
+            <h3>Clinic Profile Not Publicly Listed</h3>
+            <p style="color:#64748b; margin-bottom:1.5rem;">This clinic is registered for direct appointments, but its public directory profile is not active.</p>
+            <div style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
+              <a href="./book.html?c=${encodeURIComponent(slug)}" class="btn btn-primary">Book Directly with Clinic</a>
+              <a href="./clinics.html" class="btn btn-secondary">Browse Directory</a>
+            </div>
+          `;
+          return;
+        }
 
         // ── SEO & Indexing ──
-        // Ensure active clinics are indexable by Google
-        let metaRobots = document.querySelector('meta[name="robots"]');
-        if (!metaRobots) {
-          metaRobots = document.createElement('meta');
-          metaRobots.name = "robots";
-          document.head.appendChild(metaRobots);
-        }
-        metaRobots.content = clinic.is_active === false ? "noindex, nofollow" : "index, follow, max-image-preview:large";
+        let metaRobots = document.querySelector('meta[name="robots"]') || document.createElement('meta');
+        metaRobots.name = "robots";
+        metaRobots.content = "index, follow, max-image-preview:large";
+        document.head.appendChild(metaRobots);
 
-        // Populate fields
-        // Update dynamic meta tags from real clinic data (no invented values)
-        // Dynamic Canonical URL
-        const clinicUrl = `https://www.dentalsmart.tech/clinic-detail.html?c=${encodeURIComponent(slug)}`;
+        // Dynamic Canonical URL using clean profile path
+        const clinicUrl = `https://www.dentalsmart.tech/clinic/${encodeURIComponent(slug)}`;
         let canonicalLink = document.querySelector('link[rel="canonical"]');
         if (canonicalLink) {
           canonicalLink.href = clinicUrl;
         }
 
-        // Dynamic Title & Description for Google & Justdial-style directory search
+        // Helper to escape HTML
+        function esc(str) {
+          if (!str) return '';
+          return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
         const clinicLocation = [clinic.area, clinic.city].filter(Boolean).join(', ');
         const locationSuffix = clinicLocation ? ` in ${clinicLocation}` : '';
         const pageTitle = `${clinic.name} – Dental Clinic${locationSuffix} | DentalSmart`;
         document.title = pageTitle;
         const metaDescText = clinic.about && clinic.about.trim().length > 10
           ? `${clinic.name}${locationSuffix}: ${clinic.about}`.slice(0, 160)
-          : `Book an appointment at ${clinic.name}${locationSuffix}. View verified clinic profile, available dental treatments, timings, and fees on DentalSmart.`;
+          : `Book an appointment at ${clinic.name}${locationSuffix}. View clinic profile, dental treatments, timings, and fees on DentalSmart.`;
 
         const descEl = document.querySelector('meta[name="description"]');
         if (descEl) descEl.content = metaDescText;
@@ -636,7 +647,7 @@
             "name": clinic.name,
             "description": metaDescText,
             "url": clinicUrl,
-            "image": clinic.cover_image || 'https://www.dentalsmart.tech/assets/favicon.svg',
+            "image": clinic.cover_image || 'https://www.dentalsmart.tech/assets/clinic-fallback.png',
             "address": {
               "@type": "PostalAddress",
               "streetAddress": clinic.address || "",
@@ -650,11 +661,11 @@
           if (clinic.phone) ldJson.telephone = clinic.phone;
           if (clinic.timings) ldJson.openingHours = clinic.timings;
           if (clinic.price_range) ldJson.priceRange = clinic.price_range;
-          if (clinic.rating && Number(clinic.rating) > 0) {
+          if (clinic.rating && Number(clinic.rating) > 0 && clinic.review_count && Number(clinic.review_count) > 0) {
             ldJson.aggregateRating = {
               "@type": "AggregateRating",
               "ratingValue": Number(clinic.rating).toFixed(1),
-              "reviewCount": clinic.review_count || 1
+              "reviewCount": Number(clinic.review_count)
             };
           }
 
@@ -669,78 +680,95 @@
 
         document.getElementById('bcClinicName').textContent = clinic.name;
         document.getElementById('cName').textContent = clinic.name;
-        // Only show owner name if it exists in real data; never show a fabricated default
+        
         const doctorEl = document.getElementById('cDoctor');
         if (clinic.owner_name) {
           doctorEl.textContent = `${clinic.owner_name}${clinic.experience_years ? ' • ' + clinic.experience_years + '+ Years Experience' : ''}`;
         } else {
           doctorEl.textContent = '';
         }
-        document.getElementById('cAddress').textContent = [clinic.address, clinic.city].filter(Boolean).join(', ');
+
+        const addressText = [clinic.address, clinic.area, clinic.city].filter(Boolean).join(', ');
+        document.getElementById('cAddress').textContent = addressText || (clinic.city ? clinic.city : 'Location available upon booking');
         document.getElementById('cTimings').textContent = clinic.timings || 'Contact clinic for opening hours';
-        // Never show a fabricated phone number
+        
         const phoneEl = document.getElementById('cPhone');
-        phoneEl.textContent = clinic.phone || 'Contact via appointment form';
-        // Only show real ratings/reviews
-        const ratingEl = document.getElementById('cRating');
-        const reviewEl = document.getElementById('cReviewCount');
-        if (clinic.rating && Number(clinic.rating) > 0) {
-          ratingEl.textContent = Number(clinic.rating).toFixed(1);
-          reviewEl.textContent = clinic.review_count ? `(${clinic.review_count} Reviews)` : '';
+        phoneEl.textContent = clinic.phone || 'Available upon appointment request';
+
+        // Rating
+        const ratingWrap = document.getElementById('cRatingWrap');
+        if (clinic.rating && Number(clinic.rating) > 0 && clinic.review_count && Number(clinic.review_count) > 0) {
+          document.getElementById('cRating').textContent = Number(clinic.rating).toFixed(1);
+          document.getElementById('cReviewCount').textContent = `(${clinic.review_count} Reviews)`;
+          if (ratingWrap) ratingWrap.style.display = 'flex';
         } else {
-          // Hide rating display if no real rating data
-          ratingEl.closest('.rating-display') && (ratingEl.closest('.rating-display').style.display = 'none');
+          if (ratingWrap) ratingWrap.style.display = 'none';
         }
-        document.getElementById('cAbout').textContent = clinic.about || '';
+
+        // About section
+        document.getElementById('cAbout').textContent = (clinic.about && clinic.about.trim())
+          ? clinic.about.trim()
+          : 'Dental practice providing comprehensive general and specialized dental care.';
 
         // Gallery Images
-        const cover = clinic.cover_image || 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80';
+        const cover = clinic.cover_image || '/assets/clinic-fallback.png';
         const imgList = Array.isArray(clinic.images) && clinic.images.length > 0 ? clinic.images : [cover];
-        document.getElementById('imgMain').src = imgList[0] || cover;
-        document.getElementById('img2').src = imgList[1] || 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800&q=80';
-        document.getElementById('img3').src = imgList[2] || 'https://images.unsplash.com/photo-1598256989800-fe5f95da9787?auto=format&fit=crop&w=800&q=80';
+        if (imgList.length > 0 && imgList[0]) {
+          document.getElementById('imgMain').src = imgList[0];
+          document.getElementById('galleryGrid').style.display = 'grid';
+        }
 
         // Treatments List
-        // Only show services that the clinic has actually configured — no invented defaults
         const services = Array.isArray(clinic.services_offered) && clinic.services_offered.length > 0
           ? clinic.services_offered
           : [];
 
-        const treatmentsHtml = services.map(s => `
-          <div class="treatment-item">
-            <div class="treatment-info">
-              <h4>${s.name}</h4>
-              <span>${s.category || 'Specialized'} &bull; Approx. ${s.duration || '30 min'}</span>
-            </div>
-            <div class="treatment-price-action">
-              <div class="treatment-price">₹${(s.price || 500).toLocaleString('en-IN')}</div>
-              <a href="./book.html?c=${encodeURIComponent(clinic.booking_slug || clinic.id)}&service=${encodeURIComponent(s.name)}" class="btn-book-service">
-                Book Slot
-              </a>
-            </div>
-          </div>
-        `).join('');
-        document.getElementById('treatmentsList').innerHTML = treatmentsHtml;
-
-        // Quick Select in Sticky Card
         const selectEl = document.getElementById('quickServiceSelect');
-        selectEl.innerHTML = services.map(s => `<option value="${s.name}">${s.name} (₹${s.price || 500})</option>`).join('');
 
-        const minPrice = Math.min(...services.map(s => s.price || 500));
-        document.getElementById('cardPriceFrom').textContent = `From ₹${minPrice.toLocaleString('en-IN')}`;
+        if (services.length > 0) {
+          const treatmentsHtml = services.map(s => `
+            <div class="treatment-item">
+              <div class="treatment-info">
+                <h4>${esc(s.name)}</h4>
+                <span>${esc(s.category || 'Dental Care')} ${s.duration ? `&bull; Approx. ${esc(s.duration)}` : ''}</span>
+              </div>
+              <div class="treatment-price-action">
+                <div class="treatment-price">${s.price ? `₹${Number(s.price).toLocaleString('en-IN')}` : 'Consultation'}</div>
+                <a href="./book.html?c=${encodeURIComponent(clinic.booking_slug || clinic.id)}&service=${encodeURIComponent(s.name)}" class="btn-book-service">
+                  Book Slot
+                </a>
+              </div>
+            </div>
+          `).join('');
+          document.getElementById('treatmentsList').innerHTML = treatmentsHtml;
+          selectEl.innerHTML = services.map(s => `<option value="${esc(s.name)}">${esc(s.name)} (${s.price ? '₹' + s.price : 'Consultation'})</option>`).join('');
+
+          const validPrices = services.filter(s => s.price).map(s => Number(s.price));
+          if (validPrices.length > 0) {
+            const minPrice = Math.min(...validPrices);
+            document.getElementById('cardPriceFrom').textContent = `From ₹${minPrice.toLocaleString('en-IN')}`;
+          }
+        } else {
+          document.getElementById('treatmentsList').innerHTML = '<p style="color:#64748b; font-size:0.9rem; padding: 1rem 0;">Direct consultations and treatments available. Select consultation to book.</p>';
+          selectEl.innerHTML = '<option value="Consultation">General Consultation</option>';
+        }
 
         // Link button in Sticky Card
         const directBtn = document.getElementById('btnBookNowDirect');
         function updateDirectLink() {
           const selectedService = selectEl.value;
-          directBtn.href = `./book.html?c=${encodeURIComponent(clinic.booking_slug || clinic.id)}&service=${encodeURIComponent(selectedService)}`;
+          directBtn.href = `./book.html?c=${encodeURIComponent(clinic.booking_slug || clinic.id)}${selectedService ? '&service=' + encodeURIComponent(selectedService) : ''}`;
         }
         selectEl.addEventListener('change', updateDirectLink);
         updateDirectLink();
 
         // Amenities
+        const amenitiesSection = document.getElementById('amenitiesSection');
         if (Array.isArray(clinic.amenities) && clinic.amenities.length > 0) {
-          document.getElementById('amenitiesList').innerHTML = clinic.amenities.map(a => `<span class="amenity-pill">${a}</span>`).join('');
+          document.getElementById('amenitiesList').innerHTML = clinic.amenities.map(a => `<span class="amenity-pill">${esc(a)}</span>`).join('');
+          if (amenitiesSection) amenitiesSection.style.display = 'block';
+        } else {
+          if (amenitiesSection) amenitiesSection.style.display = 'none';
         }
 
         // Show Content
@@ -749,6 +777,11 @@
 
       } catch (err) {
         console.error('Error loading clinic detail:', err);
+        let metaRobots = document.querySelector('meta[name="robots"]') || document.createElement('meta');
+        metaRobots.name = "robots";
+        metaRobots.content = "noindex, nofollow";
+        document.head.appendChild(metaRobots);
+
         document.getElementById('loadingPlaceholder').innerHTML = `
           <h3>Unable to load clinic details</h3>
           <p style="color:#64748b; margin-bottom:1.5rem;">${err.message || 'The link may be invalid or expired.'}</p>

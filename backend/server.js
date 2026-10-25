@@ -190,6 +190,12 @@ app.use('/api/messages',     messageRoutes);
 const internalRoutes = require('./routes/internal');
 app.use('/internal',         internalRoutes);
 
+// ── Crawler policy for backend API host ──────────────────────────────────────
+app.get('/robots.txt', (_req, res) => {
+  res.type('text/plain');
+  res.send('User-agent: *\nAllow: /api/public/\nAllow: /api/config\nDisallow: /api/\n');
+});
+
 // ── 404 handler (API routes only) ────────────────────────────────────────────
 // NOTE: The Express backend on Render is API-only. Frontend HTML is served by Vercel.
 // Static error pages (401.html, 403.html etc.) with correct status codes are

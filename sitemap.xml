@@ -37,25 +37,4 @@
     <priority>0.3</priority>
   </url>
 
-  <!-- VAIBHAV Sharma&#39;s Dental Clinic (Delhi) -->
-  <url>
-    <loc>https://www.dentalsmart.tech/clinic/6e695bqy4</loc>
-    <lastmod>2026-09-28</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <!-- Mohit Yes&#39;s Dental Clinic (Delhi) -->
-  <url>
-    <loc>https://www.dentalsmart.tech/clinic/41d408rli</loc>
-    <lastmod>2026-10-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <!-- Vaibhav&#39;s Dental Clinic (Delhi) -->
-  <url>
-    <loc>https://www.dentalsmart.tech/clinic/edd501096</loc>
-    <lastmod>2026-10-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
 </urlset>

@@ -1,7 +1,7 @@
 const PLAN_CREDITS = {
-  starter:    200,
-  growth:     450,
-  premium:    900,
+  starter:    300,
+  growth:     1000,
+  premium:    2000,
   enterprise: 999999  // effectively unlimited
 };
 

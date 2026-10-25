@@ -432,7 +432,7 @@ async function run() {
           </div>
           <h3 style="font-size: 1.35rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem;">Independent Clinics Onboarding</h3>
           <p style="color: #64748b; line-height: 1.6; margin-bottom: 1.75rem; font-size: 0.95rem;">
-            Dental practices across India are currently joining DentalSmart. Are you a clinic owner or dentist? List your practice today to accept verified online bookings.
+            Dental practices across India are currently onboarding on DentalSmart. Are you a clinic owner or dentist? Register your practice today to accept online patient appointments.
           </p>
           <a href="/register.html" class="btn btn-primary" style="padding: 0.75rem 1.75rem; font-size: 0.95rem; display: inline-block;">List Your Practice</a>
         </div>

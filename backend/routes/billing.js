@@ -258,11 +258,14 @@ router.post('/verify-payment', requireAuth, [
       console.error('[Billing] Credits upsert error:', creditErr);
     }
 
-    // 5. Update clinic profile
-    await supabase.from('clinics').update({
-      subscription_plan:     plan,
-      is_marketplace_listed: PLAN_FEATURES[plan]?.marketplace || (plan !== 'starter')
-    }).eq('id', clinicId);
+    // 5. Update clinic profile plan
+    // Preserves explicit publication consent/approval: do NOT automatically set marketplace listing to true.
+    // If downgrading to a plan without marketplace access, delist the clinic.
+    const clinicUpdates = { subscription_plan: plan };
+    if (!PLAN_FEATURES[plan]?.marketplace) {
+      clinicUpdates.is_marketplace_listed = false;
+    }
+    await supabase.from('clinics').update(clinicUpdates).eq('id', clinicId);
 
     // 6. Log invoice / receipt record
     const invoiceNum = `INV-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 900 + 100)}`;
@@ -514,10 +517,9 @@ router.post('/verify-trial', requireAuth, [
 
     if (creditErr) console.error('[Billing] Credits upsert error:', creditErr);
 
-    // 3. Enable marketplace
+    // 3. Set trial plan (does NOT auto-publish clinic)
     await supabase.from('clinics').update({
-      subscription_plan:     'premium',
-      is_marketplace_listed: true
+      subscription_plan: 'premium'
     }).eq('id', clinicId);
 
     // 4. Log trial invoice (₹0.00 trial verification)
@@ -930,13 +932,11 @@ router.post('/start-trial', requireAuth, async (req, res, next) => {
       updated_at:        now.toISOString()
     }, { onConflict: 'clinic_id' }).then(() => {}).catch(e => console.error('[Billing] Trial credit upsert error:', e));
 
-    // Enable marketplace access during trial
+    // Set trial subscription plan. Preserves explicit publication consent/approval:
+    // does NOT automatically publish clinic to public marketplace directory.
     await supabase.from('clinics').update({
-      subscription_plan:     trialPlan,
-      is_marketplace_listed: true
+      subscription_plan: trialPlan
     }).eq('id', clinicId);
-    const { scheduleDiscoveryRebuild: scheduleRebuildTrial } = require('../lib/discoveryTrigger');
-    scheduleRebuildTrial(`clinic ${clinicId} trial activated`);
 
     // Record trial activation in credit ledger
     await supabase.from('credit_transactions').insert({

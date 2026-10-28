@@ -585,12 +585,52 @@ async function runTests() {
       const origVercel = process.env.VERCEL;
       process.env.VERCEL = '1';
       let loopPrevented = false;
-      const { scheduleDiscoveryRebuild: scheduleLoop } = require('../lib/discoveryTrigger');
+      const { scheduleDiscoveryRebuild: scheduleLoop, validateHookUrl } = require('../lib/discoveryTrigger');
       // In Vercel environment, it must log and return without scheduling
       scheduleLoop('should not trigger loop');
       ok('Loop prevention: skips trigger inside Vercel/CI environment to prevent recursive builds');
       if (origVercel !== undefined) process.env.VERCEL = origVercel;
       else delete process.env.VERCEL;
+
+      // 10e: Production rejects localhost / 127.0.0.1
+      delete process.env.DISCOVERY_TEST_MODE;
+      const origNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      try {
+        let threwLocalhost = false;
+        try { validateHookUrl('http://localhost:3000/api/deploy'); }
+        catch (_) { threwLocalhost = true; }
+        if (threwLocalhost) ok('Production mode strictly rejects localhost deploy hook');
+        else fail('Production mode permitted localhost deploy hook');
+
+        let threwIp = false;
+        try { validateHookUrl('http://127.0.0.1:3000/api/deploy'); }
+        catch (_) { threwIp = true; }
+        if (threwIp) ok('Production mode strictly rejects 127.0.0.1 deploy hook');
+        else fail('Production mode permitted 127.0.0.1 deploy hook');
+
+        let threwNonHttps = false;
+        try { validateHookUrl('http://api.vercel.com/v1/integrations/deploy/hook123'); }
+        catch (_) { threwNonHttps = true; }
+        if (threwNonHttps) ok('Production mode requires HTTPS for deploy hook');
+        else fail('Production mode permitted plain HTTP for api.vercel.com');
+
+        let threwUntrusted = false;
+        try { validateHookUrl('https://evil-site.com/v1/integrations/deploy/hook123'); }
+        catch (_) { threwUntrusted = true; }
+        if (threwUntrusted) ok('Production mode rejects non-api.vercel.com destination');
+        else fail('Production mode permitted non-api.vercel.com destination');
+
+        let passedValid = false;
+        try {
+          const u = validateHookUrl('https://api.vercel.com/v1/integrations/deploy/prj_abc/hook_xyz');
+          passedValid = u.hostname === 'api.vercel.com';
+        } catch (_) {}
+        if (passedValid) ok('Production mode accepts valid https://api.vercel.com/... hook');
+        else fail('Production mode failed to accept valid https://api.vercel.com/... hook');
+      } finally {
+        process.env.NODE_ENV = origNodeEnv;
+      }
 
     } finally {
       delete process.env.DISCOVERY_TEST_MODE;
@@ -639,6 +679,58 @@ async function runTests() {
       }
     } else {
       fail('vercel.json outputDirectory is not "dist"');
+    }
+
+    // ── TEST 12: Separation of Publication from Billing & Trial Activation ────
+    console.log(B('\nTEST 12: Separation of Publication from Billing & Trial Activation'));
+    const billingCode = fs.readFileSync(path.join(ROOT, 'backend', 'routes', 'billing.js'), 'utf8');
+    const webhooksCode = fs.readFileSync(path.join(ROOT, 'backend', 'routes', 'webhooks.js'), 'utf8');
+
+    const stripComments = (str) => str.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+    const billingCodeClean = stripComments(billingCode);
+    const webhooksCodeClean = stripComments(webhooksCode);
+
+    // 12a: Ensure billing.js NEVER sets is_marketplace_listed to true
+    const billingSetsTrue = /is_marketplace_listed\s*[:=]\s*true/.test(billingCodeClean);
+    if (!billingSetsTrue) {
+      ok('billing.js executable code never sets is_marketplace_listed to true (trial/upgrade cannot publish)');
+    } else {
+      fail('billing.js contains code setting is_marketplace_listed: true');
+    }
+
+    // 12b: Ensure webhooks.js NEVER sets is_marketplace_listed to true
+    const webhooksSetsTrue = /is_marketplace_listed\s*[:=]\s*true/.test(webhooksCodeClean);
+    if (!webhooksSetsTrue) {
+      ok('webhooks.js executable code never sets is_marketplace_listed to true on active/trialing transitions');
+    } else {
+      fail('webhooks.js contains code setting is_marketplace_listed: true');
+    }
+
+    // 12c: Verify trial start does not silently republish or auto-publish
+    const trialStartBlocks = billingCodeClean.match(/router\.post\('\/start-trial'[\s\S]*?\}\);/);
+    if (trialStartBlocks && !trialStartBlocks[0].includes('is_marketplace_listed')) {
+      ok('/api/billing/start-trial modifies only subscription status/plan, leaving publication flags untouched');
+    } else {
+      fail('/api/billing/start-trial attempts to modify publication status');
+    }
+
+    // 12d: Verify plan upgrade preserves delisted state (never silently republishes)
+    // In billing.js change-plan handler:
+    // If clinic is previously delisted (is_marketplace_listed === false), an upgrade to Growth must NOT flip it to true.
+    const planChangeHasDefensiveDelist = billingCode.includes('!PLAN_FEATURES[plan]?.marketplace') &&
+      billingCode.includes('clinicUpdates.is_marketplace_listed = false');
+    if (planChangeHasDefensiveDelist) {
+      ok('Plan change logic only performs defensive delisting; never silently republishes unapproved/delisted clinics');
+    } else {
+      fail('Plan change logic missing defensive delisting boundary');
+    }
+
+    // 12e: Verify explicit operator approval route is preserved in superAdmin.js
+    const superAdminCode = fs.readFileSync(path.join(ROOT, 'backend', 'routes', 'superAdmin.js'), 'utf8');
+    if (superAdminCode.includes('/clinics/:id/marketplace') && superAdminCode.includes('clinic.marketplace_published')) {
+      ok('superAdmin.js remains the sole authorized route for explicit clinic marketplace publication');
+    } else {
+      fail('superAdmin.js missing explicit marketplace publication endpoint');
     }
 
   } finally {

@@ -178,17 +178,18 @@ async function handleSubscriptionEvent(eventType, rzpSub, eventId, fullPayload) 
     .eq('id', subRecord.id);
 
   // Marketplace visibility:
-  // - Remove only when fully canceled/expired (not while cancel_pending — access still valid)
-  // - Restore when active or trialing
+  // - Delist when fully canceled or expired (not while cancel_pending — access still valid)
+  // - Delist if new plan does not support marketplace access
+  // - Preserves explicit publication consent/approval: do NOT automatically set marketplace listing to true
+  //   when active/trialing, and never silently republish a previously delisted clinic.
   if (newStatus === 'canceled' || newStatus === 'expired') {
     await supabase.from('clinics').update({ is_marketplace_listed: false }).eq('id', clinicId);
     const { scheduleDiscoveryRebuild } = require('../lib/discoveryTrigger');
     scheduleDiscoveryRebuild(`clinic ${clinicId} subscription ${newStatus}`);
-  } else if (newStatus === 'active' || newStatus === 'trialing') {
-    const isListed = PLAN_FEATURES[subRecord.plan]?.marketplace || false;
-    await supabase.from('clinics').update({ is_marketplace_listed: isListed }).eq('id', clinicId);
+  } else if (!PLAN_FEATURES[subRecord.plan]?.marketplace) {
+    await supabase.from('clinics').update({ is_marketplace_listed: false }).eq('id', clinicId);
     const { scheduleDiscoveryRebuild } = require('../lib/discoveryTrigger');
-    scheduleDiscoveryRebuild(`clinic ${clinicId} subscription ${newStatus} (listed=${isListed})`);
+    scheduleDiscoveryRebuild(`clinic ${clinicId} plan has no marketplace access`);
   }
   // cancel_pending: leave marketplace visibility unchanged — access still valid
 

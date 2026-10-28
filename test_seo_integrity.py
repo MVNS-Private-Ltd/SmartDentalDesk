@@ -146,21 +146,26 @@ if robots:
 else:
     warn("robots.txt not found at static root — may be served by backend")
 
-for sm_name in ["sitemap.xml", "sitemap-clinics.xml"]:
-    sm_path = ROOT / sm_name
-    if sm_path.exists():
-        sm_content = read(sm_path)
-        leaked = [s for s in INTERNAL_SLUGS if s in sm_content]
-        if leaked:
-            fail(f"{sm_name}: internal slug(s) still in sitemap: {leaked}")
-        else:
-            ok(f"{sm_name}: no internal test slugs in sitemap")
-        if "<url>" in sm_content or "<urlset" in sm_content:
-            ok(f"{sm_name}: valid XML structure present")
-        else:
-            warn(f"{sm_name}: may be empty or malformed")
+sm_path = ROOT / "sitemap.xml"
+if sm_path.exists():
+    sm_content = read(sm_path)
+    leaked = [s for s in INTERNAL_SLUGS if s in sm_content]
+    if leaked:
+        fail(f"sitemap.xml: internal slug(s) still in sitemap: {leaked}")
     else:
-        warn(f"{sm_name} not found (may be generated at build time)")
+        ok("sitemap.xml: no internal test slugs in sitemap")
+    if "<url>" in sm_content or "<urlset" in sm_content:
+        ok("sitemap.xml: valid XML structure present")
+    else:
+        fail("sitemap.xml: may be empty or malformed")
+    # Verify core canonical pages
+    for page in ["https://www.dentalsmart.tech/", "https://www.dentalsmart.tech/clinics", "https://www.dentalsmart.tech/pricing"]:
+        if page in sm_content:
+            ok(f"sitemap.xml contains authoritative page: {page}")
+        else:
+            fail(f"sitemap.xml missing authoritative page: {page}")
+else:
+    fail("sitemap.xml not found at static root")
 
 # ─────────────────────────────────────────────
 # PHASE 3b — PLANS.JS CREDIT TRUTH

@@ -52,13 +52,26 @@ function validateHookUrl(hookUrl) {
   const isTest = process.env.NODE_ENV === 'test' || process.env.DISCOVERY_TEST_MODE === 'true';
   const isLocal = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
 
-  if (!isLocal && parsed.hostname !== 'api.vercel.com') {
+  // Permit localhost/127.0.0.1 strictly and ONLY when the explicit test condition is active
+  if (isLocal) {
+    if (!isTest) {
+      throw new Error(
+        'Deploy hook cannot point to localhost/127.0.0.1 in non-test environments. ' +
+        'Destination must be https://api.vercel.com/...'
+      );
+    }
+    // In test environment, allow local test HTTP server
+    return parsed;
+  }
+
+  // Production requirement: hostname must strictly be api.vercel.com
+  if (parsed.hostname !== 'api.vercel.com') {
     throw new Error(
       `Deploy hook hostname must be api.vercel.com, got "${parsed.hostname}". Verify VERCEL_DEPLOY_HOOK_URL.`
     );
   }
 
-  if (!isLocal && parsed.protocol !== 'https:') {
+  if (parsed.protocol !== 'https:') {
     throw new Error('Deploy hook URL must use HTTPS.');
   }
 
@@ -177,10 +190,12 @@ async function _fireHookWithRetry(hookUrl, reasons, maxRetries = MAX_RETRIES) {
 }
 
 /**
- * Optionally log the job to Supabase discovery_build_jobs table if it exists.
- * Does not throw if table does not exist.
+ * Records an audit entry in the Supabase discovery_build_jobs table if it exists.
+ * NOTE: This is strictly an audit log of trigger events; the actual rebuild
+ * execution is handled via in-memory debounced HTTP dispatch. Direct database
+ * edits bypass route triggers and do NOT automatically trigger Vercel rebuilds.
  */
-async function _logJobToDatabase(reason) {
+async function _recordTriggerAuditLog(reason) {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !supabaseKey) return;
@@ -193,11 +208,11 @@ async function _logJobToDatabase(reason) {
     const supabase = createClient(supabaseUrl, supabaseKey);
     await supabase.from('discovery_build_jobs').insert({
       trigger_reason: reason,
-      status: 'pending',
+      status: 'audit_logged',
       created_at: new Date().toISOString()
     });
   } catch (_) {
-    // Gracefully ignore if table has not been created yet
+    // Gracefully ignore if audit table has not been created yet
   }
 }
 
@@ -226,8 +241,8 @@ function scheduleDiscoveryRebuild(reason) {
 
   _pendingReasons.push(reason);
 
-  // Optional background durable log
-  _logJobToDatabase(reason).catch(() => {});
+  // Optional background audit log
+  _recordTriggerAuditLog(reason).catch(() => {});
 
   if (_debounceTimer) {
     // Already scheduled — reason accumulated

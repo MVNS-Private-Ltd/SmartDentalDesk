@@ -1,4 +1,4 @@
-const express  = require('express');
+﻿const express  = require('express');
 const rateLimit = require('express-rate-limit');
 const { body, param, query, validationResult } = require('express-validator');
 const supabase = require('../lib/supabase');
@@ -636,8 +636,47 @@ router.post('/book', bookingLimiter, [
   }
 });
 
-// ── POST /api/public/report ───────────────────────────────────────────────────
-// Submit a report against a clinic listing
+// ── GET /api/public/appointment-status/:id ────────────────────────────────────
+// Real-time status lookup for patients waiting on the booking confirmation screen
+const statusLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many status requests. Please wait a moment.' }
+});
+
+router.get('/appointment-status/:id', statusLimiter, [
+  param('id').isUUID().withMessage('Valid appointment ID is required')
+], async (req, res, next) => {
+  try {
+    if (!validate(req, res)) return;
+    const { id } = req.params;
+
+    const { data: appt, error } = await supabase
+      .from('appointments')
+      .select('id, status, date, time, service, notes')
+      .eq('id', id)
+      .single();
+
+    if (error || !appt) {
+      return res.status(404).json({ error: 'Appointment not found.' });
+    }
+
+    res.json({
+      id: appt.id,
+      status: appt.status,
+      date: appt.date,
+      time: appt.time,
+      service: appt.service,
+      notes: appt.notes || null
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/public/report ───────────────────────────────────────────────────// Submit a report against a clinic listing
 const reportLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5,

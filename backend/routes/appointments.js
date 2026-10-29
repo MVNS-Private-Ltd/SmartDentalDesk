@@ -280,9 +280,14 @@ router.post('/:id/reject', async (req, res, next) => {
 
     if (findErr || !existing) return res.status(404).json({ error: 'Appointment not found.' });
 
+        const updates = { status: 'cancelled', updated_at: new Date().toISOString() };
+    if (reason && typeof reason === 'string' && reason.trim()) {
+      updates.notes = reason.trim();
+    }
+
     const { data, error } = await supabase
       .from('appointments')
-      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .update(updates)
       .eq('id', req.params.id)
       .eq('clinic_id', req.clinicId)
       .select(`*, patients(id, name, phone, email)`)

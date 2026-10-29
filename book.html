@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -197,6 +197,11 @@
       line-height: 1.6;
     }
     .summary-box strong { color: var(--text-main); }
+    @keyframes pulseDot {
+      0% { transform: scale(0.9); opacity: 0.6; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.6; }
+    }
   </style>
 </head>
 <body>
@@ -312,10 +317,10 @@
       <button class="btn btn-secondary" id="btnBack3">Back</button>
     </div>
 
-    <!-- SUCCESS STATE -->
+        <!-- SUCCESS STATE -->
     <div class="step-panel" id="stepSuccess" style="text-align:center; padding: 3rem 2rem;">
       <div id="successIconWrap" style="margin-bottom:1rem;">
-        <svg id="successIconApproved" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2">
+        <svg id="successIconApproved" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" style="display:none;">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
           <polyline points="22 4 12 14.01 9 11.01"></polyline>
         </svg>
@@ -323,9 +328,25 @@
           <circle cx="12" cy="12" r="10"></circle>
           <polyline points="12 6 12 12 16 14"></polyline>
         </svg>
+        <svg id="successIconDeclined" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" style="display:none;">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="15" y1="9" x2="9" y2="15"></line>
+          <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>
       </div>
       <h2 id="successTitle" style="font-size:1.5rem; margin-bottom:0.5rem; color:var(--text-main);">Booking Confirmed!</h2>
       <p id="successDesc" style="color:var(--text-muted); line-height:1.6;">Your appointment has been successfully scheduled. We look forward to seeing you.</p>
+
+      <div id="liveStatusBadge" style="display:none; margin:1.5rem auto 0; padding:0.55rem 1rem; background:#fffbeb; border:1px solid #fef3c7; border-radius:999px; align-items:center; justify-content:center; gap:8px; font-size:0.85rem; color:#b45309; font-weight:500; width:fit-content;">
+        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#d97706; animation:pulseDot 1.5s infinite;"></span>
+        <span>Waiting for clinic response in real-time...</span>
+      </div>
+
+      <div id="declinedActionWrap" style="display:none; margin-top:1.5rem;">
+        <button type="button" class="btn btn-primary" onclick="window.location.reload()" style="max-width:240px; margin:0 auto; display:block;">
+          Choose Another Slot
+        </button>
+      </div>
     </div>
 
   </div>
@@ -415,6 +436,101 @@ function showError(step, msg) {
   const errEl = document.getElementById(`err${step}`);
   errEl.textContent = msg;
   errEl.style.display = msg ? 'block' : 'none';
+}
+
+
+let pollInterval = null;
+
+function stopStatusPolling() {
+  if (pollInterval) {
+    clearInterval(pollInterval);
+    pollInterval = null;
+  }
+}
+
+function startStatusPolling(appointmentId) {
+  stopStatusPolling();
+  if (!appointmentId) return;
+
+  const liveBadge = document.getElementById('liveStatusBadge');
+  if (liveBadge) liveBadge.style.display = 'inline-flex';
+
+  const checkStatus = async () => {
+    try {
+      const res = await fetch(`${API_URL}/appointment-status/${appointmentId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      if (data.status === 'scheduled' || data.status === 'confirmed') {
+        stopStatusPolling();
+        renderApprovedState(data);
+      } else if (data.status === 'cancelled') {
+        stopStatusPolling();
+        renderDeclinedState(data);
+      }
+    } catch (e) {
+      // transient network blip - keep polling
+    }
+  };
+
+  pollInterval = setInterval(checkStatus, 3000);
+}
+
+function renderApprovedState(data) {
+  document.getElementById('successIconPending').style.display = 'none';
+  document.getElementById('successIconDeclined').style.display = 'none';
+  document.getElementById('successIconApproved').style.display = 'inline-block';
+
+  const title = document.getElementById('successTitle');
+  title.textContent = 'Appointment Confirmed!';
+  title.style.color = '#16a34a';
+
+  const timeStr = data.time ? formatTime12h(String(data.time).slice(0, 5)) : formatTime12h(bookingData.time);
+  const dateStr = data.date || bookingData.date;
+  const srvStr = data.service || bookingData.service;
+
+  document.getElementById('successDesc').innerHTML = `
+    🎉 <strong>Great news!</strong> Your appointment for <strong>${srvStr}</strong> on <strong>${dateStr}</strong> at <strong>${timeStr}</strong> has been <strong>approved &amp; confirmed</strong> by the clinic.<br><br>We look forward to seeing you.
+  `;
+
+  const liveBadge = document.getElementById('liveStatusBadge');
+  if (liveBadge) {
+    liveBadge.style.background = '#f0fdf4';
+    liveBadge.style.borderColor = '#bbf7d0';
+    liveBadge.style.color = '#15803d';
+    liveBadge.innerHTML = '<span>✅ Approved &amp; Confirmed by Clinic</span>';
+    liveBadge.style.display = 'inline-flex';
+  }
+
+  const decWrap = document.getElementById('declinedActionWrap');
+  if (decWrap) decWrap.style.display = 'none';
+}
+
+function renderDeclinedState(data) {
+  document.getElementById('successIconPending').style.display = 'none';
+  document.getElementById('successIconApproved').style.display = 'none';
+  document.getElementById('successIconDeclined').style.display = 'inline-block';
+
+  const title = document.getElementById('successTitle');
+  title.textContent = 'Appointment Declined';
+  title.style.color = '#dc2626';
+
+  const timeStr = data.time ? formatTime12h(String(data.time).slice(0, 5)) : formatTime12h(bookingData.time);
+  const dateStr = data.date || bookingData.date;
+  const srvStr = data.service || bookingData.service;
+  const reasonText = data.notes
+    ? `<div style="margin:1rem 0; padding:0.75rem 1rem; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; color:#991b1b; font-size:0.9rem; text-align:left;"><strong>Note from clinic:</strong> ${data.notes}</div>`
+    : '';
+
+  document.getElementById('successDesc').innerHTML = `
+    The clinic was unable to approve your requested slot for <strong>${srvStr}</strong> on <strong>${dateStr}</strong> at <strong>${timeStr}</strong>.${reasonText}<br>Please select another available date or time slot.
+  `;
+
+  const liveBadge = document.getElementById('liveStatusBadge');
+  if (liveBadge) liveBadge.style.display = 'none';
+
+  const decWrap = document.getElementById('declinedActionWrap');
+  if (decWrap) decWrap.style.display = 'block';
 }
 
 // ── STEP 1: Details -> Send OTP ──

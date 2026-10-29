@@ -2,6 +2,7 @@ const express  = require('express');
 const rateLimit = require('express-rate-limit');
 const { body, param, query, validationResult } = require('express-validator');
 const supabase = require('../lib/supabase');
+const { supabaseAnon } = require('../lib/supabase');
 const { sendMail } = require('../lib/mailer');
 
 const router = express.Router();
@@ -325,7 +326,12 @@ router.post('/send-otp', otpLimiter, [
     if (!validate(req, res)) return;
     const { email } = req.body;
 
-    const { error } = await supabase.auth.signInWithOtp({ email });
+    // Use the anon client for Auth API calls — never the service-role singleton.
+    // Calling auth methods on the service-role client can overwrite its internal
+    // session with a user JWT, causing all subsequent DB queries on that
+    // singleton to run under RLS instead of bypassing it.
+    const authClient = supabaseAnon || supabase;
+    const { error } = await authClient.auth.signInWithOtp({ email });
     if (error) throw error;
 
     res.json({ message: 'OTP sent successfully' });
@@ -343,7 +349,12 @@ router.post('/verify-otp', otpLimiter, [
     if (!validate(req, res)) return;
     const { email, otp } = req.body;
 
-    const { data, error } = await supabase.auth.verifyOtp({
+    // Use the anon client — verifyOtp() sets a user session on whichever
+    // client instance it's called on. Using the service-role singleton here
+    // would corrupt its auth state and make every subsequent DB query run
+    // as the authenticated user (subject to RLS) instead of service-role.
+    const authClient = supabaseAnon || supabase;
+    const { data, error } = await authClient.auth.verifyOtp({
       email,
       token: otp,
       type: 'email'

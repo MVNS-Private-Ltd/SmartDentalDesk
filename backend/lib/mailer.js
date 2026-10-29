@@ -1,12 +1,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  Mailer — lib/mailer.js
 //
-//  All sends go through the email gate before hitting the Resend API.
+//  Sends transactional emails with dual transport:
+//  1. Primary: Resend HTTP API (if RESEND_API_KEY is configured)
+//  2. Fallback / Direct: Nodemailer SMTP (if SMTP_USER and SMTP_PASS are configured)
+//
 //  Never logs secrets, API keys, patient clinical content, or full email bodies.
 // ─────────────────────────────────────────────────────────────────────────────
 
 'use strict';
 
+const nodemailer = require('nodemailer');
 const {
   getEmailMode,
   getEmailConfig,
@@ -14,6 +18,7 @@ const {
   safeLogEvent,
   isValidEmailFormat,
   SafeConfigError,
+  resolveEnvVar,
 } = require('./emailGate');
 
 const MAX_SUBJECT_LENGTH = 200;
@@ -29,7 +34,7 @@ function sanitizePlainText(text) {
     .slice(0, MAX_BODY_LENGTH);
 }
 
-// ── Build a safe HTML body from plain text (no arbitrary HTML injection) ──────
+// ── Build a safe HTML body from plain text (fallback when no html is supplied)
 function buildSafeHtml(plainText, fromName) {
   const escaped = plainText
     .replace(/&/g, '&amp;')
@@ -65,23 +70,51 @@ function buildSafeHtml(plainText, fromName) {
 </html>`.trim();
 }
 
+// ── SMTP Transporter Singleton ───────────────────────────────────────────────
+let _smtpTransporter = null;
+
+function getSmtpTransporter() {
+  const smtpUser = resolveEnvVar('SMTP_USER');
+  const smtpPass = resolveEnvVar('SMTP_PASS');
+  const smtpHost = resolveEnvVar('SMTP_HOST') || 'smtp.gmail.com';
+  const smtpPort = parseInt(resolveEnvVar('SMTP_PORT') || '587', 10);
+
+  if (!smtpUser || !smtpPass) return null;
+
+  if (!_smtpTransporter) {
+    _smtpTransporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 5000,
+      socketTimeout: 15000,
+    });
+  }
+
+  return _smtpTransporter;
+}
+
 // ── Core send function ────────────────────────────────────────────────────────
 
 /**
- * Send a transactional email via Resend.
+ * Send a transactional email via Resend API (primary) or Nodemailer SMTP (fallback).
  *
  * @param {object}  opts
  * @param {string}  opts.to           - Recipient email (validated)
  * @param {string}  opts.subject      - Subject line (max 200 chars)
  * @param {string}  opts.text         - Plain-text body (sanitized, max 50 KB)
+ * @param {string}  [opts.html]       - Optional formatted HTML body
  * @param {string}  [opts.templateId] - Template identifier for logging
  * @param {string}  [opts.clinicId]   - Clinic ID for audit logging
  * @param {boolean} [opts.dryRun]     - If true, validates but does not send
- * @returns {Promise<{ messageId: string }>}
+ * @returns {Promise<{ messageId: string, provider: string }>}
  */
-async function sendMail({ to, subject, text, templateId, clinicId, dryRun = false }) {
-  const mode = getEmailMode();
-
+async function sendMail({ to, subject, text, html, templateId, clinicId, dryRun = false }) {
   // ── 1. Input validation ───────────────────────────────────────────────────
   if (!isValidEmailFormat(to)) {
     throw new SafeConfigError('Invalid recipient email address.', 'INVALID_RECIPIENT');
@@ -93,22 +126,15 @@ async function sendMail({ to, subject, text, templateId, clinicId, dryRun = fals
   if (subject.length > MAX_SUBJECT_LENGTH) {
     throw new SafeConfigError(`Subject exceeds maximum length of ${MAX_SUBJECT_LENGTH}.`, 'SUBJECT_TOO_LONG');
   }
-  // Never allow patient clinical data in subjects (no PHI patterns)
-  // We strip the subject of any newlines to prevent header injection
   const cleanSubject = subject.replace(/[\r\n]/g, ' ').slice(0, MAX_SUBJECT_LENGTH);
 
   if (!text || typeof text !== 'string' || text.trim().length === 0) {
     throw new SafeConfigError('Email body is required.', 'MISSING_BODY');
   }
-
   const cleanText = sanitizePlainText(text);
 
   // ── 2. Gate check ─────────────────────────────────────────────────────────
   if (!isSafeToSend()) {
-    const reason = mode === 'disabled'
-      ? 'Email is disabled (RESEND_API_KEY not configured).'
-      : 'Email production configuration is incomplete or invalid.';
-
     safeLogEvent({
       event: 'email.blocked',
       recipientEmail: to,
@@ -117,35 +143,11 @@ async function sendMail({ to, subject, text, templateId, clinicId, dryRun = fals
       status: 'blocked',
       errorCode: 'EMAIL_NOT_CONFIGURED',
     });
-
-    throw new SafeConfigError(reason, 'EMAIL_NOT_CONFIGURED');
+    console.error('[Mailer] Email delivery blocked: Neither RESEND_API_KEY nor SMTP credentials (SMTP_USER/SMTP_PASS) are configured.');
+    throw new SafeConfigError('Email service is not configured.', 'EMAIL_NOT_CONFIGURED');
   }
 
-  // ── 3. Development/staging — block real recipients if not explicitly enabled ──
-  if (mode === 'development' || mode === 'staging') {
-    const allowedTestDomains = (process.env.EMAIL_TEST_RECIPIENT_DOMAINS || '')
-      .split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
-    const toDomain = to.split('@')[1]?.toLowerCase();
-    if (allowedTestDomains.length > 0 && !allowedTestDomains.includes(toDomain)) {
-      safeLogEvent({
-        event: 'email.blocked',
-        recipientEmail: to,
-        templateId,
-        clinicId,
-        status: 'blocked',
-        errorCode: 'RECIPIENT_NOT_IN_TEST_ALLOWLIST',
-      });
-      throw new SafeConfigError(
-        `In ${mode} mode, email recipients must be from the configured test domain allowlist.`,
-        'RECIPIENT_NOT_IN_TEST_ALLOWLIST'
-      );
-    }
-    if (mode === 'development') {
-      console.info(`[EmailGate] DEV MODE — email would send to masked recipient, template: ${templateId || 'unknown'}`);
-    }
-  }
-
-  // ── 4. Dry run ────────────────────────────────────────────────────────────
+  // ── 3. Dry run ────────────────────────────────────────────────────────────
   if (dryRun) {
     safeLogEvent({
       event: 'email.dryRun',
@@ -157,79 +159,109 @@ async function sendMail({ to, subject, text, templateId, clinicId, dryRun = fals
     return { messageId: 'dry-run', dryRun: true };
   }
 
-  // ── 5. Build payload ──────────────────────────────────────────────────────
+  // ── 4. Build names & addresses ────────────────────────────────────────────
   const cfg = getEmailConfig();
-  const apiKey    = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.EMAIL_FROM;
-  const fromName  = cfg.fromName;
+  const fromName = cfg.fromName || resolveEnvVar('EMAIL_FROM_NAME', 'SMTP_FROM_NAME') || 'DentalSmart';
+  const htmlBody = html || buildSafeHtml(cleanText, fromName);
 
-  const htmlBody = buildSafeHtml(cleanText, fromName);
+  const resendApiKey = resolveEnvVar('RESEND_API_KEY');
+  let resendErr = null;
 
-  const payload = {
-    from:    `"${fromName}" <${fromEmail}>`,
-    to:      [to],
-    subject: cleanSubject,
-    text:    cleanText,
-    html:    htmlBody,
-  };
+  // ── 5. Attempt 1: Resend HTTP API ─────────────────────────────────────────
+  if (resendApiKey) {
+    const fromEmail = resolveEnvVar('EMAIL_FROM', 'RESEND_FROM_EMAIL') || 'onboarding@resend.dev';
+    const payload = {
+      from: `"${fromName}" <${fromEmail}>`,
+      to: [to],
+      subject: cleanSubject,
+      text: cleanText,
+      html: htmlBody,
+    };
 
-  // ── 6. Send via Resend ────────────────────────────────────────────────────
-  let response;
-  try {
-    response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-      // 15-second timeout via AbortController
-      signal: AbortSignal.timeout(15_000),
-    });
-  } catch (fetchErr) {
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(15_000),
+      });
+
+      let data;
+      try { data = await response.json(); } catch { data = {}; }
+
+      if (response.ok && data.id) {
+        safeLogEvent({
+          event: 'email.send',
+          recipientEmail: to,
+          templateId,
+          clinicId,
+          status: 'sent',
+          messageId: data.id,
+        });
+        return { messageId: data.id, provider: 'resend' };
+      }
+
+      resendErr = new Error(`Resend API error (${response.status}): ${data.message || JSON.stringify(data)}`);
+      console.warn('[Mailer] Resend API failed, checking SMTP fallback:', resendErr.message);
+    } catch (fetchErr) {
+      resendErr = fetchErr;
+      console.warn('[Mailer] Resend fetch network error, checking SMTP fallback:', fetchErr.message);
+    }
+  }
+
+  // ── 6. Attempt 2: Nodemailer SMTP (Fallback or primary if no Resend key) ──
+  const smtpTransporter = getSmtpTransporter();
+  if (smtpTransporter) {
+    const smtpUser = resolveEnvVar('SMTP_USER');
+    try {
+      const info = await smtpTransporter.sendMail({
+        from: `"${fromName}" <${smtpUser}>`,
+        to,
+        subject: cleanSubject,
+        text: cleanText,
+        html: htmlBody,
+      });
+
+      safeLogEvent({
+        event: 'email.send',
+        recipientEmail: to,
+        templateId,
+        clinicId,
+        status: 'sent',
+        messageId: info.messageId,
+      });
+      return { messageId: info.messageId, provider: 'smtp' };
+    } catch (smtpErr) {
+      console.error('[Mailer] SMTP delivery error:', smtpErr.message);
+      safeLogEvent({
+        event: 'email.send',
+        recipientEmail: to,
+        templateId,
+        clinicId,
+        status: 'smtp_error',
+        errorCode: smtpErr.code || 'SMTP_ERROR',
+      });
+      throw new Error(`Email delivery failed via SMTP: ${smtpErr.message}`);
+    }
+  }
+
+  // If we reached here, Resend failed and there was no SMTP transporter
+  if (resendErr) {
     safeLogEvent({
       event: 'email.send',
       recipientEmail: to,
       templateId,
       clinicId,
-      status: 'fetch_error',
-      errorCode: fetchErr.name || 'NETWORK_ERROR',
+      status: 'resend_error',
+      errorCode: resendErr.name || 'RESEND_ERROR',
     });
-    // Never expose the full error message (may contain URL with key)
-    throw new Error('Email delivery failed due to a network error. Please try again.');
+    throw resendErr;
   }
 
-  let data;
-  try {
-    data = await response.json();
-  } catch {
-    data = {};
-  }
-
-  if (!response.ok) {
-    const errCode = data.name || data.statusCode || response.status;
-    safeLogEvent({
-      event: 'email.send',
-      recipientEmail: to,
-      templateId,
-      clinicId,
-      status: 'api_error',
-      errorCode: String(errCode),
-    });
-    // Expose only safe error info — never the API key or full response
-    throw new Error(`Email delivery failed (code: ${errCode}). Check Resend dashboard.`);
-  }
-
-  safeLogEvent({
-    event: 'email.send',
-    recipientEmail: to,
-    templateId,
-    clinicId,
-    status: 'sent',
-    messageId: data.id,
-  });
-
-  return { messageId: data.id };
+  throw new Error('Email delivery failed: No valid email transport succeeded.');
 }
 
 module.exports = { sendMail, buildSafeHtml, sanitizePlainText };

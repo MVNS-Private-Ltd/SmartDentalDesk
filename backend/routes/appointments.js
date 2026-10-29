@@ -1,4 +1,4 @@
-// ─────────────────────────────────────────────────────────────────────────────
+﻿// ─────────────────────────────────────────────────────────────────────────────
 //  Appointments Routes
 //  GET    /api/appointments          — List appointments (filter by date/status)
 //  GET    /api/appointments/today    — Today's appointments only
@@ -33,23 +33,33 @@ function validate(req, res) {
 // ── Email notification helper on status change ──────────────────────────────
 async function sendAppointmentStatusEmail(appointmentId, clinicId, newStatus, reason = '') {
   try {
-    const { data: appt } = await supabase
+    const { data: appt, error: apptErr } = await supabase
       .from('appointments')
       .select('id, date, time, service, patients(name, email), clinics(name)')
       .eq('id', appointmentId)
       .eq('clinic_id', clinicId)
       .single();
 
-    if (!appt || !appt.patients?.email) return;
+    if (apptErr) {
+      console.error('[APPT_EMAIL] Database error fetching appointment details:', apptErr.message);
+      return;
+    }
 
-    const patientName = appt.patients.name;
+    if (!appt || !appt.patients?.email) {
+      console.warn('[APPT_EMAIL] Skipping email — appointment or patient email not found. Appt data:', JSON.stringify(appt));
+      return;
+    }
+
+    const patientName = appt.patients.name || 'Patient';
     const patientEmail = appt.patients.email;
     const clinicName = appt.clinics?.name || 'dentalsmart';
     const date = appt.date;
-    const [h, m] = String(appt.time).split(':');
+    const [h, m] = String(appt.time || '12:00').split(':');
     const hour = parseInt(h, 10);
     const ampm = hour >= 12 ? 'PM' : 'AM';
     const formattedTime = `${hour % 12 || 12}:${m} ${ampm}`;
+
+    console.log(`[APPT_EMAIL] Preparing ${newStatus} email to ${patientEmail} for appointment ${appointmentId}`);
 
     if (newStatus === 'scheduled' || newStatus === 'confirmed') {
       const htmlBody = `
@@ -67,12 +77,14 @@ async function sendAppointmentStatusEmail(appointmentId, clinicId, newStatus, re
           <p>Best regards,<br><strong>${clinicName}</strong></p>
         </div>
       `;
-      await sendMail({
+      const result = await sendMail({
         to: patientEmail,
         subject: `Appointment Approved & Confirmed - ${clinicName}`,
         text: `Hello ${patientName},\n\nYour appointment for ${appt.service} on ${date} at ${formattedTime} has been approved and confirmed by ${clinicName}.\n\nThank you!`,
-        html: htmlBody
+        html: htmlBody,
+        clinicId
       });
+      console.log(`[APPT_EMAIL] Approved email sent successfully to ${patientEmail}:`, result);
     } else if (newStatus === 'cancelled') {
       const htmlBody = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
@@ -84,12 +96,14 @@ async function sendAppointmentStatusEmail(appointmentId, clinicId, newStatus, re
           <p>Best regards,<br><strong>${clinicName}</strong></p>
         </div>
       `;
-      await sendMail({
+      const result = await sendMail({
         to: patientEmail,
         subject: `Appointment Request Update - ${clinicName}`,
         text: `Hello ${patientName},\n\nYour appointment request for ${appt.service} on ${date} at ${formattedTime} could not be approved by ${clinicName}.${reason ? `\nNote: ${reason}` : ''}\n\nPlease visit our booking page to choose another slot.`,
-        html: htmlBody
+        html: htmlBody,
+        clinicId
       });
+      console.log(`[APPT_EMAIL] Cancellation email sent successfully to ${patientEmail}:`, result);
     }
   } catch (err) {
     console.error('[APPT_EMAIL] Failed to send status update email:', err.message || err);

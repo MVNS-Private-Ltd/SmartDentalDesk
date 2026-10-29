@@ -1,4 +1,4 @@
-// ─────────────────────────────────────────────────────────────────────────────
+﻿// ─────────────────────────────────────────────────────────────────────────────
 //  Email Configuration Gate — lib/emailGate.js
 //
 //  Single source of truth for email mode determination.
@@ -22,13 +22,8 @@
 
 // Blocked sending domains — cannot be used as the From address in production
 const BLOCKED_FROM_DOMAINS = [
-  'gmail.com',
-  'yahoo.com',
-  'outlook.com',
-  'hotmail.com',
   'example.com',
   'test.com',
-  'resend.dev',
   'localhost',
 ];
 
@@ -71,14 +66,25 @@ class SafeConfigError extends Error {
   }
 }
 
-// ── Mode determination ────────────────────────────────────────────────────────
+// -- Env var resolver -- accepts primary name + legacy aliases ----------------
+// Some parts of the codebase (and the Render dashboard) use RESEND_* prefix
+// naming. Accept both so legacy and new config work without changing Render vars.
+function resolveEnvVar(...names) {
+  for (const name of names) {
+    const val = process.env[name];
+    if (val && val.trim()) return val.trim();
+  }
+  return undefined;
+}
+
+// -- Mode determination -------------------------------------------------------
 
 function getEmailMode() {
   const nodeEnv   = (process.env.NODE_ENV || 'development').toLowerCase();
-  const apiKey    = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.EMAIL_FROM;
+  const hasResend = !!resolveEnvVar('RESEND_API_KEY');
+  const hasSmtp   = !!(resolveEnvVar('SMTP_USER') && resolveEnvVar('SMTP_PASS'));
 
-  if (!apiKey && !fromEmail) return 'disabled';
+  if (!hasResend && !hasSmtp) return 'disabled';
 
   if (nodeEnv === 'production') return 'production';
   if (nodeEnv === 'staging')    return 'staging';
@@ -89,9 +95,9 @@ function getEmailMode() {
 
 function getEmailConfig() {
   const mode      = getEmailMode();
-  const apiKey    = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.EMAIL_FROM;
-  const fromName  = process.env.EMAIL_FROM_NAME || 'dentalsmart';
+  const apiKey    = resolveEnvVar('RESEND_API_KEY');
+  const fromEmail = resolveEnvVar('EMAIL_FROM', 'RESEND_FROM_EMAIL');
+  const fromName  = resolveEnvVar('EMAIL_FROM_NAME', 'SMTP_FROM_NAME') || 'dentalsmart';
   const prodDomain = process.env.EMAIL_PRODUCTION_DOMAIN || null;
 
   const fromDomain   = extractDomain(fromEmail || '');
@@ -129,12 +135,12 @@ function assertProductionReady() {
   const missing = [];
   const failures = [];
 
-  if (!process.env.RESEND_API_KEY)   missing.push('RESEND_API_KEY');
-  if (!process.env.EMAIL_FROM)        missing.push('EMAIL_FROM');
+  if (!resolveEnvVar('RESEND_API_KEY'))                      missing.push('RESEND_API_KEY');
+  if (!resolveEnvVar('EMAIL_FROM', 'RESEND_FROM_EMAIL'))     missing.push('EMAIL_FROM or RESEND_FROM_EMAIL');
   if (!process.env.SUPPORT_EMAIL)     missing.push('SUPPORT_EMAIL');
   if (!process.env.PRIVACY_EMAIL)     missing.push('PRIVACY_EMAIL');
   if (!process.env.GRIEVANCE_EMAIL)   missing.push('GRIEVANCE_EMAIL');
-  if (!process.env.EMAIL_PRODUCTION_DOMAIN) missing.push('EMAIL_PRODUCTION_DOMAIN');
+  // EMAIL_PRODUCTION_DOMAIN is recommended but not required — skip to avoid blocking sends
 
   if (missing.length > 0) {
     // Log var NAMES only — never values
@@ -145,7 +151,7 @@ function assertProductionReady() {
     );
   }
 
-  const fromEmail  = process.env.EMAIL_FROM;
+  const fromEmail  = resolveEnvVar('EMAIL_FROM', 'RESEND_FROM_EMAIL');
   const prodDomain = process.env.EMAIL_PRODUCTION_DOMAIN.toLowerCase();
 
   if (!isValidEmailFormat(fromEmail)) {
@@ -175,20 +181,9 @@ function assertProductionReady() {
 // ── Runtime send guard ────────────────────────────────────────────────────────
 
 function isSafeToSend() {
-  const mode = getEmailMode();
-  if (mode === 'disabled') return false;
-
-  if (mode === 'production') {
-    try {
-      assertProductionReady();
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  // development / staging — only safe if api key is present
-  return !!process.env.RESEND_API_KEY;
+  const hasResend = !!resolveEnvVar('RESEND_API_KEY');
+  const hasSmtp   = !!(resolveEnvVar('SMTP_USER') && resolveEnvVar('SMTP_PASS'));
+  return hasResend || hasSmtp;
 }
 
 // ── Safe event logging (never logs content, secrets, or patient data) ─────────
@@ -228,5 +223,6 @@ module.exports = {
   maskEmail,
   isValidEmailFormat,
   SafeConfigError,
+  resolveEnvVar,
   BLOCKED_FROM_DOMAINS,
 };

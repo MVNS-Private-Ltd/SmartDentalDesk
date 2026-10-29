@@ -1,4 +1,4 @@
-// dentalsmart API Client
+﻿// dentalsmart API Client
 window.api = (function() {
   const BASE_URL       = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
     ? 'http://localhost:3001/api' 
@@ -385,6 +385,7 @@ window.api = (function() {
       const STALL_MS = 25000;
       const WALL_CLOCK_MS = 120000; // 120s total attempt timeout
 
+      const MAX_RETRIES = 3;
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         let controller = null;
         try {
@@ -484,7 +485,7 @@ window.api = (function() {
 
           console.warn(`[AI Chat] Attempt ${attempt} failed: ${error.message}. Retrying...`);
           if (attempt === MAX_RETRIES) {
-             const userFriendlyMsg = "I couldn't analyze this image right now. Please try again or provide a clearer photo.";
+             const userFriendlyMsg = hasImages ? "I couldn't analyze this image right now. Please try again or provide a clearer photo." : (error.message || "I couldn't process this right now. Please try asking again.");
              if (onError) onError(new Error(userFriendlyMsg));
              throw new Error(userFriendlyMsg);
           }

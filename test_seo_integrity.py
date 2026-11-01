@@ -159,7 +159,7 @@ if sm_path.exists():
     else:
         fail("sitemap.xml: may be empty or malformed")
     # Verify core canonical pages
-    for page in ["https://www.dentalsmart.tech/", "https://www.dentalsmart.tech/clinics", "https://www.dentalsmart.tech/pricing"]:
+    for page in ["https://www.dentalsmart.tech/", "https://www.dentalsmart.tech/clinics", "https://www.dentalsmart.tech/pricing", "https://www.dentalsmart.tech/about"]:
         if page in sm_content:
             ok(f"sitemap.xml contains authoritative page: {page}")
         else:
@@ -190,6 +190,7 @@ PAGES = {
     "index.html":    {"canonical": True,  "description": True,  "title": True},
     "pricing.html":  {"canonical": True,  "description": True,  "title": True},
     "clinics.html":  {"canonical": True,  "description": True,  "title": True},
+    "about.html":    {"canonical": True,  "description": True,  "title": True},
     "login.html":    {"canonical": False, "description": False, "title": True},
     "register.html": {"canonical": False, "description": False, "title": True},
 }

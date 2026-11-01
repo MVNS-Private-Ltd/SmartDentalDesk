@@ -77,6 +77,7 @@ async function main() {
     { loc: `${domain}/`, priority: '1.0', changefreq: 'daily', lastmod: today },
     { loc: `${domain}/clinics`, priority: '0.9', changefreq: 'daily', lastmod: today },
     { loc: `${domain}/pricing`, priority: '0.7', changefreq: 'weekly', lastmod: today },
+    { loc: `${domain}/about`, priority: '0.6', changefreq: 'monthly', lastmod: today },
     { loc: `${domain}/privacy-policy`, priority: '0.3', changefreq: 'yearly', lastmod: today },
     { loc: `${domain}/terms-of-service`, priority: '0.3', changefreq: 'yearly', lastmod: today },
     { loc: `${domain}/refund-cancellation`, priority: '0.3', changefreq: 'yearly', lastmod: today }

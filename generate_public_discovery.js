@@ -388,6 +388,7 @@ function renderClinicProfileHtml(clinic) {
 
   <footer style="background: white; border-top: 1px solid #e2e8f0; padding: 2rem 1.5rem; margin-top: auto; text-align: center; font-size: 0.85rem; color: #64748b;">
     <div style="display:flex; justify-content:center; gap:1.5rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+      <a href="/about" style="color:inherit; text-decoration:none;">About</a>
       <a href="/privacy-policy" style="color:inherit; text-decoration:none;">Privacy Policy</a>
       <a href="/terms-of-service" style="color:inherit; text-decoration:none;">Terms of Service</a>
       <a href="/refund-cancellation" style="color:inherit; text-decoration:none;">Refund Policy</a>
@@ -590,6 +591,7 @@ async function run() {
     { loc: `${DOMAIN}/`, priority: '1.0', changefreq: 'daily', lastmod: today },
     { loc: `${DOMAIN}/clinics`, priority: '0.9', changefreq: 'daily', lastmod: today },
     { loc: `${DOMAIN}/pricing`, priority: '0.7', changefreq: 'weekly', lastmod: today },
+    { loc: `${DOMAIN}/about`, priority: '0.6', changefreq: 'monthly', lastmod: today },
     { loc: `${DOMAIN}/privacy-policy`, priority: '0.3', changefreq: 'yearly', lastmod: today },
     { loc: `${DOMAIN}/terms-of-service`, priority: '0.3', changefreq: 'yearly', lastmod: today },
     { loc: `${DOMAIN}/refund-cancellation`, priority: '0.3', changefreq: 'yearly', lastmod: today }

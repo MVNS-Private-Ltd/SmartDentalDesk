@@ -1,7 +1,7 @@
 {
   "name": "dentalsmart-backend",
   "version": "1.0.0",
-  "description": "DentalSmart API Server — Node.js + Express + Supabase",
+  "description": "DentalSmart API Server – Node.js + Express + Supabase",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -28,6 +28,9 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
+  },
+  "overrides": {
+    "qs": ">=6.16.2"
   },
   "engines": {
     "node": ">=18.0.0"

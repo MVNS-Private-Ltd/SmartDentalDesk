@@ -48,21 +48,16 @@
   "@type": "SoftwareApplication",
   "name": "dentalsmart",
   "applicationCategory": "BusinessApplication",
+  "applicationSubCategory": "Dental Practice Management",
   "operatingSystem": "Web",
-  "description": "Dental clinic management platform for managing appointments, records, treatments, billing, and patient discovery.",
-  "url": "https://www.dentalsmart.tech/",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "INR",
-    "price": "0",
-    "description": "Free trial available"
-  }
+  "description": "Dental clinic management platform for managing appointments, records, treatments, billing, and clinic operations.",
+  "url": "https://www.dentalsmart.tech/"
 }
 </script>
 <style>
 /* Hero two-col */
 .hero-two-col{display:grid;grid-template-columns:1fr 1fr;gap:clamp(2rem,6vw,5rem);align-items:center}
-@media(max-width:860px){.hero-two-col{grid-template-columns:1fr}.hero-right{order:-1}}
+@media(max-width:860px){.hero-two-col{grid-template-columns:1fr}.hero-right{order:-1;margin-top:0 !important}.hero-left h1{margin-top:0 !important}}
 
 /* Mockup card */
 .mockup-card{background:var(--color-surface);border:1px solid var(--color-divider);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);overflow:hidden}
@@ -162,11 +157,11 @@
 <section class="section container reveal">
   <div class="hero-two-col" style="align-items:flex-start; margin-top: clamp(1rem, 4vw, 3rem); grid-template-columns: 5fr 7fr;">
     <div class="hero-left">
-      <h1 style="font-size:clamp(3.5rem, 5vw, 5.5rem);line-height:1.05;letter-spacing:-.03em;margin-top:-3rem;margin-bottom:var(--space-4);color:var(--color-primary)">
-        dentalsmart<br>Clinic
+      <h1 style="font-size:clamp(2.5rem, 4.5vw, 4.5rem);line-height:1.05;letter-spacing:-.03em;margin-top:-3rem;margin-bottom:var(--space-4);color:var(--color-primary)">
+        dentalsmart<br><span style="font-size:clamp(1.25rem, 2.2vw, 1.85rem);font-family:var(--font-body);font-weight:600;letter-spacing:0;line-height:1.3;display:block;margin-top:var(--space-2);color:var(--color-text)">Dental Practice Management Software</span>
       </h1>
       <p style="font-size:clamp(1.1rem, 1.5vw, 1.25rem);color:var(--color-text-muted);line-height:1.6;max-width:46ch;font-weight:500;margin-top:1.5rem;margin-bottom:var(--space-6)">
-        We know your patients value a modern, seamless experience. Through 24/7 scheduling, gentle outreach, and simple reputation management, we quietly work in the background to help you welcome and retain patients with ease.
+        We know your patients value a modern, seamless experience. Through 24/7 online scheduling, automated reminders, and simple practice management, we quietly work in the background to help you welcome and retain patients with ease.
       </p>
       <div style="display:flex;gap:var(--space-4);align-items:center;flex-wrap:wrap">
         <a href="./register.html" class="btn btn-primary" style="padding:.9em 1.8em;font-size:var(--text-base);border-radius:var(--radius-full)">Start 3 Months Free Trial</a>
@@ -185,7 +180,7 @@
 <section class="container reveal">
   <div class="trust-row" style="padding-block:var(--space-8)">
     <div class="trust-cities" style="justify-content:center;width:100%">
-      <span class="trust-city" style="font-size:var(--text-sm);color:var(--color-text-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:700">Online booking and clinic management for independent dentists.</span>
+      <span class="trust-city" style="font-size:var(--text-sm);color:var(--color-text-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:700">Online booking and practice management for dental clinics.</span>
     </div>
   </div>
 </section>
@@ -194,7 +189,7 @@
   <div class="container reveal">
     <div class="section-header" style="max-width:800px;margin-inline:auto">
       <h2 style="font-size:clamp(2rem, 5vw, 3rem);margin-bottom:var(--space-3)">Your entire clinic managed effortlessly.</h2>
-      <p style="font-size:var(--text-lg)">Everything a dental clinic actually needs &mdash; nothing it doesn&rsquo;t. Built for independent dentists.</p>
+      <p style="font-size:var(--text-lg)">Everything a dental clinic actually needs &mdash; nothing it doesn&rsquo;t.</p>
     </div>
   </div>
 
@@ -271,25 +266,26 @@
       </div>
     </div>
 
-    <!-- Row 4 (Replaced AI with WhatsApp Reminders) -->
+    <!-- Row 4 (Automated Appointment Reminders) -->
     <div class="zigzag-row reveal" style="transition-delay: 0.3s">
       <div class="zigzag-node"></div>
       <div class="zigzag-content">
-        <h3>4. Automated WhatsApp Reminders</h3>
-        <p>Reduce no-shows instantly. dentalsmart automatically sends a WhatsApp reminder to your patient a day before their appointment.</p>
+        <h3>4. Automated Appointment Reminders</h3>
+        <p>Reduce no-shows. Send automated email appointment reminders to patients.</p>
         <a href="./register.html" class="btn" style="background:var(--color-primary);color:white">Start 3 Months Free Trial</a>
       </div>
       <div class="zigzag-visual">
         <div style="background:var(--color-surface-offset);padding:var(--space-4);border-radius:var(--radius-lg);border:1px solid var(--color-divider)">
           <div style="display:flex;gap:var(--space-3);align-items:flex-start">
-            <div style="width:36px;height:36px;background:#25D366;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a5.8 5.8 0 00-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path fill-rule="evenodd" d="M12.003 2c-5.517 0-9.997 4.48-9.997 9.998 0 1.76.46 3.479 1.332 5l-1.428 5.211 5.334-1.398c1.485.792 3.167 1.211 4.759 1.211 5.516 0 9.996-4.48 9.996-9.998C22.002 6.48 17.52 2 12.003 2zM12 20.081c-1.492 0-2.955-.4-4.241-1.162l-.304-.179-3.155.827.842-3.077-.197-.313A7.94 7.94 0 014.025 12C4.025 7.595 7.616 4 12.025 4c4.408 0 7.998 3.595 7.998 8s-3.59 8-8.023 8.081z" clip-rule="evenodd"/></svg>
+            <div style="width:36px;height:36px;background:var(--color-primary-highlight);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--color-primary);flex-shrink:0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
             </div>
             <div style="background:var(--color-surface);padding:var(--space-3);border-radius:0 var(--radius-md) var(--radius-md) var(--radius-md);border:1px solid var(--color-divider);box-shadow:var(--shadow-sm);width:100%">
-              <p style="font-size:var(--text-xs);color:var(--color-text);margin:0;line-height:1.5">Hi Rahul, this is a reminder for your dental appointment tomorrow at <strong>10:30 AM</strong> at dentalsmart.</p>
-              <div style="margin-top:var(--space-2);display:flex;justify-content:flex-end">
-                <span style="font-size:9px;color:var(--color-text-faint)">14:20</span>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-1)">
+                <strong style="font-size:var(--text-xs);color:var(--color-text)">Upcoming Visit</strong>
+                <span style="font-size:9px;color:var(--color-text-faint)">Appointment reminder</span>
               </div>
+              <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin:0;line-height:1.5">Hi Rahul, this is a reminder for your dental appointment tomorrow at <strong>10:30 AM</strong> at dentalsmart.</p>
             </div>
           </div>
         </div>
@@ -469,7 +465,7 @@
         <strong style="font-family:var(--font-display);color:#eef4f1">dentalsmart</strong>
       </div>
       <p class="mt-6" style="font-size:var(--text-xs);color:#9fb0aa;max-width:28ch;line-height:1.6">
-        Simple online booking and patient management for independent dentists across India.
+        Online booking and practice management for dental clinics.
       </p>
     </div>
     <div>
@@ -499,7 +495,7 @@
   </div>
   <div class="container footer-bottom">
     <span>&copy; 2026 dentalsmart. All rights reserved.</span>
-    <span>Built for independent dentists &amp; small clinics.</span>
+    <span>Built for dental clinics and dental teams.</span>
   
     <div style="margin-top: 10px; display: flex; gap: 15px; flex-wrap: wrap;">
       <a href="./privacy-policy.html">Privacy Policy</a>

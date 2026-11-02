@@ -1,6 +1,6 @@
 """
 DentalSmart SEO & Content-Integrity Test Suite
-Validates all Phase 1-3 audit fixes on the static files directly.
+Validates all Phase 1-4 audit fixes on the static files directly.
 Run: python test_seo_integrity.py
 """
 
@@ -159,11 +159,50 @@ if sm_path.exists():
     else:
         fail("sitemap.xml: may be empty or malformed")
     # Verify core canonical pages
-    for page in ["https://www.dentalsmart.tech/", "https://www.dentalsmart.tech/clinics", "https://www.dentalsmart.tech/pricing", "https://www.dentalsmart.tech/about"]:
+    core_pages = [
+        "https://www.dentalsmart.tech/",
+        "https://www.dentalsmart.tech/clinics",
+        "https://www.dentalsmart.tech/pricing",
+        "https://www.dentalsmart.tech/about",
+    ]
+    for page in core_pages:
         if page in sm_content:
             ok(f"sitemap.xml contains authoritative page: {page}")
         else:
             fail(f"sitemap.xml missing authoritative page: {page}")
+
+    # Verify new feature pages in sitemap
+    FEATURE_URLS = [
+        "https://www.dentalsmart.tech/features/dental-appointment-scheduling",
+        "https://www.dentalsmart.tech/features/dental-patient-records",
+        "https://www.dentalsmart.tech/features/dental-billing-software",
+        "https://www.dentalsmart.tech/features/dental-appointment-reminders",
+        "https://www.dentalsmart.tech/features/dental-clinic-online-booking",
+        "https://www.dentalsmart.tech/features/dental-staff-management",
+        "https://www.dentalsmart.tech/features/dental-practice-reports",
+    ]
+    for url in FEATURE_URLS:
+        slug = url.split("/features/")[1]
+        if url in sm_content:
+            ok(f"sitemap.xml contains feature page: /features/{slug}")
+        else:
+            fail(f"sitemap.xml missing feature page: /features/{slug}")
+
+    # Verify new guide pages in sitemap
+    GUIDE_URLS = [
+        "https://www.dentalsmart.tech/guides",
+        "https://www.dentalsmart.tech/guides/reduce-dental-appointment-no-shows",
+        "https://www.dentalsmart.tech/guides/choose-dental-practice-management-software",
+        "https://www.dentalsmart.tech/guides/manage-dental-appointments-without-paper",
+        "https://www.dentalsmart.tech/guides/digitize-dental-patient-records",
+        "https://www.dentalsmart.tech/guides/cloud-vs-offline-dental-software",
+    ]
+    for url in GUIDE_URLS:
+        slug = url.replace("https://www.dentalsmart.tech/", "")
+        if url in sm_content:
+            ok(f"sitemap.xml contains guide page: /{slug}")
+        else:
+            fail(f"sitemap.xml missing guide page: /{slug}")
 else:
     fail("sitemap.xml not found at static root")
 
@@ -180,6 +219,107 @@ for plan, expected in EXPECTED_CREDITS.items():
         ok(f"plans.js: {plan} credits = {expected}")
     else:
         fail(f"plans.js: {plan} credits not set to {expected}")
+
+# ─────────────────────────────────────────────
+# PHASE 4 — SEO CONTENT EXPANSION CHECKS
+# ─────────────────────────────────────────────
+print(f"\n{BOLD}PHASE 4 — SEO content expansion: feature/guide pages{RESET}")
+
+# 4a — index.html must NOT contain unsupported inventory/low-stock claims
+index_html = read(ROOT / "index.html")
+for banned in ["low stock alert", "inventory", "Billing &amp; Inventory", "Billing & Inventory"]:
+    if banned.lower() not in index_html.lower():
+        ok(f"index.html: unsupported claim removed: '{banned}'")
+    else:
+        fail(f"index.html: still contains unsupported claim: '{banned}'")
+
+# 4b — Feature pages exist and have required SEO elements
+FEATURE_PAGES = [
+    "features/dental-appointment-scheduling.html",
+    "features/dental-patient-records.html",
+    "features/dental-billing-software.html",
+    "features/dental-appointment-reminders.html",
+    "features/dental-clinic-online-booking.html",
+    "features/dental-staff-management.html",
+    "features/dental-practice-reports.html",
+]
+
+for fname in FEATURE_PAGES:
+    fpath = ROOT / fname
+    if not fpath.exists():
+        fail(f"{fname}: file not found")
+        continue
+    content = read(fpath)
+    if re.search(r'<title>.+</title>', content, re.I):
+        ok(f"{fname}: <title> present")
+    else:
+        fail(f"{fname}: missing <title>")
+    if re.search(r'<meta[^>]+name=["\']description["\']', content, re.I):
+        ok(f"{fname}: meta description present")
+    else:
+        warn(f"{fname}: meta description missing")
+    if re.search(r'<link[^>]+rel=["\']canonical["\']', content, re.I):
+        ok(f"{fname}: canonical tag present")
+    else:
+        warn(f"{fname}: canonical tag missing")
+    if "noindex" in content.lower():
+        fail(f"{fname}: has unexpected noindex")
+    else:
+        ok(f"{fname}: no noindex")
+    # Must NOT claim inventory
+    if "inventory" in content.lower() or "low stock" in content.lower():
+        fail(f"{fname}: contains unsupported inventory/low-stock claim")
+    else:
+        ok(f"{fname}: no unsupported inventory claim")
+
+# 4c — Guide pages exist and have required SEO elements
+GUIDE_PAGES = [
+    "guides/index.html",
+    "guides/reduce-dental-appointment-no-shows.html",
+    "guides/choose-dental-practice-management-software.html",
+    "guides/manage-dental-appointments-without-paper.html",
+    "guides/digitize-dental-patient-records.html",
+    "guides/cloud-vs-offline-dental-software.html",
+]
+
+for fname in GUIDE_PAGES:
+    fpath = ROOT / fname
+    if not fpath.exists():
+        fail(f"{fname}: file not found")
+        continue
+    content = read(fpath)
+    if re.search(r'<title>.+</title>', content, re.I):
+        ok(f"{fname}: <title> present")
+    else:
+        fail(f"{fname}: missing <title>")
+    if re.search(r'<meta[^>]+name=["\']description["\']', content, re.I):
+        ok(f"{fname}: meta description present")
+    else:
+        warn(f"{fname}: meta description missing")
+    if re.search(r'<link[^>]+rel=["\']canonical["\']', content, re.I):
+        ok(f"{fname}: canonical tag present")
+    else:
+        warn(f"{fname}: canonical tag missing")
+    if "noindex" in content.lower():
+        fail(f"{fname}: has unexpected noindex")
+    else:
+        ok(f"{fname}: no noindex")
+
+# 4d — about.html, clinics.html navigation consistency
+print(f"\n{BOLD}PHASE 4d — Navigation consistency{RESET}")
+
+for fname, must_have in [
+    ("about.html",    ["/features/dental-appointment-scheduling", "/guides"]),
+    ("clinics.html",  ["/about"]),
+    ("index.html",    ["/features/dental-appointment-scheduling", "/guides", "/about"]),
+]:
+    fpath = ROOT / fname
+    content = read(fpath)
+    for link in must_have:
+        if link in content:
+            ok(f"{fname}: nav contains link to {link}")
+        else:
+            fail(f"{fname}: nav missing link to {link}")
 
 # ─────────────────────────────────────────────
 # META / CANONICAL SPOT-CHECKS

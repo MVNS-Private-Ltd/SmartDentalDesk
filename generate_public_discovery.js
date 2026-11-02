@@ -73,6 +73,16 @@ function prepareDistDirectory(targetDir) {
     }
   }
 
+  // 1b. Copy content subdirectories (features, guides)
+  const contentDirs = ['features', 'guides'];
+  for (const dirName of contentDirs) {
+    const srcDir = path.join(__dirname, dirName);
+    const dstDir = path.join(targetDir, dirName);
+    if (fs.existsSync(srcDir)) {
+      fs.cpSync(srcDir, dstDir, { recursive: true });
+    }
+  }
+
   // 2. Copy assets directory
   const srcAssets = path.join(__dirname, 'assets');
   const dstAssets = path.join(targetDir, 'assets');
@@ -590,8 +600,21 @@ async function run() {
   const staticPages = [
     { loc: `${DOMAIN}/`, priority: '1.0', changefreq: 'daily', lastmod: today },
     { loc: `${DOMAIN}/clinics`, priority: '0.9', changefreq: 'daily', lastmod: today },
-    { loc: `${DOMAIN}/pricing`, priority: '0.7', changefreq: 'weekly', lastmod: today },
-    { loc: `${DOMAIN}/about`, priority: '0.6', changefreq: 'monthly', lastmod: today },
+    { loc: `${DOMAIN}/pricing`, priority: '0.8', changefreq: 'weekly', lastmod: today },
+    { loc: `${DOMAIN}/about`, priority: '0.7', changefreq: 'monthly', lastmod: today },
+    { loc: `${DOMAIN}/features/dental-appointment-scheduling`, priority: '0.8', changefreq: 'monthly', lastmod: today },
+    { loc: `${DOMAIN}/features/dental-patient-records`, priority: '0.8', changefreq: 'monthly', lastmod: today },
+    { loc: `${DOMAIN}/features/dental-billing-software`, priority: '0.8', changefreq: 'monthly', lastmod: today },
+    { loc: `${DOMAIN}/features/dental-appointment-reminders`, priority: '0.8', changefreq: 'monthly', lastmod: today },
+    { loc: `${DOMAIN}/features/dental-clinic-online-booking`, priority: '0.8', changefreq: 'monthly', lastmod: today },
+    { loc: `${DOMAIN}/features/dental-staff-management`, priority: '0.7', changefreq: 'monthly', lastmod: today },
+    { loc: `${DOMAIN}/features/dental-practice-reports`, priority: '0.7', changefreq: 'monthly', lastmod: today },
+    { loc: `${DOMAIN}/guides`, priority: '0.7', changefreq: 'monthly', lastmod: today },
+    { loc: `${DOMAIN}/guides/reduce-dental-appointment-no-shows`, priority: '0.7', changefreq: 'monthly', lastmod: today },
+    { loc: `${DOMAIN}/guides/choose-dental-practice-management-software`, priority: '0.7', changefreq: 'monthly', lastmod: today },
+    { loc: `${DOMAIN}/guides/manage-dental-appointments-without-paper`, priority: '0.7', changefreq: 'monthly', lastmod: today },
+    { loc: `${DOMAIN}/guides/digitize-dental-patient-records`, priority: '0.7', changefreq: 'monthly', lastmod: today },
+    { loc: `${DOMAIN}/guides/cloud-vs-offline-dental-software`, priority: '0.7', changefreq: 'monthly', lastmod: today },
     { loc: `${DOMAIN}/privacy-policy`, priority: '0.3', changefreq: 'yearly', lastmod: today },
     { loc: `${DOMAIN}/terms-of-service`, priority: '0.3', changefreq: 'yearly', lastmod: today },
     { loc: `${DOMAIN}/refund-cancellation`, priority: '0.3', changefreq: 'yearly', lastmod: today }
